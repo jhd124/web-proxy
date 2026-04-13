@@ -1,0 +1,17 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  max-width: none;
+  margin: 0;
+  text-align: initial;
+  border: none;
+  min-height: 100svh;
+}
+
+body {
+  margin: 0;
+}

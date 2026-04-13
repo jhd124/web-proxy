@@ -1,0 +1,17 @@
+target/
+frontend/dist/
+
+# Runtime data
+proxy-overrides.sqlite3
+proxy-overrides.sqlite3-*
+*.db
+*.db-*
+
+# Generated local MITM CA material
+mitm-ca/
+
+# Local IDE/debug artifacts
+.cursor/debug-*.log
+
+# OS noise
+.DS_Store
