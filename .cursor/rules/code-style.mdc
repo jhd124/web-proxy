@@ -58,23 +58,6 @@ alwaysApply: true
 - 避免深层嵌套：使用提前返回（early return）
 - 使用纯函数：便于测试和维护
 
-### 目录结构
-
-```
-biz/
-├── chat/                 # 按功能模块组织
-│   ├── components/      # 模块组件
-│   ├── hooks/           # 模块 Hooks
-│   ├── services/        # 模块 API
-│   ├── types/           # 模块类型
-│   └── utils/           # 模块工具
-shared/
-├── components/          # 共享组件
-├── hooks/               # 共享 Hooks
-├── utils/               # 工具函数
-└── types/               # 类型定义
-```
-
 ## 强制行为 ✅
 
 2. 必须遵循文件命名规范

@@ -1,0 +1,128 @@
+@keyframes drawerFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fsBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  animation: drawerFade 0.12s ease-out;
+}
+
+.fs {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
+}
+
+.fsHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.fsHead h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.fsErr {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: rgba(248, 113, 113, 0.08);
+  border-bottom: 1px solid #f8717155;
+}
+
+.fsBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drawerClose {
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 0.15rem 0.5rem;
+}
+
+.toolCol {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 320px);
+  min-width: 220px;
+  border-right: 1px solid var(--border);
+  background: #12151c;
+  min-height: 0;
+}
+
+.toolTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.toolTab {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.55rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.toolTabOn {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.toolBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.65rem 0.75rem 1rem;
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--panel);
+  position: static;
+}
+
+.foot :global(.primary) {
+  grid-column: auto;
+}

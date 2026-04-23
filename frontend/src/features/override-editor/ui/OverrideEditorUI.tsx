@@ -1,55 +1,15 @@
-import type { RefObject } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
-import type { OverrideFormState, OverrideRule, TrafficEntry } from '../types'
-import { urlOrigin } from '../lib/dashboardUtils'
-import { OverrideFilesPanel } from './OverrideFilesPanel'
-import { OverrideMonacoPane } from './OverrideMonacoPane'
-import { OverrideRequestForm } from './OverrideRequestForm'
+import { urlOrigin } from '../../../lib/dashboardUtils'
+import { overrideEditorTexts } from '../texts'
+import type { OverrideEditorUIProps } from '../types'
+import { OverrideFilesUI } from './OverrideFilesUI'
+import { OverrideMonacoUI } from './OverrideMonacoUI'
+import { OverrideRequestFormUI } from './OverrideRequestFormUI'
+import s from './OverrideEditorUI.module.css'
 
-type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
+const t = overrideEditorTexts.shell
+const of = overrideEditorTexts.form
 
-type AddBreakpointFromOverride = (
-  source: {
-    name: string
-    matchHost?: string | null
-    matchPathRegex?: string | null
-  },
-  originHint?: string,
-) => void
-
-type Props = {
-  closeOverrideDrawer: () => void
-  saveOverride: () => void
-  overrideError: string | null
-  overrideLeftTool: 'files' | 'info'
-  setOverrideLeftTool: (t: 'files' | 'info') => void
-  overrideFileInputRef: RefObject<HTMLInputElement | null>
-  overrideForm: OverrideFormState
-  setOverrideForm: SetOverrideForm
-  overrideEntries: OverrideRule[]
-  startNewOverride: () => void
-  openOverrideEditorForKey: (override: OverrideRule) => void
-  onAddBreakpointForListOverride: (override: OverrideRule) => void
-  overrideBodyDrafts: Record<string, string>
-  setOverrideBodyDrafts: Dispatch<SetStateAction<Record<string, string>>>
-  overrideBodySaving: Record<string, boolean>
-  overrideToggleSaving: Record<string, boolean>
-  setOverrideEnabled: (override: OverrideRule, enabled: boolean) => void
-  saveOverrideBody: (override: OverrideRule) => void
-  deleteOverrideRule: (id: string) => Promise<void>
-  selected: TrafficEntry | null
-  selectedMatchingOverride: OverrideRule | null
-  overrideEditingId: string | null
-  selectedCanControlStream: boolean
-  resumeRequest: (id: string) => void
-  resumeSaving: Record<string, boolean>
-  addBreakpointFromOverride: AddBreakpointFromOverride
-  streamActionSaving: Record<string, boolean>
-  playControlledStream: (id: string) => void
-  pauseControlledStream: (id: string) => void
-}
-
-export function OverrideEditorOverlay({
+export function OverrideEditorUI({
   closeOverrideDrawer,
   saveOverride,
   overrideError,
@@ -79,61 +39,64 @@ export function OverrideEditorOverlay({
   streamActionSaving,
   playControlledStream,
   pauseControlledStream,
-}: Props) {
+}: OverrideEditorUIProps) {
   return (
     <div
-      className="override-fs-backdrop"
+      className={s.fsBackdrop}
       role="presentation"
       onClick={closeOverrideDrawer}
     >
       <div
-        className="override-fs"
+        className={s.fs}
         role="dialog"
         aria-modal="true"
         aria-labelledby="override-fs-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="override-fs-head">
+        <div className={s.fsHead}>
           <div>
-            <h2 id="override-fs-title">Override response</h2>
+            <h2 id="override-fs-title">{t.title}</h2>
             <p className="small muted" style={{ margin: '0.15rem 0 0' }}>
-              Future requests that match the rule receive this response (plain HTTP; first
-              mock wins).
+              {t.subtitle}
             </p>
           </div>
           <button
             type="button"
-            className="ghost drawer-close"
+            className={`ghost ${s.drawerClose}`}
             onClick={closeOverrideDrawer}
-            aria-label="Close"
+            aria-label={t.closeAria}
           >
             ×
           </button>
         </div>
         {overrideError && (
-          <p className="small err override-fs-err">{overrideError}</p>
+          <p className={`small err ${s.fsErr}`}>{overrideError}</p>
         )}
-        <div className="override-fs-body">
-          <aside className="override-tool-col">
-            <div className="override-tool-tabs" role="tablist">
+        <div className={s.fsBody}>
+          <aside className={s.toolCol}>
+            <div className={s.toolTabs} role="tablist">
               <button
                 type="button"
-                className={overrideLeftTool === 'files' ? 'on' : ''}
+                className={`${s.toolTab} ${
+                  overrideLeftTool === 'files' ? s.toolTabOn : ''
+                }`}
                 onClick={() => setOverrideLeftTool('files')}
               >
-                Files
+                {t.tabFiles}
               </button>
               <button
                 type="button"
-                className={overrideLeftTool === 'info' ? 'on' : ''}
+                className={`${s.toolTab} ${
+                  overrideLeftTool === 'info' ? s.toolTabOn : ''
+                }`}
                 onClick={() => setOverrideLeftTool('info')}
               >
-                Request
+                {t.tabRequest}
               </button>
             </div>
-            <div className="override-tool-body">
+            <div className={s.toolBody}>
               {overrideLeftTool === 'files' && (
-                <OverrideFilesPanel
+                <OverrideFilesUI
                   overrideFileInputRef={overrideFileInputRef}
                   overrideForm={overrideForm}
                   setOverrideForm={setOverrideForm}
@@ -151,7 +114,7 @@ export function OverrideEditorOverlay({
                 />
               )}
               {overrideLeftTool === 'info' && (
-                <OverrideRequestForm
+                <OverrideRequestFormUI
                   overrideForm={overrideForm}
                   setOverrideForm={setOverrideForm}
                   selectedCanControlStream={selectedCanControlStream}
@@ -163,30 +126,31 @@ export function OverrideEditorOverlay({
               )}
             </div>
           </aside>
-          <OverrideMonacoPane
+          <OverrideMonacoUI
             overrideEditingId={overrideEditingId}
             overrideForm={overrideForm}
             setOverrideForm={setOverrideForm}
           />
         </div>
-        <div className="drawer-actions override-fs-foot">
-          {selected?.pending && selectedMatchingOverride?.id === overrideEditingId && (
-            <button
-              type="button"
-              className="primary inline-primary"
-              disabled={resumeSaving[selected.id] === true}
-              onClick={() => void resumeRequest(selected.id)}
-            >
-              {resumeSaving[selected.id] ? 'Resuming…' : 'Resume request'}
-            </button>
-          )}
+        <div className={s.foot}>
+          {selected?.pending &&
+            selectedMatchingOverride?.id === overrideEditingId && (
+              <button
+                type="button"
+                className="primary inline-primary"
+                disabled={resumeSaving[selected.id] === true}
+                onClick={() => void resumeRequest(selected.id)}
+              >
+                {resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
+              </button>
+            )}
           <button
             type="button"
             className="ghost"
             onClick={() =>
               void addBreakpointFromOverride(
                 {
-                  name: overrideForm.name.trim() || 'Override',
+                  name: overrideForm.name.trim() || of.defaultOverrideName,
                   matchHost: overrideForm.matchHost || null,
                   matchPathRegex: overrideForm.matchPathRegex || null,
                 },
@@ -196,13 +160,13 @@ export function OverrideEditorOverlay({
               )
             }
           >
-            Add breakpoint
+            {t.footAddBreakpoint}
           </button>
           <button type="button" className="ghost" onClick={closeOverrideDrawer}>
-            Cancel
+            {t.footCancel}
           </button>
           <button type="button" className="primary" onClick={saveOverride}>
-            {overrideEditingId ? 'Save changes' : 'Save override'}
+            {overrideEditingId ? t.saveChanges : t.saveOverride}
           </button>
         </div>
       </div>

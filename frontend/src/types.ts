@@ -18,25 +18,10 @@ export interface TrafficEntry {
   responseBodyPreview?: string | null
   durationMs?: number | null
   error?: string | null
-  mocked: boolean
   pending: boolean
   breakpointName?: string | null
   streamControllable: boolean
   streamPlaying?: boolean | null
-}
-
-export interface MockRule {
-  id: string
-  name: string
-  enabled: boolean
-  matchMethod?: string | null
-  matchHost?: string | null
-  matchPathRegex?: string | null
-  status: number
-  headers: [string, string][]
-  body: string
-  /** When set, body is split on blank lines and streamed at this interval (ms). */
-  streamIntervalMs?: number | null
 }
 
 export interface OverrideRule {
@@ -77,6 +62,5 @@ export interface OverrideFormState {
 export type WsMessage =
   | { type: 'snapshot'; requests: TrafficEntry[] }
   | { type: 'traffic'; entry: TrafficEntry }
-  | { type: 'mock_updated' }
   | { type: 'overrides_updated' }
   | { type: 'breakpoints_updated' }

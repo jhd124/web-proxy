@@ -1,7 +1,9 @@
-import type { Dispatch, SetStateAction } from 'react'
-import type { OverrideFormState, TrafficEntry } from '../types'
+import type { OverrideFormState, TrafficEntry } from '../../../types'
+import { overrideEditorTexts } from '../texts'
+import type { SetOverrideForm } from '../types'
+import s from './OverrideRequestFormUI.module.css'
 
-type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
+const t = overrideEditorTexts.request
 
 type Props = {
   overrideForm: OverrideFormState
@@ -13,7 +15,7 @@ type Props = {
   pauseControlledStream: (id: string) => void
 }
 
-export function OverrideRequestForm({
+export function OverrideRequestFormUI({
   overrideForm,
   setOverrideForm,
   selectedCanControlStream,
@@ -23,9 +25,9 @@ export function OverrideRequestForm({
   pauseControlledStream,
 }: Props) {
   return (
-    <div className="override-info-form">
+    <div className={s.form}>
       <label>
-        Name
+        {t.name}
         <input
           value={overrideForm.name}
           onChange={(e) =>
@@ -33,8 +35,8 @@ export function OverrideRequestForm({
           }
         />
       </label>
-      <label className="stream-toggle">
-        <span className="stream-toggle-row">
+      <label className={s.streamToggle}>
+        <span className={s.streamToggleRow}>
           <input
             type="checkbox"
             checked={overrideForm.enabled}
@@ -45,11 +47,11 @@ export function OverrideRequestForm({
               }))
             }
           />
-          <span>Enable this override rule</span>
+          <span>{t.enableRule}</span>
         </span>
       </label>
       <label>
-        Match method
+        {t.matchMethod}
         <input
           value={overrideForm.matchMethod}
           onChange={(e) =>
@@ -58,11 +60,11 @@ export function OverrideRequestForm({
               matchMethod: e.target.value,
             }))
           }
-          placeholder="GET"
+          placeholder={t.matchMethodPlaceholder}
         />
       </label>
       <label>
-        Host contains
+        {t.host}
         <input
           value={overrideForm.matchHost}
           onChange={(e) =>
@@ -73,8 +75,8 @@ export function OverrideRequestForm({
           }
         />
       </label>
-      <label className="wide">
-        Path regex
+      <label className={s.labelWide}>
+        {t.pathRegex}
         <input
           className="mono"
           value={overrideForm.matchPathRegex}
@@ -87,7 +89,7 @@ export function OverrideRequestForm({
         />
       </label>
       <label>
-        Status
+        {t.status}
         <input
           type="number"
           value={overrideForm.status}
@@ -99,8 +101,8 @@ export function OverrideRequestForm({
           }
         />
       </label>
-      <label className="wide">
-        Response headers (one <code>Name: value</code> per line)
+      <label className={s.labelWide}>
+        {t.responseHeaders} <code>{t.codeName}</code> {t.perLine}
         <textarea
           rows={4}
           className="mono"
@@ -114,8 +116,8 @@ export function OverrideRequestForm({
           }
         />
       </label>
-      <label className="stream-toggle">
-        <span className="stream-toggle-row">
+      <label className={s.streamToggle}>
+        <span className={s.streamToggleRow}>
           <input
             type="checkbox"
             checked={overrideForm.streamEnabled}
@@ -127,15 +129,14 @@ export function OverrideRequestForm({
             }
           />
           <span>
-            Stream body (double newline = chunk;{' '}
-            <code>text/event-stream</code> in headers)
+            {t.streamHint} <code>text/event-stream</code> {t.eventStream}
           </span>
         </span>
       </label>
       {selectedCanControlStream && selected && (
-        <div className="stream-preview-section">
+        <div className={s.streamPreviewSection}>
           <label>
-            Interval between chunks (ms)
+            {t.chunkInterval}
             <input
               type="number"
               min={0}
@@ -149,9 +150,9 @@ export function OverrideRequestForm({
               }
             />
           </label>
-          <div className="stream-preview-controls">
-            <span className="small muted">Stream controller</span>
-            <div className="stream-preview-btns">
+          <div className={s.streamPreviewControls}>
+            <span className="small muted">{t.streamController}</span>
+            <div className={s.streamPreviewBtns}>
               <button
                 type="button"
                 className="ghost"
@@ -161,7 +162,7 @@ export function OverrideRequestForm({
                   selected.streamPlaying === true
                 }
               >
-                Play
+                {t.play}
               </button>
               <button
                 type="button"
@@ -172,18 +173,20 @@ export function OverrideRequestForm({
                   selected.streamPlaying !== true
                 }
               >
-                Stop
+                {t.stop}
               </button>
             </div>
           </div>
-          <pre className="pre stream-preview-out mono tiny">
+          <pre
+            className={`pre ${s.streamPreviewOut} mono tiny`}
+          >
             {streamActionSaving[selected.id] === true
-              ? 'Updating stream controller...'
+              ? t.statusUpdating
               : selected.pending
-                ? 'Request is paused. Press Play to start streaming the override response.'
+                ? t.statusPausedDetail
                 : selected.streamPlaying
-                  ? 'Streaming. Press Stop to pause after the current chunk.'
-                  : 'Paused. Press Play to continue.'}
+                  ? t.statusStreaming
+                  : t.statusPaused}
           </pre>
         </div>
       )}

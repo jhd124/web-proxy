@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+
+# frontend
+
+## 技术栈
+* 包管理器: bun
+* UI: react
+* 打包: vite

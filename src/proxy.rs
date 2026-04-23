@@ -771,7 +771,6 @@ async fn forward_proxied_http(
                 response_body_preview: None,
                 duration_ms: None,
                 error: None,
-                mocked: None,
                 pending: Some(false),
                 breakpoint_name: None,
                 stream_controllable: None,
@@ -791,21 +790,6 @@ async fn forward_proxied_http(
             rule.body,
             rule.stream_interval_ms,
             stream_ctrl,
-        )
-        .await;
-    }
-
-    if let Some(rule) = matched_mock {
-        return respond_with_rule(
-            state,
-            entry_id,
-            peer,
-            &url,
-            rule.status,
-            rule.headers,
-            rule.body,
-            rule.stream_interval_ms,
-            None,
         )
         .await;
     }
@@ -836,7 +820,6 @@ async fn forward_proxied_http(
                     response_body_preview: None,
                     duration_ms: Some(started.elapsed().as_millis() as u64),
                     error: Some(e.to_string()),
-                    mocked: None,
                     pending: None,
                     breakpoint_name: None,
                     stream_controllable: None,
@@ -873,7 +856,6 @@ async fn forward_proxied_http(
                 response_body_preview: None,
                 duration_ms: None,
                 error: None,
-                mocked: Some(false),
                 pending: None,
                 breakpoint_name: None,
                 stream_controllable: None,
@@ -918,7 +900,6 @@ async fn forward_proxied_http(
                         response_body_preview: Some(preview),
                         duration_ms: None,
                         error: None,
-                        mocked: None,
                         pending: None,
                         breakpoint_name: None,
                         stream_controllable: None,
@@ -942,7 +923,6 @@ async fn forward_proxied_http(
                             response_body_preview: Some(preview),
                             duration_ms: None,
                             error: None,
-                            mocked: None,
                             pending: None,
                             breakpoint_name: None,
                             stream_controllable: None,
@@ -981,7 +961,6 @@ async fn forward_proxied_http(
                     response_body_preview: None,
                     duration_ms: Some(started.elapsed().as_millis() as u64),
                     error: Some(e.to_string()),
-                    mocked: None,
                     pending: None,
                     breakpoint_name: None,
                     stream_controllable: None,
@@ -1004,7 +983,6 @@ async fn forward_proxied_http(
             response_body_preview: preview,
             duration_ms: Some(started.elapsed().as_millis() as u64),
             error: None,
-            mocked: Some(false),
             pending: None,
             breakpoint_name: None,
             stream_controllable: None,

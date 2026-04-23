@@ -1,11 +1,12 @@
-import type { RefObject } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
-import type { OverrideFormState, OverrideRule } from '../types'
+import type { OverrideFormState, OverrideRule } from '../../../types'
+import { overrideEditorTexts } from '../texts'
+import type { SetOverrideForm } from '../types'
+import s from './OverrideFilesUI.module.css'
 
-type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
+const tf = overrideEditorTexts.files
 
 type Props = {
-  overrideFileInputRef: RefObject<HTMLInputElement | null>
+  overrideFileInputRef: React.RefObject<HTMLInputElement | null>
   overrideForm: OverrideFormState
   setOverrideForm: SetOverrideForm
   overrideEntries: OverrideRule[]
@@ -13,7 +14,9 @@ type Props = {
   openOverrideEditorForKey: (override: OverrideRule) => void
   onAddBreakpointClick: (override: OverrideRule) => void
   overrideBodyDrafts: Record<string, string>
-  setOverrideBodyDrafts: Dispatch<SetStateAction<Record<string, string>>>
+  setOverrideBodyDrafts: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >
   overrideBodySaving: Record<string, boolean>
   overrideToggleSaving: Record<string, boolean>
   setOverrideEnabled: (override: OverrideRule, enabled: boolean) => void
@@ -21,7 +24,7 @@ type Props = {
   deleteOverrideRule: (id: string) => Promise<void>
 }
 
-export function OverrideFilesPanel({
+export function OverrideFilesUI({
   overrideFileInputRef,
   overrideForm,
   setOverrideForm,
@@ -38,18 +41,15 @@ export function OverrideFilesPanel({
   deleteOverrideRule,
 }: Props) {
   return (
-    <div className="file-manager file-manager-embed">
+    <div className={`${s.fileManager} ${s.fileManagerEmbed}`}>
       <button
         type="button"
-        className="ghost new-override-btn"
+        className={`ghost ${s.newOverrideBtn}`}
         onClick={startNewOverride}
       >
-        New rule
+        {tf.newRule}
       </button>
-      <p className="small muted">
-        Body import/export applies to the <strong>rule you are editing</strong> in this
-        session (right pane), not a row below until you use Edit.
-      </p>
+      <p className="small muted">{tf.importHint}</p>
       <input
         ref={overrideFileInputRef}
         type="file"
@@ -68,13 +68,13 @@ export function OverrideFilesPanel({
           e.target.value = ''
         }}
       />
-      <div className="file-manager-actions">
+      <div className={s.fileManagerActions}>
         <button
           type="button"
           className="ghost"
           onClick={() => overrideFileInputRef.current?.click()}
         >
-          Import to body
+          {tf.importToBody}
         </button>
         <button
           type="button"
@@ -88,39 +88,42 @@ export function OverrideFilesPanel({
             URL.revokeObjectURL(a.href)
           }}
         >
-          Export body
+          {tf.exportBody}
         </button>
         <button
           type="button"
           className="ghost"
           onClick={() => setOverrideForm((f) => ({ ...f, body: '' }))}
         >
-          Clear body
+          {tf.clearBody}
         </button>
       </div>
-      <div className="file-manager-sep" aria-hidden="true" />
-      <p className="small muted file-manager-list-intro">
-        Rule list (SQLite, applied before mock rules). You can also add a rule from{' '}
-        <strong>Traffic → Override response</strong>, or <strong>New rule</strong> above,
-        then use <strong>Request</strong> to fill match and body.
+      <div className={s.fileManagerSep} aria-hidden="true" />
+      <p className={`small muted ${s.fileManagerListIntro}`}>
+        {tf.listIntroLead}{' '}
+        <strong>Traffic → Override response</strong>
+        {tf.listIntroOr} <strong>New rule</strong> {tf.listIntroAbove}{' '}
+        <strong>Request</strong> {tf.listIntroTail}
       </p>
       {overrideEntries.length === 0 ? (
         <p className="small muted" style={{ margin: '0.15rem 0' }}>
-          No rules yet. Use <strong>New rule</strong> or open one from captured traffic.
+          {tf.noRulesLead} <strong>{tf.newRule}</strong> {tf.noRulesTail}
         </p>
       ) : (
-        <ul className="mock-list override-embed-mock-list">
+        <ul className={s.embedMockList}>
           {overrideEntries.map((override) => (
             <li
               key={override.id}
-              className={`mock-card ${override.enabled ? '' : 'is-disabled'}`}
+              className={`${s.card} ${!override.enabled ? s.cardDisabled : ''}`}
             >
-              <div className="mock-head">
+              <div className={s.head}>
                 <strong>
                   {override.name}{' '}
-                  {!override.enabled && <span className="pill subtle">disabled</span>}
+                  {!override.enabled && (
+                    <span className="pill subtle">{tf.disabled}</span>
+                  )}
                 </strong>
-                <div className="override-actions">
+                <div className={s.actions}>
                   <button
                     type="button"
                     className="ghost"
@@ -128,30 +131,30 @@ export function OverrideFilesPanel({
                     onClick={() => void setOverrideEnabled(override, !override.enabled)}
                   >
                     {overrideToggleSaving[override.id]
-                      ? 'Saving…'
+                      ? tf.saving
                       : override.enabled
-                        ? 'Disable'
-                        : 'Enable'}
+                        ? tf.disable
+                        : tf.enable}
                   </button>
                   <button
                     type="button"
                     className="ghost"
                     onClick={() => openOverrideEditorForKey(override)}
                   >
-                    Edit
+                    {tf.edit}
                   </button>
                   <button
                     type="button"
                     className="ghost"
                     onClick={() => onAddBreakpointClick(override)}
                   >
-                    Add breakpoint
+                    {tf.addBreakpoint}
                   </button>
                   <button
                     type="button"
                     className="ghost danger"
                     onClick={() => {
-                      if (!window.confirm('Delete this override from SQLite?')) {
+                      if (!window.confirm(tf.deleteRuleConfirm)) {
                         return
                       }
                       void deleteOverrideRule(override.id).catch((e) => {
@@ -159,30 +162,29 @@ export function OverrideFilesPanel({
                       })
                     }}
                   >
-                    Delete rule
+                    {tf.deleteRule}
                   </button>
                 </div>
               </div>
-              <p className="small mono override-sig">
-                <span className="tag-sig">{override.matchMethod ?? '∗'}</span>{' '}
+              <p className={`small mono ${s.overrideSig}`}>
+                <span className={s.tagSig}>{override.matchMethod ?? '∗'}</span>{' '}
                 {override.matchHost ?? '∗'}
-                <span className="path-sig">{override.matchPathRegex ?? '∗'}</span>
+                <span className={s.pathSig}>{override.matchPathRegex ?? '∗'}</span>
               </p>
               <p className="tiny muted">
-                Override id: <code>{override.id}</code>
+                {tf.overrideId} <code>{override.id}</code>
               </p>
-              <p className="small mono">HTTP {override.status}</p>
+              <p className="small mono">{tf.httpStatus(override.status)}</p>
               {override.streamIntervalMs != null && (
                 <p className="tiny muted">
-                  Streamed: {override.streamIntervalMs} ms between chunks (body split on
-                  blank lines)
+                  {tf.streamed(override.streamIntervalMs)}
                 </p>
               )}
-              <label className="override-body-editor">
+              <label className={s.bodyEditor}>
                 <span className="tiny muted">
                   {override.streamIntervalMs != null
-                    ? 'Stream body content'
-                    : 'Response body content'}
+                    ? tf.streamBodyLabel
+                    : tf.responseBodyLabel}
                 </span>
                 <textarea
                   rows={Math.max(
@@ -204,14 +206,15 @@ export function OverrideFilesPanel({
                   }
                 />
               </label>
-              <div className="override-inline-actions">
+              <div className={s.inlineActions}>
                 <button
                   type="button"
                   className="ghost"
                   disabled={
                     overrideBodySaving[override.id] === true ||
                     overrideToggleSaving[override.id] === true ||
-                    (overrideBodyDrafts[override.id] ?? override.body) === override.body
+                    (overrideBodyDrafts[override.id] ?? override.body) ===
+                      override.body
                   }
                   onClick={() =>
                     setOverrideBodyDrafts((prev) => ({
@@ -220,18 +223,18 @@ export function OverrideFilesPanel({
                     }))
                   }
                 >
-                  Reset
+                  {tf.reset}
                 </button>
                 <button
                   type="button"
-                  className="primary inline-primary"
+                  className={`primary ${s.inlinePrimary}`}
                   disabled={
                     overrideBodySaving[override.id] === true ||
                     overrideToggleSaving[override.id] === true
                   }
                   onClick={() => void saveOverrideBody(override)}
                 >
-                  {overrideBodySaving[override.id] ? 'Saving…' : 'Save content'}
+                  {overrideBodySaving[override.id] ? tf.saving : tf.saveContent}
                 </button>
               </div>
             </li>

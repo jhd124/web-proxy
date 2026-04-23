@@ -1,8 +1,8 @@
 import Editor from '@monaco-editor/react'
-import type { Dispatch, SetStateAction } from 'react'
-import type { OverrideFormState } from '../types'
-
-type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
+import type { OverrideFormState } from '../../../types'
+import { overrideEditorTexts } from '../texts'
+import type { SetOverrideForm } from '../types'
+import s from './OverrideMonacoUI.module.css'
 
 type Props = {
   overrideEditingId: string | null
@@ -10,18 +10,18 @@ type Props = {
   setOverrideForm: SetOverrideForm
 }
 
-export function OverrideMonacoPane({
+const t = overrideEditorTexts.monaco
+
+export function OverrideMonacoUI({
   overrideEditingId,
   overrideForm,
   setOverrideForm,
 }: Props) {
   return (
-    <div className="override-main-col">
-      <div className="override-monaco-wrap">
-        <p className="override-main-hint small muted">
-          {overrideForm.streamEnabled
-            ? 'Stream: separate chunks with a blank line in the source.'
-            : 'Response body (override)'}
+    <div className={s.mainCol}>
+      <div className={s.monacoWrap}>
+        <p className={`${s.mainHint} small muted`}>
+          {overrideForm.streamEnabled ? t.stream : t.body}
         </p>
         <Editor
           key={String(overrideEditingId ?? 'new')}

@@ -1,25 +1,8 @@
-import type { Dispatch, SetStateAction } from 'react'
-import type { BreakpointRule } from '../types'
+import { breakpointTexts } from '../texts'
+import type { BreakpointsPanelUIProps } from '../types'
+import s from './BreakpointsPanelUI.module.css'
 
-type BreakpointForm = {
-  name: string
-  matchOrigin: string
-  matchPathRegex: string
-}
-
-type SetBreakpointForm = Dispatch<SetStateAction<BreakpointForm>>
-
-type Props = {
-  breakpointForm: BreakpointForm
-  setBreakpointForm: SetBreakpointForm
-  breakpointEntries: BreakpointRule[]
-  addBreakpoint: () => void
-  removeBreakpoint: (id: string) => Promise<void>
-  setBreakpointEnabled: (rule: BreakpointRule, enabled: boolean) => void
-  breakpointToggleSaving: Record<string, boolean>
-}
-
-export function BreakpointsPanel({
+export function BreakpointsPanelUI({
   breakpointForm,
   setBreakpointForm,
   breakpointEntries,
@@ -27,18 +10,15 @@ export function BreakpointsPanel({
   removeBreakpoint,
   setBreakpointEnabled,
   breakpointToggleSaving,
-}: Props) {
+}: BreakpointsPanelUIProps) {
+  const t = breakpointTexts
   return (
-    <div className="mocks">
-      <p className="muted intro">
-        Breakpoints pause matching HTTP requests before overrides, mocks, or upstream
-        fetches. When a request is pending, resume it from the request detail view or from
-        the Overrides response editor.
-      </p>
+    <div className={s.root}>
+      <p className={`muted ${s.intro}`}>{t.intro}</p>
 
-      <div className="mock-form">
+      <div className={s.form}>
         <label>
-          Name
+          {t.nameLabel}
           <input
             value={breakpointForm.name}
             onChange={(e) =>
@@ -46,11 +26,11 @@ export function BreakpointsPanel({
             }
           />
         </label>
-        <label className="wide">
-          Origin
+        <label className={s.wide}>
+          {t.originLabel}
           <input
             className="mono"
-            placeholder="https://example.com"
+            placeholder={t.originPlaceholder}
             value={breakpointForm.matchOrigin}
             onChange={(e) =>
               setBreakpointForm((f) => ({
@@ -60,11 +40,11 @@ export function BreakpointsPanel({
             }
           />
         </label>
-        <label className="wide">
-          Path regex
+        <label className={s.wide}>
+          {t.pathRegexLabel}
           <input
             className="mono"
-            placeholder="^/api/"
+            placeholder={t.pathPlaceholder}
             value={breakpointForm.matchPathRegex}
             onChange={(e) =>
               setBreakpointForm((f) => ({
@@ -74,26 +54,32 @@ export function BreakpointsPanel({
             }
           />
         </label>
-        <button type="button" className="primary" onClick={addBreakpoint}>
-          Add breakpoint
+        <button
+          type="button"
+          className={`primary ${s.addBtn}`}
+          onClick={addBreakpoint}
+        >
+          {t.add}
         </button>
       </div>
 
       {breakpointEntries.length === 0 ? (
-        <p className="muted">No breakpoints yet.</p>
+        <p className="muted">{t.noneYet}</p>
       ) : (
-        <ul className="mock-list">
+        <ul className={s.list}>
           {breakpointEntries.map((rule) => (
             <li
               key={rule.id}
-              className={`mock-card ${rule.enabled ? '' : 'is-disabled'}`}
+              className={`${s.card} ${rule.enabled ? '' : s.cardDisabled}`}
             >
-              <div className="mock-head">
+              <div className={s.head}>
                 <strong>
                   {rule.name}{' '}
-                  {!rule.enabled && <span className="pill subtle">disabled</span>}
+                  {!rule.enabled && (
+                    <span className="pill subtle">{t.disabledPill}</span>
+                  )}
                 </strong>
-                <div className="override-actions">
+                <div className={s.actions}>
                   <button
                     type="button"
                     className="ghost"
@@ -101,16 +87,16 @@ export function BreakpointsPanel({
                     onClick={() => void setBreakpointEnabled(rule, !rule.enabled)}
                   >
                     {breakpointToggleSaving[rule.id]
-                      ? 'Saving…'
+                      ? t.saving
                       : rule.enabled
-                        ? 'Disable'
-                        : 'Enable'}
+                        ? t.disable
+                        : t.enable}
                   </button>
                   <button
                     type="button"
                     className="ghost danger"
                     onClick={() => {
-                      if (!window.confirm('Delete this breakpoint rule?')) {
+                      if (!window.confirm(t.deleteConfirm)) {
                         return
                       }
                       void removeBreakpoint(rule.id).catch((e) => {
@@ -118,11 +104,11 @@ export function BreakpointsPanel({
                       })
                     }}
                   >
-                    Delete
+                    {t.delete}
                   </button>
                 </div>
               </div>
-              <p className="small mono">
+              <p className={`small mono ${s.ruleBody}`}>
                 {rule.matchOrigin ?? '∗'}
                 <br />
                 {rule.matchPathRegex ?? '∗'}

@@ -1,0 +1,48 @@
+---
+globs: "*.ts,*.tsx"
+alwaysApply: true
+---
+
+# React 开发规范
+
+## 基本原则
+- 使用函数组件和 TypeScript 接口
+- 声明式 JSX，函数式编程风格
+- 用 `Suspense` 包裹客户端组件并提供 fallback
+
+## 组件设计模式：职责分离
+
+### 开发组件的时候，采用UX + hooks + portal：
+* UI里没有业务逻辑，只有交互
+* hooks里承载业务逻辑
+* portal将UI 和 hooks组合成业务组件
+* 组件中的文案放在一个文件里,已键值对方式存放，单独管理
+
+### 组件目录结构
+SomeComponent
+|- ui
+|   |- SomeUI.tsx
+|   |- SomeUI.module.css
+|- hooks
+|   |- some-hook.ts
+|- portal.ts
+|- texts.ts
+
+## 自定义 Hook 规范
+
+1. Hook 必须以 `use` 开头
+2. 只在函数组件或自定义 Hook 顶层调用 Hook
+3. 不在循环、条件或嵌套函数中调用 Hook
+4. 依赖数组必须完整正确
+
+---
+
+## 强制行为 ✅
+1. 业务逻辑必须提取到自定义 Hook
+2. 所有 Props 和 State 必须有 TypeScript 类型
+3. 必须处理 loading、error、空状态
+4. 组件文件 < 300 行
+5. 优先 Server Components
+6. `useEffect` 依赖数组必须正确
+7. 所有 Hook 调用置于组件顶层，任何 `return` / 条件判断之前
+

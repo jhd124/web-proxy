@@ -2,7 +2,7 @@
 name = "proxy-app"
 version = "0.1.0"
 edition = "2021"
-description = "HTTP/HTTPS proxy with a web dashboard and mock responses"
+description = "HTTP/HTTPS proxy with a web dashboard, overrides, and breakpoints"
 
 [dependencies]
 anyhow = "1"

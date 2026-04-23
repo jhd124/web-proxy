@@ -1,0 +1,50 @@
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabOn {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tabLaunch {
+  appearance: none;
+  border: 1px solid #34d39944;
+  background: var(--panel);
+  color: var(--accent);
+  padding: 0.5rem 0.85rem;
+  margin: 0.4rem 0.25rem 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  align-self: center;
+}
+
+.tabLaunch:hover {
+  border-color: var(--accent);
+  background: #1a2620;
+}
+
+.tabCount {
+  margin-left: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 600;
+}
