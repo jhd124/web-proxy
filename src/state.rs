@@ -9,53 +9,6 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MockRule {
-    pub id: Uuid,
-    pub name: String,
-    pub enabled: bool,
-    /// If set, must match HTTP method (GET, POST, …)
-    pub match_method: Option<String>,
-    /// Substring match on host (from URI authority or Host header)
-    pub match_host: Option<String>,
-    /// Regex on path (leading `/` path only, or full path)
-    pub match_path_regex: Option<String>,
-    pub status: u16,
-    pub headers: Vec<(String, String)>,
-    pub body: String,
-    /// When set, the mock body is split on blank lines (double newlines) and sent as a
-    /// streaming response with this delay between chunks (milliseconds).
-    #[serde(default)]
-    pub stream_interval_ms: Option<u64>,
-}
-
-impl MockRule {
-    pub fn matches(&self, method: &str, host: &str, path: &str) -> bool {
-        if !self.enabled {
-            return false;
-        }
-        if let Some(ref m) = self.match_method {
-            if !m.eq_ignore_ascii_case(method) {
-                return false;
-            }
-        }
-        if let Some(ref h) = self.match_host {
-            if !host.to_lowercase().contains(&h.to_lowercase()) {
-                return false;
-            }
-        }
-        if let Some(ref pattern) = self.match_path_regex {
-            if let Ok(re) = regex::Regex::new(pattern) {
-                if !re.is_match(path) {
-                    return false;
-                }
-            }
-        }
-        true
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OverrideRule {
     pub id: Uuid,
     pub name: String,
@@ -135,8 +88,6 @@ pub enum DashboardMessage {
     Snapshot { requests: Vec<TrafficEntry> },
     #[serde(rename = "traffic")]
     Traffic { entry: TrafficEntry },
-    #[serde(rename = "mock_updated")]
-    MockUpdated,
     #[serde(rename = "overrides_updated")]
     OverridesUpdated,
     #[serde(rename = "breakpoints_updated")]
@@ -163,7 +114,6 @@ pub struct TrafficEntry {
     pub response_body_preview: Option<String>,
     pub duration_ms: Option<u64>,
     pub error: Option<String>,
-    pub mocked: bool,
     #[serde(default)]
     pub pending: bool,
     pub breakpoint_name: Option<String>,
@@ -182,7 +132,6 @@ pub enum TrafficKind {
 pub struct AppState {
     pub tx: broadcast::Sender<DashboardMessage>,
     pub traffic: Arc<RwLock<Vec<TrafficEntry>>>,
-    pub mocks: Arc<RwLock<Vec<MockRule>>>,
     pub overrides: Arc<RwLock<Vec<OverrideRule>>>,
     pub breakpoints: Arc<RwLock<Vec<BreakpointRule>>>,
     pub pending_requests: Arc<Mutex<HashMap<Uuid, oneshot::Sender<()>>>>,
@@ -211,7 +160,6 @@ impl AppState {
         Self {
             tx,
             traffic: Arc::new(RwLock::new(Vec::new())),
-            mocks: Arc::new(RwLock::new(Vec::new())),
             overrides: Arc::new(RwLock::new(overrides)),
             breakpoints: Arc::new(RwLock::new(breakpoints)),
             pending_requests: Arc::new(Mutex::new(HashMap::new())),
@@ -254,9 +202,6 @@ impl AppState {
             if let Some(err) = update.error {
                 e.error = Some(err);
             }
-            if let Some(m) = update.mocked {
-                e.mocked = m;
-            }
             if let Some(p) = update.pending {
                 e.pending = p;
             }
@@ -273,10 +218,6 @@ impl AppState {
             drop(log);
             let _ = self.tx.send(DashboardMessage::Traffic { entry });
         }
-    }
-
-    pub fn notify_mocks_changed(&self) {
-        let _ = self.tx.send(DashboardMessage::MockUpdated);
     }
 
     pub fn notify_overrides_changed(&self) {
@@ -330,7 +271,6 @@ impl AppState {
                     response_body_preview: None,
                     duration_ms: None,
                     error: None,
-                    mocked: None,
                     pending: None,
                     breakpoint_name: None,
                     stream_controllable: None,
@@ -358,7 +298,6 @@ pub struct TrafficUpdate {
     pub response_body_preview: Option<String>,
     pub duration_ms: Option<u64>,
     pub error: Option<String>,
-    pub mocked: Option<bool>,
     pub pending: Option<bool>,
     pub breakpoint_name: Option<String>,
     pub stream_controllable: Option<bool>,

@@ -172,7 +172,7 @@ where
 
 /// Split on blank lines (`\n\n`). Empty segments are kept so an “empty line” between
 /// delimiters is yielded as its own chunk (e.g. `a\n\n\n\nb` → `a`, ``, `b`).
-fn split_mock_body_by_empty_lines(s: &str) -> Vec<String> {
+fn split_rule_body_by_empty_lines(s: &str) -> Vec<String> {
     s.split("\n\n").map(|p| p.to_string()).collect()
 }
 
@@ -239,19 +239,6 @@ fn parse_origin(url: &str) -> String {
     } else {
         String::new()
     }
-}
-
-fn find_mock(
-    state: &AppState,
-    method: &str,
-    host: &str,
-    path: &str,
-) -> Option<crate::state::MockRule> {
-    let rules = state.mocks.read();
-    rules
-        .iter()
-        .find(|r| r.matches(method, host, path))
-        .cloned()
 }
 
 fn find_override(
@@ -354,7 +341,6 @@ async fn handle_connect(
         response_body_preview: None,
         duration_ms: None,
         error: None,
-        mocked: false,
         pending: false,
         breakpoint_name: None,
         stream_controllable: false,
@@ -374,7 +360,6 @@ async fn handle_connect(
                     response_body_preview: None,
                     duration_ms: Some(started.elapsed().as_millis() as u64),
                     error: Some(format!("connect {}: {}", addr, e)),
-                    mocked: None,
                     pending: None,
                     breakpoint_name: None,
                     stream_controllable: None,
@@ -408,7 +393,6 @@ async fn handle_connect(
             response_body_preview: None,
             duration_ms: Some(started.elapsed().as_millis() as u64),
             error: None,
-            mocked: None,
             pending: None,
             breakpoint_name: None,
             stream_controllable: None,
@@ -564,7 +548,7 @@ async fn respond_with_rule(
     }
 
     if let Some(interval_ms) = stream_interval_ms {
-        let chunks = split_mock_body_by_empty_lines(&body);
+        let chunks = split_rule_body_by_empty_lines(&body);
         let body_bytes = Bytes::copy_from_slice(body.as_bytes());
         let preview = preview_bytes(&body_bytes);
         state.update_traffic(
@@ -575,7 +559,6 @@ async fn respond_with_rule(
                 response_body_preview: preview,
                 duration_ms: None,
                 error: None,
-                mocked: Some(true),
                 pending: None,
                 breakpoint_name: None,
                 stream_controllable: None,
@@ -609,7 +592,6 @@ async fn respond_with_rule(
                     response_body_preview: None,
                     duration_ms: None,
                     error: None,
-                    mocked: None,
                     pending: None,
                     breakpoint_name: None,
                     stream_controllable: Some(false),
@@ -618,7 +600,7 @@ async fn respond_with_rule(
             );
         });
         let resp = res.body(Either::Right(StreamBody::new(stream))).unwrap();
-        tracing::info!(?peer, "mocked {}", url);
+        tracing::info!(?peer, "local response {}", url);
         return Ok(resp);
     }
 
@@ -638,14 +620,13 @@ async fn respond_with_rule(
             response_body_preview: preview,
             duration_ms: Some(started.elapsed().as_millis() as u64),
             error: None,
-            mocked: Some(true),
             pending: None,
             breakpoint_name: None,
             stream_controllable: None,
             stream_playing: None,
         },
     );
-    tracing::info!(?peer, "mocked {}", url);
+    tracing::info!(?peer, "local response {}", url);
     Ok(resp)
 }
 
@@ -722,11 +703,6 @@ async fn forward_proxied_http(
     let req_body_preview = preview_bytes(&collected);
     let req_headers = reqwest_headers_for_upstream(request_headers);
     let matched_override = find_override(&state, method.as_str(), &host, &path);
-    let matched_mock = if matched_override.is_none() {
-        find_mock(&state, method.as_str(), &host, &path)
-    } else {
-        None
-    };
 
     let entry_id = Uuid::new_v4();
     let entry = TrafficEntry {
@@ -754,7 +730,6 @@ async fn forward_proxied_http(
         response_body_preview: None,
         duration_ms: None,
         error: None,
-        mocked: false,
         pending: false,
         breakpoint_name: None,
         stream_controllable: false,
@@ -779,7 +754,6 @@ async fn forward_proxied_http(
                 response_body_preview: None,
                 duration_ms: None,
                 error: None,
-                mocked: None,
                 pending: Some(true),
                 breakpoint_name: Some(rule.name),
                 stream_controllable: Some(has_controlled_stream),

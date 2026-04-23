@@ -1,7 +1,6 @@
 mod api;
 mod breakpoints;
 mod mitm;
-mod mocks;
 mod overrides;
 mod proxy;
 mod state;
