@@ -157,6 +157,26 @@ body {
   font-weight: 600;
 }
 
+button.tab-launch {
+  appearance: none;
+  border: none;
+  background: var(--panel);
+  color: var(--accent);
+  padding: 0.5rem 0.85rem;
+  margin: 0.4rem 0.25rem 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #34d39944;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  align-self: center;
+}
+
+button.tab-launch:hover {
+  border-color: var(--accent);
+  background: #1a2620;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
@@ -750,6 +770,226 @@ body {
   margin: 0;
   max-height: 12rem;
   min-height: 3rem;
+}
+
+/* Full-screen override editor */
+.override-fs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  animation: drawer-fade 0.12s ease-out;
+}
+
+.override-fs {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
+}
+
+.override-fs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.override-fs-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.override-fs-err {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: rgba(248, 113, 113, 0.08);
+  border-bottom: 1px solid #f8717155;
+}
+
+.override-fs-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.override-tool-col {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 320px);
+  min-width: 220px;
+  border-right: 1px solid var(--border);
+  background: #12151c;
+  min-height: 0;
+}
+
+.override-tool-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.override-tool-tabs button {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.55rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.override-tool-tabs button.on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.override-tool-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.65rem 0.75rem 1rem;
+}
+
+.file-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.file-manager-embed {
+  gap: 0.5rem;
+}
+
+button.new-override-btn {
+  width: 100%;
+  justify-content: center;
+  font-weight: 600;
+  border-color: #34d39944;
+  color: var(--accent);
+}
+
+.file-manager-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0 0.35rem;
+}
+
+.file-manager-list-intro {
+  line-height: 1.45;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.override-embed-mock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.override-embed-mock-list .mock-card {
+  padding: 0.55rem 0.6rem;
+}
+
+.override-embed-mock-list .mock-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.override-embed-mock-list .override-actions {
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.file-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.override-info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.override-info-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.override-info-form input,
+.override-info-form textarea {
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0f1218;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.override-info-form .stream-toggle {
+  font-size: 0.8rem;
+}
+
+.override-main-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #0b0d12;
+}
+
+.override-main-hint {
+  margin: 0;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.override-monaco-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-actions.override-fs-foot {
+  position: static;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
 }
 
 @media (max-width: 800px) {

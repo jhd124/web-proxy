@@ -1,0 +1,92 @@
+---
+alwaysApply: true
+---
+
+# Code Style and Structure
+
+## 基本原则
+
+- 使用简体中文编写代码注释
+- 使用函数式和声明式编程，避免使用类
+- 优先使用迭代和模块化，避免代码重复（DRY）
+- 使用描述性的变量名，带辅助动词（如 isLoading, hasError）
+- 文件结构：静态内容 → 类型定义 → 导出组件 → 子组件 → 辅助函数
+
+## 命名规范
+
+### 文件命名
+
+- **组件文件**: PascalCase（`UserProfile.tsx`, `ChatMessage.tsx`）
+- **非组件文件**: camelCase（`userService.ts`, `formatDate.ts`）
+- **类型文件**: `*.types.ts`
+- **样式文件**: 使用 CSS Modules（`Component.module.css`）
+
+### 变量命名
+
+- **普通变量**: camelCase（`userName`, `totalCount`）
+- **布尔值**: 使用 is/has/can/should 前缀（`isActive`, `hasPermission`）
+- **常量**: UPPER_SNAKE_CASE（`MAX_RETRY_COUNT`, `API_BASE_URL`）
+- **数组/集合**: 使用复数（`users`, `items`, `messages`）
+
+### 函数命名
+
+- **普通函数**: camelCase，动词开头（`getUserById`, `calculateTotal`）
+- **事件处理**: handle + 动词（`handleClick`, `handleSubmit`）
+- **布尔函数**: is/has/can 开头（`isValid`, `hasAccess`）
+
+### 组件命名
+
+- **组件**: PascalCase（`UserProfile`, `ChatList`）
+- **无状态（纯函数）组件**: PascalCase + `UI`（`UserProfileUI`, `ChatListUI`）
+- **Props 接口**: 组件名 + Props（`UserProfileProps`）
+- **Hooks**: use + PascalCase（`useUserData`, `useDebounce`）
+
+## 代码质量
+
+### 文件大小限制
+
+- 单个组件文件：< 300 行
+- 单个工具文件：< 200 行
+- 单个 Hook 文件：< 150 行
+- 单个函数：< 100 行
+- 超过限制时必须拆分
+
+### 函数设计
+
+- 单一职责：一个函数只做一件事
+- 参数限制：超过 3 个参数时使用对象参数
+- 避免深层嵌套：使用提前返回（early return）
+- 使用纯函数：便于测试和维护
+
+### 目录结构
+
+```
+biz/
+├── chat/                 # 按功能模块组织
+│   ├── components/      # 模块组件
+│   ├── hooks/           # 模块 Hooks
+│   ├── services/        # 模块 API
+│   ├── types/           # 模块类型
+│   └── utils/           # 模块工具
+shared/
+├── components/          # 共享组件
+├── hooks/               # 共享 Hooks
+├── utils/               # 工具函数
+└── types/               # 类型定义
+```
+
+## 强制行为 ✅
+
+2. 必须遵循文件命名规范
+3. 必须按标准顺序导入
+4. 必须遵守文件大小限制
+5. 必须使用有意义的命名
+
+## 禁止行为 ❌
+
+1. 禁止使用不清晰的缩写
+2. 禁止使用单字母变量（除循环索引）
+3. 禁止使用 data/info/thing 等模糊名称
+4. 禁止混用不同命名风格
+5. 禁止保留无用代码和未使用的导入
+6. 禁止在组件 index 中再导出同目录 utils/types 等，使 index 成为 barrel 入口

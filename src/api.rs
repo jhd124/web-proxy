@@ -69,11 +69,11 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
     let proxy_port = std::env::var("PROXY_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(8080);
+        .unwrap_or(9090);
     let dashboard_port = std::env::var("DASHBOARD_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(3001);
+        .unwrap_or(9091);
     Json(Health {
         ok: true,
         proxy_port,
@@ -146,7 +146,7 @@ async fn self_test() -> Json<serde_json::Value> {
     let proxy_port: u16 = std::env::var("PROXY_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(8080);
+        .unwrap_or(9090);
     let proxy_url = format!("http://127.0.0.1:{}", proxy_port);
 
     let proxy = match reqwest::Proxy::http(&proxy_url) {

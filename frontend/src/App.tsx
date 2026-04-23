@@ -1,66 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { BreakpointsPanel } from './components/BreakpointsPanel'
+import { DashboardHeader } from './components/DashboardHeader'
+import { DashboardNav } from './components/DashboardNav'
+import { MitmBanner } from './components/MitmBanner'
+import { MockRulesPanel } from './components/MockRulesPanel'
+import { OverrideEditorOverlay } from './components/OverrideEditorOverlay'
+import { TrafficPanel } from './components/TrafficPanel'
+import {
+  breakpointMatches,
+  escapeRegex,
+  getDefaultOverrideForm,
+  headersToText,
+  inferOriginFromHostHint,
+  parseHeadersText,
+  urlOrigin,
+  wsUrl,
+} from './lib/dashboardUtils'
 import type {
   BreakpointRule,
   MockRule,
+  OverrideFormState,
   OverrideRule,
   TrafficEntry,
   WsMessage,
 } from './types'
-
-const wsUrl = () => {
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${window.location.host}/ws`
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function headersToText(headers: [string, string][] | null | undefined): string {
-  if (!headers?.length) return ''
-  return headers.map(([k, v]) => `${k}: ${v}`).join('\n')
-}
-
-function parseHeadersText(text: string): [string, string][] {
-  const out: [string, string][] = []
-  for (const line of text.split('\n')) {
-    const t = line.trim()
-    if (!t) continue
-    const i = t.indexOf(':')
-    if (i <= 0) continue
-    out.push([t.slice(0, i).trim(), t.slice(i + 1).trim()])
-  }
-  return out
-}
-
-function urlOrigin(u: string): string {
-  try {
-    return new URL(u).origin
-  } catch {
-    return ''
-  }
-}
-
-function inferOriginFromHostHint(hostHint: string | null | undefined): string {
-  const value = (hostHint ?? '').trim()
-  if (!value) return ''
-  if (value.startsWith('http://') || value.startsWith('https://')) return value
-  return ''
-}
-
-function breakpointMatches(rule: BreakpointRule, entry: TrafficEntry): boolean {
-  const origin = urlOrigin(entry.url)
-  if (rule.matchOrigin && rule.matchOrigin.toLowerCase() !== origin.toLowerCase()) {
-    return false
-  }
-  if (!rule.matchPathRegex) return true
-  try {
-    return new RegExp(rule.matchPathRegex).test(entry.path)
-  } catch {
-    return false
-  }
-}
 
 function App() {
   const [entries, setEntries] = useState<TrafficEntry[]>([])
@@ -68,9 +32,12 @@ function App() {
   const [wsStatus, setWsStatus] = useState<'connecting' | 'open' | 'closed'>(
     'connecting',
   )
-  const [tab, setTab] = useState<'traffic' | 'mocks' | 'overrides' | 'breakpoints'>(
-    'traffic',
-  )
+  const [tab, setTab] = useState<'traffic' | 'mocks' | 'breakpoints'>('traffic')
+  const [overridesPanel, setOverridesPanel] = useState<
+    { state: 'closed' } | { state: 'edit'; source: 'nav' | 'traffic' }
+  >({ state: 'closed' })
+  const [overrideLeftTool, setOverrideLeftTool] = useState<'files' | 'info'>('info')
+  const overrideFileInputRef = useRef<HTMLInputElement | null>(null)
   const [testError, setTestError] = useState<string | null>(null)
   const [mitmEnabled, setMitmEnabled] = useState(false)
   const [urlFilter, setUrlFilter] = useState('')
@@ -107,24 +74,12 @@ function App() {
     matchPathRegex: '^/api/',
   })
 
-  const [overrideOpen, setOverrideOpen] = useState(false)
   const [overrideError, setOverrideError] = useState<string | null>(null)
   const [overrideEditingId, setOverrideEditingId] = useState<string | null>(null)
   const [streamActionSaving, setStreamActionSaving] = useState<
     Record<string, boolean>
   >({})
-  const [overrideForm, setOverrideForm] = useState({
-    name: '',
-    enabled: true,
-    status: 200,
-    body: '',
-    headersText: '',
-    matchMethod: '',
-    matchHost: '',
-    matchPathRegex: '',
-    streamEnabled: false,
-    streamIntervalMs: 500,
-  })
+  const [overrideForm, setOverrideForm] = useState<OverrideFormState>(getDefaultOverrideForm)
 
   const refreshMocks = useCallback(async () => {
     const r = await fetch('/api/mocks')
@@ -547,12 +502,28 @@ function App() {
         streamIntervalMs: 500,
       })
     }
-    setOverrideOpen(true)
+    setOverrideLeftTool('info')
+    setOverridesPanel({ state: 'edit', source: 'traffic' })
   }, [selected, overrides])
 
-  const closeOverrideDrawer = useCallback(() => {
-    setOverrideOpen(false)
+  const openOverridesFromNav = useCallback(() => {
     setOverrideError(null)
+    setOverrideForm(getDefaultOverrideForm())
+    setOverrideEditingId(null)
+    setOverrideLeftTool('files')
+    setOverridesPanel({ state: 'edit', source: 'nav' })
+  }, [])
+
+  const startNewOverride = useCallback(() => {
+    setOverrideError(null)
+    setOverrideForm(getDefaultOverrideForm())
+    setOverrideEditingId(null)
+    setOverrideLeftTool('info')
+  }, [])
+
+  const closeOverrideDrawer = useCallback(() => {
+    setOverrideError(null)
+    setOverridesPanel({ state: 'closed' })
   }, [])
 
   const openOverrideEditorForKey = useCallback(
@@ -571,7 +542,7 @@ function App() {
         streamEnabled: override.streamIntervalMs != null,
         streamIntervalMs: override.streamIntervalMs ?? 500,
       })
-      setOverrideOpen(true)
+      setOverrideLeftTool('info')
     },
     [],
   )
@@ -682,928 +653,143 @@ function App() {
         setOverrideEditingId(rule.id)
       }
       await refreshOverrides()
-      setOverrideOpen(false)
+      setOverridesPanel((p) => {
+        if (p.state === 'edit' && p.source === 'nav') {
+          return { state: 'edit', source: 'nav' }
+        }
+        return { state: 'closed' }
+      })
     } catch (e) {
       setOverrideError(String(e))
     }
   }, [overrideEditingId, overrideForm, refreshOverrides])
 
   useEffect(() => {
-    if (!overrideOpen) return
+    if (overridesPanel.state === 'closed') return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeOverrideDrawer()
+      if (e.key !== 'Escape') return
+      if (overridesPanel.state === 'edit') {
+        closeOverrideDrawer()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [overrideOpen, closeOverrideDrawer])
+  }, [overridesPanel, closeOverrideDrawer])
+
+  const onAddBreakpointForListOverride = useCallback(
+    (override: OverrideRule) => {
+      void addBreakpointFromOverride(
+        override,
+        selectedMatchingOverride?.id === override.id && selected
+          ? urlOrigin(selected.url)
+          : undefined,
+      )
+    },
+    [addBreakpointFromOverride, selected, selectedMatchingOverride],
+  )
+
+  const onOverridesNavClick = useCallback(() => {
+    setOverrideError(null)
+    if (overridesPanel.state === 'edit' && overridesPanel.source === 'nav') {
+      setOverrideLeftTool('files')
+      return
+    }
+    openOverridesFromNav()
+  }, [overridesPanel, openOverridesFromNav])
 
   return (
     <div className="app">
-      <header className="top">
-        <div className="brand">
-          <span className="dot" />
-          <h1>Proxy dashboard</h1>
-        </div>
-        <div className="meta">
-          <span
-            className={`pill ${wsStatus === 'open' ? 'ok' : wsStatus === 'connecting' ? 'warn' : 'bad'}`}
-          >
-            WS {wsStatus}
-          </span>
-          <span className="pill subtle">
-            {urlFilterTrimmed
-              ? `${filteredEntries.length} / ${entries.length} shown`
-              : `${entries.length} captured`}
-          </span>
-          <code className="hint">
-            export HTTP_PROXY=http://127.0.0.1:8080 HTTPS_PROXY=http://127.0.0.1:8080
-          </code>
-        </div>
-      </header>
+      <DashboardHeader
+        wsStatus={wsStatus}
+        urlFilterTrimmed={urlFilterTrimmed}
+        filteredCount={filteredEntries.length}
+        totalCount={entries.length}
+      />
 
-      {mitmEnabled && (
-        <div className="mitm-banner">
-          <strong>HTTPS decryption (MITM) is on.</strong> Install the local CA so browsers
-          trust proxied TLS: open{' '}
-          <a href="/api/mitm/ca.pem" download="proxy-mitm-ca.pem">
-            /api/mitm/ca.pem
-          </a>{' '}
-          and add it to your system keychain (macOS: Keychain Access → import → always trust).
-          Then restart the browser. Without the CA, HTTPS sites will show certificate errors.
-        </div>
-      )}
+      {mitmEnabled && <MitmBanner />}
 
-      <nav className="tabs">
-        <button
-          type="button"
-          className={tab === 'traffic' ? 'on' : ''}
-          onClick={() => setTab('traffic')}
-        >
-          Traffic
-        </button>
-        <button
-          type="button"
-          className={tab === 'mocks' ? 'on' : ''}
-          onClick={() => setTab('mocks')}
-        >
-          Mock rules
-        </button>
-        <button
-          type="button"
-          className={tab === 'overrides' ? 'on' : ''}
-          onClick={() => setTab('overrides')}
-        >
-          Overrides
-          {overrideEntries.length > 0 && (
-            <span className="tab-count">{overrideEntries.length}</span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={tab === 'breakpoints' ? 'on' : ''}
-          onClick={() => setTab('breakpoints')}
-        >
-          Breakpoints
-          {breakpointEntries.length > 0 && (
-            <span className="tab-count">{breakpointEntries.length}</span>
-          )}
-        </button>
-      </nav>
+      <DashboardNav
+        tab={tab}
+        setTab={setTab}
+        overrideCount={overrideEntries.length}
+        breakpointCount={breakpointEntries.length}
+        onOverridesClick={onOverridesNavClick}
+      />
 
       {tab === 'traffic' && (
-        <div className="grid">
-          <aside className="list-panel">
-            <div className="list-tools">
-              <button type="button" className="primary" onClick={sendTestProxy}>
-                Test proxy
-              </button>
-              <button type="button" className="ghost" onClick={clearTraffic}>
-                Clear
-              </button>
-              <label className="list-filter">
-                <span className="sr-only">Filter by URL substring</span>
-                <input
-                  type="search"
-                  value={urlFilter}
-                  onChange={(e) => setUrlFilter(e.target.value)}
-                  placeholder="Filter URL…"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </label>
-            </div>
-            {testError && (
-              <p className="small err" style={{ margin: '0 0 8px 0' }}>
-                {testError}
-              </p>
-            )}
-            <ul className="req-list">
-              {[...filteredEntries].reverse().map((e) => {
-                const schemeLabel =
-                  e.kind === 'connect' ? 'HTTPS' : e.scheme.toUpperCase()
-                const summary =
-                  e.kind === 'connect' ? `${e.url} (TLS tunnel)` : e.url
-                return (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      className={selectedId === e.id ? 'row active' : 'row'}
-                      onClick={() => setSelectedId(e.id)}
-                    >
-                      <span className="scheme">{schemeLabel}</span>
-                      <span className="m">{e.method}</span>
-                      <span className="u" title={summary}>
-                        {summary}
-                      </span>
-                      {e.pending && <span className="tag warn">pending</span>}
-                      {e.mocked && <span className="tag">mock</span>}
-                      {e.responseStatus != null && (
-                        <span className="s">{e.responseStatus}</span>
-                      )}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </aside>
-
-          <main className="detail">
-            {selected ? (
-              <>
-                <section className="block">
-                  <h2>Request</h2>
-                  <p className="mono small">
-                    {selected.method} {selected.url}
-                  </p>
-                  <p className="small muted">
-                    client {selected.peer ?? '—'} · {selected.kind} ·{' '}
-                    {selected.scheme} ·{' '}
-                    {selected.durationMs != null ? `${selected.durationMs} ms` : '…'}
-                  </p>
-                  {selected.pending && (
-                    <p className="small warn-text">
-                      Pending at breakpoint
-                      {selected.breakpointName ? `: ${selected.breakpointName}` : ''}. The
-                      client is waiting for you to resume this request.
-                    </p>
-                  )}
-                  {selected.kind === 'connect' && (
-                    <p className="small muted">
-                      HTTPS uses a CONNECT tunnel; paths and bodies inside TLS are not
-                      visible to the proxy.
-                    </p>
-                  )}
-                  <pre className="pre">
-                    {selected.requestHeaders.map(([k, v]) => `${k}: ${v}\n`).join('')}
-                  </pre>
-                  {selected.requestBodyPreview && (
-                    <>
-                      <h3>Body</h3>
-                      <pre className="pre">{selected.requestBodyPreview}</pre>
-                    </>
-                  )}
-                </section>
-                <section className="block">
-                  <div className="block-head">
-                    <h2>Response</h2>
-                    <div className="detail-actions">
-                      {selected.kind === 'http' && (
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => void addBreakpointFromSelected()}
-                        >
-                          Add breakpoint
-                        </button>
-                      )}
-                      {selected.pending && !selected.streamControllable && (
-                        <button
-                          type="button"
-                          className="primary inline-primary"
-                          disabled={resumeSaving[selected.id] === true}
-                          onClick={() => void resumeRequest(selected.id)}
-                        >
-                          {resumeSaving[selected.id] ? 'Resuming…' : 'Resume'}
-                        </button>
-                      )}
-                      {selected.kind === 'http' && (
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={openOverrideDrawer}
-                        >
-                          Override response
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {selected.pending && !selected.responseStatus && !selected.error && (
-                    <p className="small muted">
-                      No response yet because this request is paused before override or upstream
-                      handling.
-                    </p>
-                  )}
-                  {selected.error && (
-                    <p className="err">{selected.error}</p>
-                  )}
-                  {selected.responseStatus != null && (
-                    <p className="mono">HTTP {selected.responseStatus}</p>
-                  )}
-                  {selected.responseHeaders && (
-                    <pre className="pre">
-                      {selected.responseHeaders.map(([k, v]) => `${k}: ${v}\n`).join('')}
-                    </pre>
-                  )}
-                  {selectedIsEventStream && !selected.responseBodyPreview && (
-                    <p className="small muted" style={{ marginTop: '8px' }}>
-                      Streaming response — body fills in as chunks arrive (retained up to ~64
-                      MB for the dashboard).
-                    </p>
-                  )}
-                  {selected.responseBodyPreview && (
-                    <>
-                      <h3>Body</h3>
-                      {selectedIsEventStream && (
-                        <p className="small muted">
-                          Full streamed body retained for this view (up to ~64 MB). Updates
-                          while the connection stays open; the last chunk is shown when the
-                          stream ends.
-                        </p>
-                      )}
-                      <pre className="pre pre-body">{selected.responseBodyPreview}</pre>
-                    </>
-                  )}
-                </section>
-              </>
-            ) : (
-              <div className="muted">
-                <p>
-                  This list shows <strong>every HTTP request</strong> and{' '}
-                  <strong>every HTTPS CONNECT tunnel</strong> that clients send through
-                  this proxy. Only traffic routed via{' '}
-                  <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code> or a system proxy
-                  appears here — not other programs on the machine.
-                </p>
-                <p>
-                  Select a row, use <strong>Test proxy</strong>, or point a client at
-                  the proxy (browsers need OS proxy settings or an extension; shell{' '}
-                  <code>export</code> alone does not affect them).
-                </p>
-              </div>
-            )}
-          </main>
-        </div>
+        <TrafficPanel
+          urlFilter={urlFilter}
+          setUrlFilter={setUrlFilter}
+          testError={testError}
+          sendTestProxy={sendTestProxy}
+          clearTraffic={clearTraffic}
+          filteredEntries={filteredEntries}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
+          selected={selected}
+          selectedIsEventStream={selectedIsEventStream}
+          openOverrideDrawer={openOverrideDrawer}
+          addBreakpointFromSelected={addBreakpointFromSelected}
+          resumeRequest={resumeRequest}
+          resumeSaving={resumeSaving}
+        />
       )}
 
-      {overrideOpen && (
-        <div
-          className="drawer-backdrop"
-          role="presentation"
-          onClick={closeOverrideDrawer}
-        >
-          <div
-            className="drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="override-drawer-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="drawer-head">
-              <h2 id="override-drawer-title">Override response</h2>
-              <button
-                type="button"
-                className="ghost drawer-close"
-                onClick={closeOverrideDrawer}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <p className="small muted drawer-intro">
-              Future requests that match the rule below receive this response
-              instead of the upstream (plain HTTP only; first matching mock wins).
-            </p>
-            {overrideError && (
-              <p className="small err" style={{ marginBottom: '0.75rem' }}>
-                {overrideError}
-              </p>
-            )}
-            <div className="drawer-form">
-              <label>
-                Name
-                <input
-                  value={overrideForm.name}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                />
-              </label>
-              <label className="wide stream-toggle">
-                <span className="stream-toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={overrideForm.enabled}
-                    onChange={(e) =>
-                      setOverrideForm((f) => ({
-                        ...f,
-                        enabled: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Enable this override rule</span>
-                </span>
-              </label>
-              <label>
-                Match method
-                <input
-                  value={overrideForm.matchMethod}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({
-                      ...f,
-                      matchMethod: e.target.value,
-                    }))
-                  }
-                  placeholder="GET"
-                />
-              </label>
-              <label>
-                Host contains
-                <input
-                  value={overrideForm.matchHost}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({
-                      ...f,
-                      matchHost: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="wide">
-                Path regex
-                <input
-                  className="mono"
-                  value={overrideForm.matchPathRegex}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({
-                      ...f,
-                      matchPathRegex: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Status
-                <input
-                  type="number"
-                  value={overrideForm.status}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({
-                      ...f,
-                      status: Number(e.target.value) || 200,
-                    }))
-                  }
-                />
-              </label>
-              <label className="wide">
-                Response headers (one <code>Name: value</code> per line)
-                <textarea
-                  rows={5}
-                  className="mono"
-                  spellCheck={false}
-                  value={overrideForm.headersText}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({
-                      ...f,
-                      headersText: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="wide stream-toggle">
-                <span className="stream-toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={overrideForm.streamEnabled}
-                    onChange={(e) =>
-                      setOverrideForm((f) => ({
-                        ...f,
-                        streamEnabled: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>
-                    Stream response body (separate messages with a blank line; set{' '}
-                    <code>Content-Type: text/event-stream</code> in headers if needed)
-                  </span>
-                </span>
-              </label>
-              <label className="wide">
-                Body
-                <span className="small muted" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                  {overrideForm.streamEnabled
-                    ? 'Split on double newlines (blank line). Each streamed chunk is prefixed with two newlines for SSE-style framing; empty segments send only those two newlines.'
-                    : 'Response body sent as one piece unless streaming is enabled above.'}
-                </span>
-                <textarea
-                  rows={12}
-                  spellCheck={false}
-                  value={overrideForm.body}
-                  onChange={(e) =>
-                    setOverrideForm((f) => ({ ...f, body: e.target.value }))
-                  }
-                />
-              </label>
-              {selectedCanControlStream && selected && (
-                <div className="stream-preview-section">
-                  <label>
-                    Interval between chunks (ms)
-                    <input
-                      type="number"
-                      min={0}
-                      step={50}
-                      value={overrideForm.streamIntervalMs}
-                      onChange={(e) =>
-                        setOverrideForm((f) => ({
-                          ...f,
-                          streamIntervalMs: Number(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </label>
-                  <div className="stream-preview-controls">
-                    <span className="small muted">Stream controller</span>
-                    <div className="stream-preview-btns">
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => void playControlledStream(selected.id)}
-                        disabled={
-                          streamActionSaving[selected.id] === true ||
-                          selected.streamPlaying === true
-                        }
-                      >
-                        Play
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => void pauseControlledStream(selected.id)}
-                        disabled={
-                          streamActionSaving[selected.id] === true ||
-                          selected.streamPlaying !== true
-                        }
-                      >
-                        Stop
-                      </button>
-                    </div>
-                  </div>
-                  <pre className="pre stream-preview-out mono tiny">
-                    {streamActionSaving[selected.id] === true
-                      ? 'Updating stream controller...'
-                      : selected.pending
-                        ? 'Request is paused at the breakpoint. Press Play to start streaming the override response.'
-                        : selected.streamPlaying
-                          ? 'Streaming override response is running. Press Stop to pause after the current chunk.'
-                          : 'Streaming override response is paused. Press Play to continue.'}
-                  </pre>
-                </div>
-              )}
-            </div>
-            <div className="drawer-actions">
-              {selected?.pending &&
-                selectedMatchingOverride?.id === overrideEditingId && (
-                  <button
-                    type="button"
-                    className="primary inline-primary"
-                    disabled={resumeSaving[selected.id] === true}
-                    onClick={() => void resumeRequest(selected.id)}
-                  >
-                    {resumeSaving[selected.id] ? 'Resuming…' : 'Resume request'}
-                  </button>
-                )}
-              <button
-                type="button"
-                className="ghost"
-                onClick={() =>
-                  void addBreakpointFromOverride(
-                    {
-                      name: overrideForm.name.trim() || 'Override',
-                      matchHost: overrideForm.matchHost || null,
-                      matchPathRegex: overrideForm.matchPathRegex || null,
-                    },
-                    selectedMatchingOverride?.id === overrideEditingId && selected
-                      ? urlOrigin(selected.url)
-                      : undefined,
-                  )
-                }
-              >
-                Add breakpoint
-              </button>
-              <button
-                type="button"
-                className="ghost"
-                onClick={closeOverrideDrawer}
-              >
-                Cancel
-              </button>
-              <button type="button" className="primary" onClick={saveOverride}>
-                {overrideEditingId ? 'Save changes' : 'Save override'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {overridesPanel.state === 'edit' && (
+        <OverrideEditorOverlay
+          closeOverrideDrawer={closeOverrideDrawer}
+          saveOverride={saveOverride}
+          overrideError={overrideError}
+          overrideLeftTool={overrideLeftTool}
+          setOverrideLeftTool={setOverrideLeftTool}
+          overrideFileInputRef={overrideFileInputRef}
+          overrideForm={overrideForm}
+          setOverrideForm={setOverrideForm}
+          overrideEntries={overrideEntries}
+          startNewOverride={startNewOverride}
+          openOverrideEditorForKey={openOverrideEditorForKey}
+          onAddBreakpointForListOverride={onAddBreakpointForListOverride}
+          overrideBodyDrafts={overrideBodyDrafts}
+          setOverrideBodyDrafts={setOverrideBodyDrafts}
+          overrideBodySaving={overrideBodySaving}
+          overrideToggleSaving={overrideToggleSaving}
+          setOverrideEnabled={setOverrideEnabled}
+          saveOverrideBody={saveOverrideBody}
+          deleteOverrideRule={deleteOverrideRule}
+          selected={selected}
+          selectedMatchingOverride={selectedMatchingOverride}
+          overrideEditingId={overrideEditingId}
+          selectedCanControlStream={selectedCanControlStream}
+          resumeRequest={resumeRequest}
+          resumeSaving={resumeSaving}
+          addBreakpointFromOverride={addBreakpointFromOverride}
+          streamActionSaving={streamActionSaving}
+          playControlledStream={playControlledStream}
+          pauseControlledStream={pauseControlledStream}
+        />
       )}
 
-      {tab === 'overrides' && (
-        <div className="mocks overrides-tab">
-          <p className="muted intro">
-            Overrides are stored in SQLite and applied before in-memory mock rules. Use{' '}
-            <strong>Traffic → Override response</strong> to create one from a captured request,
-            then manage it here.
-          </p>
-          {overrideEntries.length === 0 ? (
-            <p className="muted">
-              No overrides yet. Open <strong>Traffic</strong>, select an HTTP request, and
-              use <strong>Override response</strong> in the detail panel.
-            </p>
-          ) : (
-            <ul className="mock-list">
-              {overrideEntries.map((override) => (
-                  <li
-                    key={override.id}
-                    className={`mock-card ${override.enabled ? '' : 'is-disabled'}`}
-                  >
-                    <div className="mock-head">
-                      <strong>
-                        {override.name}{' '}
-                        {!override.enabled && (
-                          <span className="pill subtle">disabled</span>
-                        )}
-                      </strong>
-                      <div className="override-actions">
-                        <button
-                          type="button"
-                          className="ghost"
-                          disabled={overrideToggleSaving[override.id] === true}
-                          onClick={() =>
-                            void setOverrideEnabled(override, !override.enabled)
-                          }
-                        >
-                          {overrideToggleSaving[override.id]
-                            ? 'Saving…'
-                            : override.enabled
-                              ? 'Disable'
-                              : 'Enable'}
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => openOverrideEditorForKey(override)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() =>
-                            void addBreakpointFromOverride(
-                              override,
-                              selectedMatchingOverride?.id === override.id && selected
-                                ? urlOrigin(selected.url)
-                                : undefined,
-                            )
-                          }
-                        >
-                          Add breakpoint
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost danger"
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                'Delete this override from SQLite?',
-                              )
-                            ) {
-                              return
-                            }
-                            void deleteOverrideRule(override.id).catch((e) => {
-                              window.alert(String(e))
-                            })
-                          }}
-                        >
-                          Delete rule
-                        </button>
-                      </div>
-                    </div>
-                    <p className="small mono override-sig">
-                      <span className="tag-sig">{override.matchMethod ?? '∗'}</span>{' '}
-                      {override.matchHost ?? '∗'}
-                      <span className="path-sig">{override.matchPathRegex ?? '∗'}</span>
-                    </p>
-                    <p className="tiny muted">
-                      Override id: <code>{override.id}</code>
-                    </p>
-                    <p className="small mono">
-                      HTTP {override.status}
-                    </p>
-                    {override.streamIntervalMs != null && (
-                      <p className="tiny muted">
-                        Streamed: {override.streamIntervalMs} ms between chunks (body split
-                        on blank lines)
-                      </p>
-                    )}
-                    <label className="override-body-editor">
-                      <span className="tiny muted">
-                        {override.streamIntervalMs != null
-                          ? 'Stream body content'
-                          : 'Response body content'}
-                      </span>
-                      <textarea
-                        rows={Math.max(
-                          5,
-                          Math.min(
-                            14,
-                            (overrideBodyDrafts[override.id] ?? override.body).split(
-                              '\n',
-                            ).length + 1,
-                          ),
-                        )}
-                        className="mono"
-                        spellCheck={false}
-                        value={overrideBodyDrafts[override.id] ?? override.body}
-                        onChange={(e) =>
-                          setOverrideBodyDrafts((prev) => ({
-                            ...prev,
-                            [override.id]: e.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                    <div className="override-inline-actions">
-                      <button
-                        type="button"
-                        className="ghost"
-                        disabled={
-                          overrideBodySaving[override.id] === true ||
-                          overrideToggleSaving[override.id] === true ||
-                          (overrideBodyDrafts[override.id] ?? override.body) ===
-                            override.body
-                        }
-                        onClick={() =>
-                          setOverrideBodyDrafts((prev) => ({
-                            ...prev,
-                            [override.id]: override.body,
-                          }))
-                        }
-                      >
-                        Reset
-                      </button>
-                      <button
-                        type="button"
-                        className="primary inline-primary"
-                        disabled={
-                          overrideBodySaving[override.id] === true ||
-                          overrideToggleSaving[override.id] === true
-                        }
-                        onClick={() => void saveOverrideBody(override)}
-                      >
-                        {overrideBodySaving[override.id] ? 'Saving…' : 'Save content'}
-                      </button>
-                    </div>
-                  </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
 
       {tab === 'breakpoints' && (
-        <div className="mocks">
-          <p className="muted intro">
-            Breakpoints pause matching HTTP requests before overrides, mocks, or upstream fetches.
-            When a request is pending, resume it from the request detail view or from the
-            matching override drawer.
-          </p>
-
-          <div className="mock-form">
-            <label>
-              Name
-              <input
-                value={breakpointForm.name}
-                onChange={(e) =>
-                  setBreakpointForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </label>
-            <label className="wide">
-              Origin
-              <input
-                className="mono"
-                placeholder="https://example.com"
-                value={breakpointForm.matchOrigin}
-                onChange={(e) =>
-                  setBreakpointForm((f) => ({
-                    ...f,
-                    matchOrigin: e.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label className="wide">
-              Path regex
-              <input
-                className="mono"
-                placeholder="^/api/"
-                value={breakpointForm.matchPathRegex}
-                onChange={(e) =>
-                  setBreakpointForm((f) => ({
-                    ...f,
-                    matchPathRegex: e.target.value,
-                  }))
-                }
-              />
-            </label>
-            <button type="button" className="primary" onClick={addBreakpoint}>
-              Add breakpoint
-            </button>
-          </div>
-
-          {breakpointEntries.length === 0 ? (
-            <p className="muted">No breakpoints yet.</p>
-          ) : (
-            <ul className="mock-list">
-              {breakpointEntries.map((rule) => (
-                <li
-                  key={rule.id}
-                  className={`mock-card ${rule.enabled ? '' : 'is-disabled'}`}
-                >
-                  <div className="mock-head">
-                    <strong>
-                      {rule.name}{' '}
-                      {!rule.enabled && <span className="pill subtle">disabled</span>}
-                    </strong>
-                    <div className="override-actions">
-                      <button
-                        type="button"
-                        className="ghost"
-                        disabled={breakpointToggleSaving[rule.id] === true}
-                        onClick={() =>
-                          void setBreakpointEnabled(rule, !rule.enabled)
-                        }
-                      >
-                        {breakpointToggleSaving[rule.id]
-                          ? 'Saving…'
-                          : rule.enabled
-                            ? 'Disable'
-                            : 'Enable'}
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost danger"
-                        onClick={() => {
-                          if (!window.confirm('Delete this breakpoint rule?')) {
-                            return
-                          }
-                          void removeBreakpoint(rule.id).catch((e) => {
-                            window.alert(String(e))
-                          })
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  <p className="small mono">
-                    {rule.matchOrigin ?? '∗'}
-                    <br />
-                    {rule.matchPathRegex ?? '∗'}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <BreakpointsPanel
+          breakpointForm={breakpointForm}
+          setBreakpointForm={setBreakpointForm}
+          breakpointEntries={breakpointEntries}
+          addBreakpoint={addBreakpoint}
+          removeBreakpoint={removeBreakpoint}
+          setBreakpointEnabled={setBreakpointEnabled}
+          breakpointToggleSaving={breakpointToggleSaving}
+        />
       )}
 
       {tab === 'mocks' && (
-        <div className="mocks">
-          <p className="muted intro">
-            Rules are checked in order. A rule matches when it is enabled and every
-            non-empty field matches (method exact, host substring, path regex).
-            First match wins and returns your status, headers, and body — no upstream
-            call for plain HTTP.
-          </p>
-
-          <div className="mock-form">
-            <label>
-              Name
-              <input
-                value={mockForm.name}
-                onChange={(e) =>
-                  setMockForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Method (optional)
-              <input
-                placeholder="GET"
-                value={mockForm.matchMethod}
-                onChange={(e) =>
-                  setMockForm((f) => ({ ...f, matchMethod: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Host contains (optional)
-              <input
-                placeholder="example.com"
-                value={mockForm.matchHost}
-                onChange={(e) =>
-                  setMockForm((f) => ({ ...f, matchHost: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Path regex (optional)
-              <input
-                placeholder="^/api/"
-                value={mockForm.matchPathRegex}
-                onChange={(e) =>
-                  setMockForm((f) => ({ ...f, matchPathRegex: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Status
-              <input
-                type="number"
-                value={mockForm.status}
-                onChange={(e) =>
-                  setMockForm((f) => ({
-                    ...f,
-                    status: Number(e.target.value) || 200,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Header (optional)
-              <div className="pair">
-                <input
-                  placeholder="name"
-                  value={mockForm.headerKey}
-                  onChange={(e) =>
-                    setMockForm((f) => ({ ...f, headerKey: e.target.value }))
-                  }
-                />
-                <input
-                  placeholder="value"
-                  value={mockForm.headerVal}
-                  onChange={(e) =>
-                    setMockForm((f) => ({ ...f, headerVal: e.target.value }))
-                  }
-                />
-              </div>
-            </label>
-            <label className="wide">
-              Body
-              <textarea
-                rows={6}
-                value={mockForm.body}
-                onChange={(e) =>
-                  setMockForm((f) => ({ ...f, body: e.target.value }))
-                }
-              />
-            </label>
-            <button type="button" className="primary" onClick={addMock}>
-              Add mock rule
-            </button>
-          </div>
-
-          <ul className="mock-list">
-            {mocks.map((m) => (
-              <li key={m.id} className="mock-card">
-                <div className="mock-head">
-                  <strong>{m.name}</strong>
-                  <button
-                    type="button"
-                    className="ghost danger"
-                    onClick={() => removeMock(m.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-                <p className="small mono">
-                  {m.matchMethod ?? '∗'} · {m.matchHost ?? '∗'} ·{' '}
-                  {m.matchPathRegex ?? '∗'} → {m.status}
-                </p>
-                <pre className="pre tiny">{m.body}</pre>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <MockRulesPanel
+          mockForm={mockForm}
+          setMockForm={setMockForm}
+          mocks={mocks}
+          addMock={addMock}
+          removeMock={removeMock}
+        />
       )}
     </div>
   )

@@ -1,0 +1,353 @@
+---
+globs: "*.scss,*.less,*.css,*.tsx"
+alwaysApply: false
+---
+
+# 样式编写规范
+
+## 基本原则
+
+- 使用 CSS Modules 避免样式冲突
+- 使用 kebab-case 命名 class
+- 优先使用 SCSS/Less 的嵌套和变量功能
+- 遵循 BEM 命名规范（可选）
+- 避免使用内联样式（特殊情况除外）
+
+## 文件命名
+
+```scss
+// ✅ 推荐：组件样式使用 CSS Modules，文件名使用 kebab-case + .module.scss 或 .module.less
+user-profile.module.scss
+chat-message.module.less
+
+// ✅ 推荐：全局样式和变量，文件名使用 kebab-case
+global.scss
+variables.scss
+mixins.scss
+
+// ❌ 禁止：不使用 CSS Modules 的组件样式文件，避免命名为 user-profile.scss（容易造成样式冲突）
+user-profile.scss
+```
+
+## 类名命名
+
+### CSS Modules
+
+```scss
+// ✅ 推荐：kebab-case
+.user-card {
+  padding: 16px;
+  
+  .user-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .user-name {
+    font-size: 16px;
+    font-weight: bold;
+  }
+}
+```
+
+### BEM 规范（可选）
+
+```scss
+// Block
+.user-card { }
+
+// Element
+.user-card__avatar { }
+.user-card__name { }
+
+// Modifier
+.user-card--highlighted { }
+.user-card__avatar--large { }
+```
+
+## 样式组织
+
+### 属性顺序
+
+```scss
+// ✅ 推荐：遵循属性顺序
+.component {
+  // 1. 定位
+  position: relative;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  
+  // 2. 盒模型
+  display: flex;
+  width: 100%;
+  height: 48px;
+  padding: 16px;
+  margin: 0 auto;
+  
+  // 3. 排版
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+  
+  // 4. 视觉
+  color: #333;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  
+  // 5. 其他
+  cursor: pointer;
+  transition: all 0.3s;
+}
+```
+
+### 嵌套规则
+
+```scss
+// ✅ 推荐：合理的嵌套层级（≤ 3 层）
+.user-card {
+  padding: 16px;
+  
+  .header {
+    display: flex;
+    
+    .avatar {
+      width: 48px;
+    }
+  }
+}
+
+// ❌ 避免：过深的嵌套（> 3 层）
+.user-card {
+  .content {
+    .info {
+      .detail {
+        .name { }  // 太深了
+      }
+    }
+  }
+}
+```
+
+## SCSS 模块系统（@use / @forward）
+
+### 重要：禁止使用 @import
+
+Dart Sass 已废弃 `@import`，项目正在迁移到 `@use` / `@forward`。**所有新代码必须使用 `@use`**。
+
+```scss
+// ❌ 禁止：@import（已废弃，将在未来版本移除）
+@import '../../styles/variables';
+@import '../_variables.scss';
+
+// ✅ 正确：@use 导入变量（推荐 as * 展开到当前作用域）
+@use '../../styles/variables' as *;
+@use '../_variables.scss' as *;
+
+// ✅ 正确：@use 带命名空间（变量较多时避免冲突）
+@use '../../styles/variables' as vars;
+.card { padding: vars.$spacing-8; }
+```
+
+### @use 与 @import 的关键区别
+
+```scss
+// @import 的行为（已废弃）：
+// - 变量自动变成全局，所有文件都能访问
+// - 传递性：A import B，B import C → A 自动拿到 C 的变量
+// - 多次 import 同一文件会重复执行
+
+// @use 的行为（推荐）：
+// - 变量有作用域，仅在当前文件可用
+// - 不传递：A use B，B use C → A 拿不到 C 的变量（除非 B 用 @forward 转发 C）
+// - 同一文件只加载一次（天然去重）
+```
+
+### @forward 转发模式
+
+```scss
+// _index.scss（入口文件，转发子模块的变量/mixin 供外部使用）
+@forward './variables';
+@forward './mixins';
+@forward './responsive';
+
+// 外部使用：一次 @use 获取所有转发内容
+@use '../../styles' as *;  // 自动找 _index.scss
+```
+
+### 本项目的变量引用方式
+
+项目通过 `sassOptions.prependData`（Next.js）/ `scss.additionalData`（Vite）自动注入了 `theme.scss` 的变量，
+所以 **组件样式文件无需手动引入全局主题变量**（如 `$VITE_CDN`、`$VITE_CURRENCY_SYMBOL`）。
+
+```scss
+// ✅ 引入模块级变量（如 paper-detail 布局变量）
+@use '../../styles/variables' as *;
+
+.card {
+  padding: $card-padding;
+  border-radius: $border-radius-card;
+  @include responsive-padding;
+}
+
+// ✅ 使用 Sass 内置模块
+@use 'sass:math';
+@use 'sass:color';
+
+.half-width {
+  width: math.div(100%, 2);
+}
+```
+
+## 变量和混入
+
+### SCSS 变量
+
+```scss
+// variables.scss
+$primary-color: #1890ff;
+$text-color: #333;
+$border-radius: 4px;
+$spacing-unit: 8px;
+
+// 使用
+.button {
+  color: $primary-color;
+  padding: $spacing-unit * 2;
+  border-radius: $border-radius;
+}
+```
+
+### SCSS 混入
+
+```scss
+// mixins.scss
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 使用
+.container {
+  @include flex-center;
+}
+
+.text {
+  @include truncate;
+}
+```
+
+## 响应式设计
+
+```scss
+// ✅ 推荐：使用媒体查询
+.container {
+  padding: 16px;
+  
+  @media (max-width: 768px) {
+    padding: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 4px;
+  }
+}
+
+// ✅ 推荐：定义断点变量
+$breakpoint-mobile: 480px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
+
+@mixin mobile {
+  @media (max-width: $breakpoint-mobile) {
+    @content;
+  }
+}
+
+.component {
+  padding: 16px;
+  
+  @include mobile {
+    padding: 8px;
+  }
+}
+```
+
+## 在 React 中使用
+
+```typescript
+// ✅ 推荐：CSS Modules
+import styles from './user-card.module.scss';
+
+export const UserCard: React.FC = () => (
+  <div className={styles.userCard}>
+    <div className={styles.avatar} />
+    <div className={styles.name}>User Name</div>
+  </div>
+);
+
+// ✅ 推荐：动态类名
+import clsx from 'clsx';
+
+export const Button: React.FC<ButtonProps> = ({ primary, disabled }) => (
+  <button
+    className={clsx(
+      styles.button,
+      primary && styles.primary,
+      disabled && styles.disabled
+    )}
+  />
+);
+
+// ❌ 避免：内联样式（除非动态值）
+<div style={{ padding: '16px' }} />  // 不好
+
+// ✅ 可以：动态值使用内联样式
+<div style={{ width: `${progress}%` }} />  // 可以
+```
+
+## 性能优化
+
+```scss
+// ✅ 推荐：避免过度具体的选择器
+.button { }  // 好
+
+// ❌ 避免
+div.container .content div.item .button { }  // 性能差
+
+// ✅ 推荐：使用 CSS 变量
+:root {
+  --primary-color: #1890ff;
+  --spacing: 8px;
+}
+
+.component {
+  color: var(--primary-color);
+  padding: var(--spacing);
+}
+```
+
+## 强制行为 ✅
+
+1. 必须使用 CSS Modules
+2. 必须使用 kebab-case 命名类名
+3. 必须限制嵌套层级（≤ 3 层）
+4. 必须使用变量管理颜色和尺寸
+5. 必须按属性顺序编写样式
+
+## 禁止行为 ❌
+
+1. 禁止使用全局样式（除 global.scss）
+2. 禁止使用 !important（除非必要）
+3. 禁止过深的嵌套（> 3 层）
+4. 禁止硬编码颜色和尺寸
+5. 禁止使用内联样式（除动态值）
+6. 禁止使用 `@import` 导入 SCSS 文件（已废弃，必须用 `@use` / `@forward` 替代）

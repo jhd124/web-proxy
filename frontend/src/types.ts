@@ -60,6 +60,20 @@ export interface BreakpointRule {
   matchPathRegex?: string | null
 }
 
+/** Editable state for the override full-screen editor (form + Monaco). */
+export interface OverrideFormState {
+  name: string
+  enabled: boolean
+  status: number
+  body: string
+  headersText: string
+  matchMethod: string
+  matchHost: string
+  matchPathRegex: string
+  streamEnabled: boolean
+  streamIntervalMs: number
+}
+
 export type WsMessage =
   | { type: 'snapshot'; requests: TrafficEntry[] }
   | { type: 'traffic'; entry: TrafficEntry }

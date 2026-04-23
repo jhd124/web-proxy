@@ -1,0 +1,213 @@
+---
+globs: "bohrium-domains/src/**/*.ts,bohrium-domains/src/**/*.tsx,bohrium-next-app/src/**/*.ts,bohrium-next-app/src/**/*.tsx"
+alwaysApply: true
+---
+
+# 类型安全与包边界规范
+
+本规则针对存量 TS 类型问题的根因制定，旨在阻止同类问题增量引入。
+
+## 包边界：bohrium-domains 禁止引用 space/next 专属模块
+
+`bohrium-domains` 是被 `bohrium-space` 和 `bohrium-next-app` 共同使用的共享包，**不得依赖任何单一宿主应用的内部模块**。
+
+### 禁止在 bohrium-domains 中导入以下内容
+
+```typescript
+// ❌ bohrium-space 专属路径别名（domains 中无法解析）
+import foo from '@@api'
+import foo from '@@api/libraryV2/api'
+import foo from '@@shared/constants/apiCode'
+import foo from '@@shared/utils'
+import foo from '@@biz/paper/libraryV2/context'
+import foo from '@@icons'
+import foo from '@context'
+import foo from '@i18n'
+import foo from '@store/siteLayout'
+
+// ❌ Next.js 框架模块（domains 无 next 依赖）
+import Link from 'next/link'
+import Head from 'next/head'
+import dynamic from 'next/dynamic'
+
+// ❌ 只在 space 中安装的业务型三方包
+import 'amis-core'
+import 'ketcher-react'
+import 'ketcher-standalone'
+import 'openchemlib'
+```
+
+### 正确做法
+
+需要跨包共享的依赖通过 **props / 回调 / Context** 传递，而不是在 domains 内部直接 import：
+
+```typescript
+// ✅ 通过 props 接收宿主提供的能力
+interface MyComponentProps {
+  onNavigate: (path: string) => void   // 代替 next/link
+  i18n: (key: string) => string        // 代替 @i18n
+  icons: Record<string, React.FC>      // 代替 @@icons
+}
+```
+
+若某段代码确实只属于某一个宿主应用，应将其移回对应应用（`biz/` 目录下），而不是放在 `bohrium-domains`。
+
+---
+
+## API 响应类型：禁止直接访问 unknown 类型的属性
+
+axios / fetch 返回的 `res.data` 默认是 `unknown`，直接访问属性会导致运行时报错。
+
+```typescript
+// ❌ 错误：res.data 是 unknown，直接访问属性
+const result = await api.getUser(id)
+console.log(result.data.name) // TS18046
+
+// ✅ 正确：为 API 调用声明返回类型
+interface GetUserResponse {
+  name: string
+  email: string
+}
+
+const result = await api.getUser<GetUserResponse>(id)
+console.log(result.data.name) // ✅
+```
+
+使用 axios 时，始终通过泛型声明响应类型：
+
+```typescript
+// ✅ 为 axios 调用声明响应类型
+const res = await axios.get<{ list: Paper[]; total: number }>('/api/papers')
+const { list, total } = res.data // 类型安全
+```
+
+访问 `unknown` 类型的属性前必须先做类型收窄：
+
+```typescript
+// ✅ 类型收窄后再访问
+function handleResponse(data: unknown) {
+  if (typeof data === 'object' && data !== null && 'name' in data) {
+    console.log((data as { name: string }).name)
+  }
+}
+```
+
+---
+
+## 函数参数：禁止隐式 any
+
+所有函数参数必须显式声明类型，不允许 TypeScript 推断为 `any`（TS7006）。
+
+```typescript
+// ❌ 错误：参数 err 隐式 any
+function handleError(err) {
+  console.error(err.message)
+}
+
+// ✅ 正确：明确声明参数类型
+function handleError(err: Error) {
+  console.error(err.message)
+}
+
+// ✅ 如果类型确实未知，使用 unknown 并收窄
+function handleError(err: unknown) {
+  if (err instanceof Error) {
+    console.error(err.message)
+  }
+}
+```
+
+回调参数同样适用：
+
+```typescript
+// ❌ 错误
+items.forEach(item => { /* item 隐式 any */ })
+
+// ✅ 正确：从上下文推断或显式声明
+const items: Paper[] = [...]
+items.forEach((item) => { /* item: Paper */ })
+```
+
+---
+
+## 动态属性访问：禁止 string 直接作为对象索引（TS7053）
+
+```typescript
+// ❌ 错误：key 是 string，但对象没有索引签名
+const config = { 'a.com': { ... }, 'b.com': { ... } }
+const value = config[key] // TS7053
+
+// ✅ 正确方案 A：使用类型断言配合 keyof
+type ConfigKey = keyof typeof config
+const value = config[key as ConfigKey]
+
+// ✅ 正确方案 B：为对象添加索引签名（如果 key 确实是动态的）
+const config: Record<string, ConfigValue> = { ... }
+const value = config[key] // ✅
+```
+
+---
+
+## 三方包类型声明：缺少 @types 时的处理方式
+
+若引入的包没有自带类型声明，按以下优先级处理：
+
+1. **安装官方 @types**（优先）
+   ```bash
+   pnpm add -D @types/package-name
+   ```
+
+2. **在 `*.d.ts` 中添加 declare module**（包无官方类型时）
+   ```typescript
+   // bohrium-domains/src/types/vendor.d.ts
+   declare module 'citeproc' {
+     export class Engine {
+       constructor(sys: CiteprocSys, style: string): void
+       makeBibliography(): [BibliographyMeta, string[]]
+     }
+   }
+   ```
+
+3. **禁止使用 `// @ts-ignore` 或 `// @ts-expect-error` 绕过**（除非有充分注释说明原因）
+
+---
+
+## JSX 组件类型：跨 React 版本使用时的注意事项
+
+`bohrium-domains` 使用 React 18，`bohrium-next-app` 使用 React 19。
+在 domains 中定义、在 next-app 中使用的 JSX 组件，必须显式声明返回类型以避免版本不兼容（TS2786/TS2604）：
+
+```typescript
+// ❌ 错误：返回类型依赖 React 版本推断
+export const MyComponent = () => {
+  return <div>...</div>
+}
+
+// ✅ 正确：显式声明 JSX.Element 或 React.ReactElement
+export const MyComponent = (): React.ReactElement => {
+  return <div>...</div>
+}
+
+// ✅ 正确：使用 React.FC 声明
+export const MyComponent: React.FC<Props> = ({ children }) => {
+  return <div>{children}</div>
+}
+```
+
+---
+
+## 强制行为 ✅
+
+1. `bohrium-domains` 中的新文件**禁止**导入 `@@`、`@context`、`@i18n`、`@store` 等 space 专属别名
+2. `bohrium-domains` 中的新文件**禁止**直接导入 `next/*` 框架模块
+3. 所有 API 调用**必须**通过泛型或接口声明响应类型
+4. 所有函数参数**必须**显式声明类型
+5. 在 domains 中新增跨 React 版本使用的 JSX 组件时，**必须**显式声明返回类型
+
+## 禁止行为 ❌
+
+1. 禁止在 `bohrium-domains` 中通过 space 路径别名跨包导入
+2. 禁止直接访问 `unknown` 类型的属性（必须先类型收窄）
+3. 禁止函数参数隐式推断为 `any`
+4. 禁止用 `// @ts-ignore` 绕过类型错误（应修复根因）
+5. 禁止手动修改 `bohrium-shared/src/icons/` 下的任何文件（由 gulp 脚本自动生成）

@@ -27,11 +27,11 @@ async fn main() -> anyhow::Result<()> {
     let proxy_port: u16 = std::env::var("PROXY_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(8080);
+        .unwrap_or(9090);
     let dashboard_port: u16 = std::env::var("DASHBOARD_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(3001);
+        .unwrap_or(9091);
 
     let max_traffic: usize = std::env::var("MAX_TRAFFIC")
         .ok()
