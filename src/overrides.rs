@@ -16,7 +16,7 @@ pub struct UpsertOverrideBody {
     pub enabled: Option<bool>,
     pub match_method: Option<String>,
     pub match_host: Option<String>,
-    pub match_path_regex: Option<String>,
+    pub match_path: Option<String>,
     pub status: u16,
     pub headers: Option<Vec<(String, String)>>,
     pub body: Option<String>,
@@ -43,6 +43,23 @@ pub fn init_and_load(path: &StdPath) -> anyhow::Result<Vec<OverrideRule>> {
     )
     .context("create overrides table")?;
     load_all_from_conn(&conn)
+}
+
+/// Historically the column held regex; we now store a plain path. Legacy `^/p$` loads as `/p`.
+fn path_from_stored_column(raw: Option<String>) -> Option<String> {
+    let raw = raw?;
+    let s = raw.trim();
+    if s.is_empty() {
+        return None;
+    }
+    let t = s.to_string();
+    if t.len() >= 2 && t.starts_with('^') && t.ends_with('$') {
+        let inner = t[1..t.len() - 1].to_string();
+        if !inner.is_empty() {
+            return Some(inner);
+        }
+    }
+    Some(t)
 }
 
 fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
@@ -73,7 +90,7 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             enabled: row.get::<_, i64>(2)? != 0,
             match_method: row.get(3)?,
             match_host: row.get(4)?,
-            match_path_regex: row.get(5)?,
+            match_path: path_from_stored_column(row.get(5)?),
             status: row.get(6)?,
             headers,
             body: row.get(8)?,
@@ -107,7 +124,7 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> anyhow::Result<()> {
             if rule.enabled { 1 } else { 0 },
             rule.match_method,
             rule.match_host,
-            rule.match_path_regex,
+            rule.match_path,
             rule.status,
             headers_json,
             rule.body,
@@ -141,7 +158,7 @@ fn update_override_row(path: &StdPath, rule: &OverrideRule) -> anyhow::Result<bo
             if rule.enabled { 1 } else { 0 },
             rule.match_method,
             rule.match_host,
-            rule.match_path_regex,
+            rule.match_path,
             rule.status,
             headers_json,
             rule.body,
@@ -171,7 +188,7 @@ pub async fn create_override(
         enabled: body.enabled.unwrap_or(true),
         match_method: body.match_method,
         match_host: body.match_host,
-        match_path_regex: body.match_path_regex,
+        match_path: body.match_path,
         status: body.status,
         headers: body.headers.unwrap_or_default(),
         body: body.body.unwrap_or_default(),
@@ -194,7 +211,7 @@ pub async fn update_override(
         enabled: body.enabled.unwrap_or(true),
         match_method: body.match_method,
         match_host: body.match_host,
-        match_path_regex: body.match_path_regex,
+        match_path: body.match_path,
         status: body.status,
         headers: body.headers.unwrap_or_default(),
         body: body.body.unwrap_or_default(),

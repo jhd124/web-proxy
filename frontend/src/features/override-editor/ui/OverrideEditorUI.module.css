@@ -58,6 +58,7 @@
 }
 
 .fsBody {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -72,37 +73,65 @@
 
 .toolCol {
   display: flex;
-  flex-direction: column;
-  width: min(100%, 320px);
-  min-width: 220px;
-  border-right: 1px solid var(--border);
-  background: #12151c;
+  height: 100%;
   min-height: 0;
+  flex-direction: column;
+  background: #12151c;
 }
 
-.toolTabs {
+.requestCol {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  background: #12151c;
+  padding: 0.65rem 0.75rem 1rem;
+}
+
+.requestOpenFab {
+  position: absolute;
+  z-index: 20;
+  right: 0.4rem;
+  top: 45%;
   display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.toolTab {
-  flex: 1;
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  padding: 0.55rem 0.5rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-
-.toolTabOn {
+  max-width: 3.2rem;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  text-align: center;
+  line-height: 1.1;
+  border: 1px solid var(--border);
+  background: #171b24f2;
+  border-radius: 0.4rem 0 0 0.4rem;
+  padding: 0.4rem 0.28rem 0.45rem;
+  box-shadow: 0 2px 8px #0004;
   color: var(--text);
-  border-bottom-color: var(--accent);
+}
+
+.requestOpenFab:hover {
+  border-color: #4a6b8a;
+}
+
+.requestOpenFab:active {
+  cursor: grabbing;
+}
+
+.requestOpenFabLabel {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.requestOpenFabHint {
+  display: block;
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-style: normal;
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 .toolBody {

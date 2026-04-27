@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { inferOriginFromHostHint } from '../../../lib/dashboardUtils'
+import { escapeRegex, inferOriginFromHostHint } from '../../../lib/dashboardUtils'
 import type { BreakpointRule } from '../../../types'
 import { breakpointTexts } from '../texts'
 
@@ -85,13 +85,15 @@ export function useBreakpointState(p: { setTab: (t: Tab) => void }) {
       source: {
         name: string
         matchHost?: string | null
-        matchPathRegex?: string | null
+        /** Plain path from override form; converted to a regex for the breakpoint rule. */
+        matchPath?: string | null
       },
       originHint: string | undefined,
     ) => {
       const matchOrigin =
         originHint || inferOriginFromHostHint(source.matchHost) || ''
-      const matchPathRegex = source.matchPathRegex ?? ''
+      const p = (source.matchPath ?? '').trim()
+      const matchPathRegex = p === '' ? '' : `^${escapeRegex(p)}$`
       setBreakpointForm({
         name: t.pauseName(source.name),
         matchOrigin,

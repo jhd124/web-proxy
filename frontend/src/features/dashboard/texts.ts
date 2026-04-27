@@ -2,9 +2,6 @@
 export const dashboardTexts = {
   header: {
     title: 'Proxy dashboard',
-    /** Shown in the small code pill for shell export */
-    proxyExportHint:
-      'export HTTP_PROXY=http://127.0.0.1:9090 HTTPS_PROXY=http://127.0.0.1:9090',
     wsPill: (status: 'connecting' | 'open' | 'closed') => `WS ${status}`,
     countFiltered: (filtered: number, total: number) =>
       `${filtered} / ${total} shown`,

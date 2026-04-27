@@ -14,7 +14,10 @@ export function useOverrideEditorState() {
   const [overridesPanel, setOverridesPanel] = useState<
     { state: 'closed' } | { state: 'edit'; source: 'nav' | 'traffic' }
   >({ state: 'closed' })
-  const [overrideLeftTool, setOverrideLeftTool] = useState<'files' | 'info'>('info')
+  const [requestPanelFocusKey, setRequestPanelFocusKey] = useState(0)
+  const bumpRequestPanel = useCallback(() => {
+    setRequestPanelFocusKey((k) => k + 1)
+  }, [])
   const overrideFileInputRef = useRef<HTMLInputElement | null>(null)
   const [overrideBodyDrafts, setOverrideBodyDrafts] = useState<Record<string, string>>({})
   const [overrideBodySaving, setOverrideBodySaving] = useState<Record<string, boolean>>({})
@@ -45,14 +48,12 @@ export function useOverrideEditorState() {
     setOverrideError(null)
     setOverrideForm(getDefaultOverrideForm())
     setOverrideEditingId(null)
-    setOverrideLeftTool('files')
     setOverridesPanel({ state: 'edit', source: 'nav' })
   }, [])
 
   const onOverridesNavClick = useCallback(() => {
     setOverrideError(null)
     if (overridesPanel.state === 'edit' && overridesPanel.source === 'nav') {
-      setOverrideLeftTool('files')
       return
     }
     openOverridesFromNav()
@@ -62,8 +63,8 @@ export function useOverrideEditorState() {
     setOverrideError(null)
     setOverrideForm(getDefaultOverrideForm())
     setOverrideEditingId(null)
-    setOverrideLeftTool('info')
-  }, [])
+    bumpRequestPanel()
+  }, [bumpRequestPanel])
 
   const closeOverrideDrawer = useCallback(() => {
     setOverrideError(null)
@@ -82,13 +83,13 @@ export function useOverrideEditorState() {
         headersText: headersToText(override.headers),
         matchMethod: override.matchMethod ?? '',
         matchHost: override.matchHost ?? '',
-        matchPathRegex: override.matchPathRegex ?? '',
+        matchPath: override.matchPath ?? '',
         streamEnabled: override.streamIntervalMs != null,
         streamIntervalMs: override.streamIntervalMs ?? 500,
       })
-      setOverrideLeftTool('info')
+      bumpRequestPanel()
     },
-    [],
+    [bumpRequestPanel],
   )
 
   const deleteOverrideRule = useCallback(
@@ -113,7 +114,7 @@ export function useOverrideEditorState() {
             enabled: override.enabled,
             matchMethod: override.matchMethod ?? null,
             matchHost: override.matchHost ?? null,
-            matchPathRegex: override.matchPathRegex ?? null,
+            matchPath: override.matchPath ?? null,
             status: override.status,
             headers: override.headers,
             body,
@@ -143,7 +144,7 @@ export function useOverrideEditorState() {
             enabled,
             matchMethod: override.matchMethod ?? null,
             matchHost: override.matchHost ?? null,
-            matchPathRegex: override.matchPathRegex ?? null,
+            matchPath: override.matchPath ?? null,
             status: override.status,
             headers: override.headers,
             body: overrideBodyDrafts[override.id] ?? override.body,
@@ -172,7 +173,7 @@ export function useOverrideEditorState() {
       enabled: overrideForm.enabled,
       matchMethod: overrideForm.matchMethod || null,
       matchHost: overrideForm.matchHost || null,
-      matchPathRegex: overrideForm.matchPathRegex || null,
+      matchPath: overrideForm.matchPath || null,
       status: overrideForm.status,
       headers,
       body: overrideForm.body,
@@ -197,12 +198,6 @@ export function useOverrideEditorState() {
         setOverrideEditingId(rule.id)
       }
       await refreshOverrides()
-      setOverridesPanel((sp) => {
-        if (sp.state === 'edit' && sp.source === 'nav') {
-          return { state: 'edit', source: 'nav' }
-        }
-        return { state: 'closed' }
-      })
     } catch (e) {
       setOverrideError(String(e))
     }
@@ -225,8 +220,8 @@ export function useOverrideEditorState() {
     setOverrides,
     overridesPanel,
     setOverridesPanel,
-    overrideLeftTool,
-    setOverrideLeftTool,
+    requestPanelFocusKey,
+    bumpRequestPanel,
     overrideFileInputRef,
     overrideBodyDrafts,
     setOverrideBodyDrafts,

@@ -37,10 +37,17 @@ export function getDefaultOverrideForm(): OverrideFormState {
     headersText: '',
     matchMethod: '',
     matchHost: '',
-    matchPathRegex: '',
+    matchPath: '',
     streamEnabled: false,
     streamIntervalMs: 500,
   }
+}
+
+/** Same rules as the proxy: trim, default empty to `/`, ensure leading `/`. */
+export function normalizePath(p: string): string {
+  const t = p.trim()
+  if (t === '') return '/'
+  return t.startsWith('/') ? t : `/${t}`
 }
 
 export function urlOrigin(u: string): string {

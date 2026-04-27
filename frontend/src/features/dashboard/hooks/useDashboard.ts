@@ -6,9 +6,9 @@ import {
   breakpointMatches,
   escapeRegex,
   headersToText,
+  normalizePath,
   urlOrigin,
 } from '../../../lib/dashboardUtils'
-import type { OverrideRule } from '../../../types'
 import { useAppWebSocket } from './useAppWebSocket'
 
 export function useDashboard() {
@@ -25,7 +25,7 @@ export function useDashboard() {
     setOverrideError,
     setOverrideEditingId,
     setOverrideForm,
-    setOverrideLeftTool,
+    bumpRequestPanel,
     setOverridesPanel,
   } = ovr
   const brk = useBreakpointState({ setTab })
@@ -74,7 +74,7 @@ export function useDashboard() {
           o.enabled &&
           (o.matchMethod ?? '').toLowerCase() === selected.method.toLowerCase() &&
           (o.matchHost ?? '') === selected.host &&
-          (o.matchPathRegex ?? '') === `^${escapeRegex(selected.path)}$`,
+          normalizePath(o.matchPath ?? '') === normalizePath(selected.path),
       ) ?? null
     )
   }, [overrides, selected])
@@ -135,7 +135,7 @@ export function useDashboard() {
       source: {
         name: string
         matchHost?: string | null
-        matchPathRegex?: string | null
+        matchPath?: string | null
       },
       originHint?: string,
     ) => {
@@ -144,27 +144,15 @@ export function useDashboard() {
     [addBreakpointFromOverrideApi],
   )
 
-  const onAddBreakpointForListOverride = useCallback(
-    (override: OverrideRule) => {
-      void addBreakpointFromOverride(
-        override,
-        selectedMatchingOverride?.id === override.id && selected
-          ? urlOrigin(selected.url)
-          : undefined,
-      )
-    },
-    [addBreakpointFromOverride, selected, selectedMatchingOverride],
-  )
-
   const openOverrideDrawer = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
     setOverrideError(null)
-    const matchPathRegex = `^${escapeRegex(selected.path)}$`
+    const pathNorm = normalizePath(selected.path)
     const existing = overrides.find(
       (o) =>
         (o.matchMethod ?? '') === selected.method &&
         (o.matchHost ?? '') === selected.host &&
-        (o.matchPathRegex ?? '') === matchPathRegex,
+        normalizePath(o.matchPath ?? '') === pathNorm,
     )
     if (existing) {
       setOverrideEditingId(existing.id)
@@ -176,7 +164,7 @@ export function useDashboard() {
         headersText: headersToText(existing.headers),
         matchMethod: existing.matchMethod ?? '',
         matchHost: existing.matchHost ?? '',
-        matchPathRegex: existing.matchPathRegex ?? '',
+        matchPath: existing.matchPath ?? '',
         streamEnabled: existing.streamIntervalMs != null,
         streamIntervalMs: existing.streamIntervalMs ?? 500,
       })
@@ -190,20 +178,20 @@ export function useDashboard() {
         headersText: headersToText(selected.responseHeaders ?? undefined),
         matchMethod: selected.method,
         matchHost: selected.host,
-        matchPathRegex: `^${escapeRegex(selected.path)}$`,
+        matchPath: selected.path,
         streamEnabled: false,
         streamIntervalMs: 500,
       })
     }
-    setOverrideLeftTool('info')
+    bumpRequestPanel()
     setOverridesPanel({ state: 'edit', source: 'traffic' })
   }, [
     overrides,
     selected,
+    bumpRequestPanel,
     setOverrideEditingId,
     setOverrideError,
     setOverrideForm,
-    setOverrideLeftTool,
     setOverridesPanel,
   ])
 
@@ -236,21 +224,16 @@ export function useDashboard() {
     closeOverrideDrawer: ovr.closeOverrideDrawer,
     saveOverride: ovr.saveOverride,
     overrideError: ovr.overrideError,
-    overrideLeftTool: ovr.overrideLeftTool,
-    setOverrideLeftTool: ovr.setOverrideLeftTool,
+    requestPanelFocusKey: ovr.requestPanelFocusKey,
+    bumpRequestPanel: ovr.bumpRequestPanel,
     overrideFileInputRef: ovr.overrideFileInputRef,
     overrideForm: ovr.overrideForm,
     setOverrideForm: ovr.setOverrideForm,
     overrideEntries: ovr.overrides,
     startNewOverride: ovr.startNewOverride,
     openOverrideEditorForKey: ovr.openOverrideEditorForKey,
-    onAddBreakpointForListOverride,
-    overrideBodyDrafts: ovr.overrideBodyDrafts,
-    setOverrideBodyDrafts: ovr.setOverrideBodyDrafts,
-    overrideBodySaving: ovr.overrideBodySaving,
     overrideToggleSaving: ovr.overrideToggleSaving,
     setOverrideEnabled: ovr.setOverrideEnabled,
-    saveOverrideBody: ovr.saveOverrideBody,
     deleteOverrideRule: ovr.deleteOverrideRule,
     selectedMatchingOverride,
     overrideEditingId: ovr.overrideEditingId,

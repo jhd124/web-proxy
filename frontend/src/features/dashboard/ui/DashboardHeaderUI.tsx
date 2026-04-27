@@ -36,7 +36,6 @@ export function DashboardHeaderUI({
             ? t.countFiltered(filteredCount, totalCount)
             : t.countAll(totalCount)}
         </span>
-        <code className={s.hint}>{t.proxyExportHint}</code>
       </div>
     </header>
   )

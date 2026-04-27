@@ -7,8 +7,8 @@ export const overrideEditorTexts = {
     subtitle:
       'Future requests that match the rule receive this response (plain HTTP; first matching rule wins).',
     closeAria: 'Close',
-    tabFiles: 'Files',
-    tabRequest: 'Request',
+    fabRequest: 'Request',
+    fabDrag: 'Drag to move',
     footResumeRequest: 'Resume request',
     footResuming: 'Resuming…',
     footAddBreakpoint: 'Add breakpoint',
@@ -19,7 +19,7 @@ export const overrideEditorTexts = {
   files: {
     newRule: 'New rule',
     importHint:
-      'Body import/export applies to the rule you are editing in this session (right pane), not a row below until you use Edit.',
+      'Body import/export applies to the rule you are editing in the center editor. Click a card in the list below to switch to another rule.',
     importToBody: 'Import to body',
     exportBody: 'Export body',
     clearBody: 'Clear body',
@@ -29,8 +29,7 @@ export const overrideEditorTexts = {
     listIntroTail: 'to fill match and body.',
     noRulesLead: 'No rules yet. Use',
     noRulesTail: 'or open one from captured traffic.',
-    edit: 'Edit',
-    addBreakpoint: 'Add breakpoint',
+    openRule: (name: string) => `Open rule: ${name}`,
     deleteRule: 'Delete rule',
     deleteRuleConfirm: 'Delete this override from SQLite?',
     overrideId: 'Override id:',
@@ -52,7 +51,7 @@ export const overrideEditorTexts = {
     matchMethod: 'Match method',
     matchMethodPlaceholder: 'GET',
     host: 'Host contains',
-    pathRegex: 'Path regex',
+    path: 'Path',
     status: 'Status',
     responseHeaders: 'Response headers (one',
     codeName: 'Name: value',

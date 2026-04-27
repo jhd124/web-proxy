@@ -1,5 +1,4 @@
-import type { RefObject } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type { OverrideFormState, OverrideRule, TrafficEntry } from '../../types'
 
 export type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
@@ -8,7 +7,7 @@ export type AddBreakpointFromOverride = (
   source: {
     name: string
     matchHost?: string | null
-    matchPathRegex?: string | null
+    matchPath?: string | null
   },
   originHint?: string,
 ) => void
@@ -17,21 +16,15 @@ export type OverrideEditorUIProps = {
   closeOverrideDrawer: () => void
   saveOverride: () => void
   overrideError: string | null
-  overrideLeftTool: 'files' | 'info'
-  setOverrideLeftTool: (t: 'files' | 'info') => void
+  requestPanelFocusKey: number
   overrideFileInputRef: RefObject<HTMLInputElement | null>
   overrideForm: OverrideFormState
   setOverrideForm: SetOverrideForm
   overrideEntries: OverrideRule[]
   startNewOverride: () => void
   openOverrideEditorForKey: (override: OverrideRule) => void
-  onAddBreakpointForListOverride: (override: OverrideRule) => void
-  overrideBodyDrafts: Record<string, string>
-  setOverrideBodyDrafts: Dispatch<SetStateAction<Record<string, string>>>
-  overrideBodySaving: Record<string, boolean>
   overrideToggleSaving: Record<string, boolean>
   setOverrideEnabled: (override: OverrideRule, enabled: boolean) => void
-  saveOverrideBody: (override: OverrideRule) => void
   deleteOverrideRule: (id: string) => Promise<void>
   selected: TrafficEntry | null
   selectedMatchingOverride: OverrideRule | null

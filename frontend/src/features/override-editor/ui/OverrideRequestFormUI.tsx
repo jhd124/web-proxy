@@ -76,14 +76,14 @@ export function OverrideRequestFormUI({
         />
       </label>
       <label className={s.labelWide}>
-        {t.pathRegex}
+        {t.path}
         <input
           className="mono"
-          value={overrideForm.matchPathRegex}
+          value={overrideForm.matchPath}
           onChange={(e) =>
             setOverrideForm((f) => ({
               ...f,
-              matchPathRegex: e.target.value,
+              matchPath: e.target.value,
             }))
           }
         />

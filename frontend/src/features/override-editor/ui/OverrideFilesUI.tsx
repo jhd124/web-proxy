@@ -12,16 +12,6 @@ type Props = {
   overrideEntries: OverrideRule[]
   startNewOverride: () => void
   openOverrideEditorForKey: (override: OverrideRule) => void
-  onAddBreakpointClick: (override: OverrideRule) => void
-  overrideBodyDrafts: Record<string, string>
-  setOverrideBodyDrafts: React.Dispatch<
-    React.SetStateAction<Record<string, string>>
-  >
-  overrideBodySaving: Record<string, boolean>
-  overrideToggleSaving: Record<string, boolean>
-  setOverrideEnabled: (override: OverrideRule, enabled: boolean) => void
-  saveOverrideBody: (override: OverrideRule) => void
-  deleteOverrideRule: (id: string) => Promise<void>
 }
 
 export function OverrideFilesUI({
@@ -31,14 +21,6 @@ export function OverrideFilesUI({
   overrideEntries,
   startNewOverride,
   openOverrideEditorForKey,
-  onAddBreakpointClick,
-  overrideBodyDrafts,
-  setOverrideBodyDrafts,
-  overrideBodySaving,
-  overrideToggleSaving,
-  setOverrideEnabled,
-  saveOverrideBody,
-  deleteOverrideRule,
 }: Props) {
   return (
     <div className={`${s.fileManager} ${s.fileManagerEmbed}`}>
@@ -112,131 +94,38 @@ export function OverrideFilesUI({
       ) : (
         <ul className={s.embedMockList}>
           {overrideEntries.map((override) => (
-            <li
-              key={override.id}
-              className={`${s.card} ${!override.enabled ? s.cardDisabled : ''}`}
-            >
-              <div className={s.head}>
-                <strong>
-                  {override.name}{' '}
-                  {!override.enabled && (
-                    <span className="pill subtle">{tf.disabled}</span>
-                  )}
-                </strong>
-                <div className={s.actions}>
-                  <button
-                    type="button"
-                    className="ghost"
-                    disabled={overrideToggleSaving[override.id] === true}
-                    onClick={() => void setOverrideEnabled(override, !override.enabled)}
-                  >
-                    {overrideToggleSaving[override.id]
-                      ? tf.saving
-                      : override.enabled
-                        ? tf.disable
-                        : tf.enable}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => openOverrideEditorForKey(override)}
-                  >
-                    {tf.edit}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => onAddBreakpointClick(override)}
-                  >
-                    {tf.addBreakpoint}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost danger"
-                    onClick={() => {
-                      if (!window.confirm(tf.deleteRuleConfirm)) {
-                        return
-                      }
-                      void deleteOverrideRule(override.id).catch((e) => {
-                        window.alert(String(e))
-                      })
-                    }}
-                  >
-                    {tf.deleteRule}
-                  </button>
+            <li key={override.id} className={s.cardWrap}>
+              <button
+                type="button"
+                className={`${s.card} ${s.cardButton} ${
+                  !override.enabled ? s.cardDisabled : ''
+                }`}
+                onClick={() => openOverrideEditorForKey(override)}
+                aria-label={tf.openRule(override.name)}
+              >
+                <div className={s.head}>
+                  <strong>
+                    {override.name}{' '}
+                    {!override.enabled && (
+                      <span className="pill subtle">{tf.disabled}</span>
+                    )}
+                  </strong>
                 </div>
-              </div>
-              <p className={`small mono ${s.overrideSig}`}>
-                <span className={s.tagSig}>{override.matchMethod ?? '∗'}</span>{' '}
-                {override.matchHost ?? '∗'}
-                <span className={s.pathSig}>{override.matchPathRegex ?? '∗'}</span>
-              </p>
-              <p className="tiny muted">
-                {tf.overrideId} <code>{override.id}</code>
-              </p>
-              <p className="small mono">{tf.httpStatus(override.status)}</p>
-              {override.streamIntervalMs != null && (
-                <p className="tiny muted">
-                  {tf.streamed(override.streamIntervalMs)}
+                <p className={`small mono ${s.overrideSig}`}>
+                  <span className={s.tagSig}>{override.matchMethod ?? '∗'}</span>{' '}
+                  {override.matchHost ?? '∗'}
+                  <span className={s.pathSig}>{override.matchPath ?? '∗'}</span>
                 </p>
-              )}
-              <label className={s.bodyEditor}>
-                <span className="tiny muted">
-                  {override.streamIntervalMs != null
-                    ? tf.streamBodyLabel
-                    : tf.responseBodyLabel}
-                </span>
-                <textarea
-                  rows={Math.max(
-                    4,
-                    Math.min(
-                      10,
-                      (overrideBodyDrafts[override.id] ?? override.body).split('\n')
-                        .length + 1,
-                    ),
-                  )}
-                  className="mono"
-                  spellCheck={false}
-                  value={overrideBodyDrafts[override.id] ?? override.body}
-                  onChange={(e) =>
-                    setOverrideBodyDrafts((prev) => ({
-                      ...prev,
-                      [override.id]: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <div className={s.inlineActions}>
-                <button
-                  type="button"
-                  className="ghost"
-                  disabled={
-                    overrideBodySaving[override.id] === true ||
-                    overrideToggleSaving[override.id] === true ||
-                    (overrideBodyDrafts[override.id] ?? override.body) ===
-                      override.body
-                  }
-                  onClick={() =>
-                    setOverrideBodyDrafts((prev) => ({
-                      ...prev,
-                      [override.id]: override.body,
-                    }))
-                  }
-                >
-                  {tf.reset}
-                </button>
-                <button
-                  type="button"
-                  className={`primary ${s.inlinePrimary}`}
-                  disabled={
-                    overrideBodySaving[override.id] === true ||
-                    overrideToggleSaving[override.id] === true
-                  }
-                  onClick={() => void saveOverrideBody(override)}
-                >
-                  {overrideBodySaving[override.id] ? tf.saving : tf.saveContent}
-                </button>
-              </div>
+                <p className="tiny muted">
+                  {tf.overrideId} <code>{override.id}</code>
+                </p>
+                <p className="small mono">{tf.httpStatus(override.status)}</p>
+                {override.streamIntervalMs != null && (
+                  <p className="tiny muted">
+                    {tf.streamed(override.streamIntervalMs)}
+                  </p>
+                )}
+              </button>
             </li>
           ))}
         </ul>

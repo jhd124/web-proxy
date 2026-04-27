@@ -15,7 +15,9 @@ pub struct OverrideRule {
     pub enabled: bool,
     pub match_method: Option<String>,
     pub match_host: Option<String>,
-    pub match_path_regex: Option<String>,
+    /// Request path (plain), compared after normalization. Serialized as `matchPath`.
+    /// Legacy DB values like `^/foo$` are coerced to `/foo` on load.
+    pub match_path: Option<String>,
     pub status: u16,
     pub headers: Vec<(String, String)>,
     pub body: String,
@@ -38,15 +40,29 @@ impl OverrideRule {
                 return false;
             }
         }
-        if let Some(ref pattern) = self.match_path_regex {
-            if let Ok(re) = regex::Regex::new(pattern) {
-                if !re.is_match(path) {
-                    return false;
-                }
+        if let Some(ref want) = self.match_path {
+            if !want.trim().is_empty() && !paths_equal(path, want) {
+                return false;
             }
         }
         true
     }
+}
+
+fn normalize_path(p: &str) -> String {
+    let t = p.trim();
+    if t.is_empty() {
+        return "/".to_string();
+    }
+    if t.starts_with('/') {
+        t.to_string()
+    } else {
+        format!("/{t}")
+    }
+}
+
+fn paths_equal(request_path: &str, rule_path: &str) -> bool {
+    normalize_path(request_path) == normalize_path(rule_path)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

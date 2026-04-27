@@ -30,7 +30,8 @@ export interface OverrideRule {
   enabled: boolean
   matchMethod?: string | null
   matchHost?: string | null
-  matchPathRegex?: string | null
+  /** Plain request path; compared (after normalization) to the incoming path. */
+  matchPath?: string | null
   status: number
   headers: [string, string][]
   body: string
@@ -54,7 +55,7 @@ export interface OverrideFormState {
   headersText: string
   matchMethod: string
   matchHost: string
-  matchPathRegex: string
+  matchPath: string
   streamEnabled: boolean
   streamIntervalMs: number
 }
