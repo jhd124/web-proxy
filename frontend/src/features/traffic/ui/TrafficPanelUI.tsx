@@ -1,3 +1,4 @@
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { trafficTexts as t } from '../texts'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
@@ -45,32 +46,34 @@ export function TrafficPanelUI({
             {testError}
           </p>
         )}
-        <ul className={s.reqList}>
-          {[...filteredEntries].reverse().map((e) => {
-            const schemeLabel = e.kind === 'connect' ? t.schemeHttps : e.scheme.toUpperCase()
-            const summary =
-              e.kind === 'connect' ? t.connectTunnel(e.url) : e.url
-            return (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  className={`${s.row} ${selectedId === e.id ? s.rowActive : ''}`}
-                  onClick={() => setSelectedId(e.id)}
-                >
-                  <span className={s.scheme}>{schemeLabel}</span>
-                  <span className={s.m}>{e.method}</span>
-                  <span className={s.u} title={summary}>
-                    {summary}
-                  </span>
-                  {e.pending && (
-                    <span className={`${s.tag} ${s.tagWarn}`}>{t.tagPending}</span>
-                  )}
-                  {e.responseStatus != null && <span className={s.s}>{e.responseStatus}</span>}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+        <ScrollArea className="min-h-0 flex-1">
+          <ul className={s.reqList}>
+            {[...filteredEntries].reverse().map((e) => {
+              const schemeLabel = e.kind === 'connect' ? t.schemeHttps : e.scheme.toUpperCase()
+              const summary =
+                e.kind === 'connect' ? t.connectTunnel(e.url) : e.url
+              return (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    className={`${s.row} ${selectedId === e.id ? s.rowActive : ''}`}
+                    onClick={() => setSelectedId(e.id)}
+                  >
+                    <span className={s.scheme}>{schemeLabel}</span>
+                    <span className={s.m}>{e.method}</span>
+                    <span className={s.u} title={summary}>
+                      {summary}
+                    </span>
+                    {e.pending && (
+                      <span className={`${s.tag} ${s.tagWarn}`}>{t.tagPending}</span>
+                    )}
+                    {e.responseStatus != null && <span className={s.s}>{e.responseStatus}</span>}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </ScrollArea>
       </aside>
 
       <main className={s.detail}>
