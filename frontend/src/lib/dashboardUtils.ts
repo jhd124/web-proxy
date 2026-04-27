@@ -1,6 +1,14 @@
 import type { BreakpointRule, OverrideFormState, TrafficEntry } from '../types'
 
+/** Default matches Rust `DASHBOARD_PORT` (and Vite’s `/ws` target). */
+const DASHBOARD_DEV_WS_PORT = '9091'
+
+/** Dev: WebSocket to Axum on localhost, not through Vite’s proxy. */
 export const wsUrl = () => {
+  if (import.meta.env.DEV) {
+    const port = import.meta.env.VITE_DASHBOARD_PORT ?? DASHBOARD_DEV_WS_PORT
+    return `ws://127.0.0.1:${port}/ws`
+  }
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${proto}//${window.location.host}/ws`
 }
