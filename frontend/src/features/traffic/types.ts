@@ -4,7 +4,6 @@ export type TrafficPanelUIProps = {
   urlFilter: string
   setUrlFilter: (v: string) => void
   testError: string | null
-  sendTestProxy: () => void
   clearTraffic: () => void
   filteredEntries: TrafficEntry[]
   selectedId: string | null

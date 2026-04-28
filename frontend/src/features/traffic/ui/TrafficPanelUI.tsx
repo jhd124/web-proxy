@@ -7,7 +7,6 @@ export function TrafficPanelUI({
   urlFilter,
   setUrlFilter,
   testError,
-  sendTestProxy,
   clearTraffic,
   filteredEntries,
   selectedId,
@@ -23,9 +22,6 @@ export function TrafficPanelUI({
     <div className={s.grid}>
       <aside className={s.listPanel}>
         <div className={s.listTools}>
-          <button type="button" className="primary" onClick={sendTestProxy}>
-            {t.testProxy}
-          </button>
           <button type="button" className="ghost" onClick={clearTraffic}>
             {t.clear}
           </button>

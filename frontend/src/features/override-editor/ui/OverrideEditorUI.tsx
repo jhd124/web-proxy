@@ -1,11 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { usePanelRef, type PanelSize } from 'react-resizable-panels'
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import { urlOrigin } from '../../../lib/dashboardUtils'
+import { isDefaultOverrideForm, urlOrigin } from '../../../lib/dashboardUtils'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
 import { OverrideFilesUI } from './OverrideFilesUI'
@@ -14,7 +14,6 @@ import { OverrideRequestFormUI } from './OverrideRequestFormUI'
 import s from './OverrideEditorUI.module.css'
 
 const t = overrideEditorTexts.shell
-const of = overrideEditorTexts.form
 const tf = overrideEditorTexts.files
 
 const REQUEST_PCT = '24%'
@@ -57,6 +56,7 @@ export function OverrideEditorUI({
   streamActionSaving,
   playControlledStream,
   pauseControlledStream,
+  computedOverrideId,
 }: OverrideEditorUIProps) {
   const requestPanelRef = usePanelRef()
   const [requestCollapsed, setRequestCollapsed] = useState(false)
@@ -67,6 +67,8 @@ export function OverrideEditorUI({
   const onRequestPanelResize = (size: PanelSize) => {
     setRequestCollapsed(size.asPercentage < 0.5)
   }
+
+  const isDefaultOverride = useMemo(() => isDefaultOverrideForm(overrideForm), [overrideForm])
 
   useLayoutEffect(() => {
     if (requestPanelFocusKey === 0) return
@@ -160,7 +162,7 @@ export function OverrideEditorUI({
             />
             <ResizablePanel
               className="min-h-0 min-w-0"
-              defaultSize="24%"
+              defaultSize={computedOverrideId ? "24%" : 0}
               id="override-request"
               minSize={0}
               panelRef={requestPanelRef}
@@ -175,12 +177,13 @@ export function OverrideEditorUI({
                   streamActionSaving={streamActionSaving}
                   playControlledStream={playControlledStream}
                   pauseControlledStream={pauseControlledStream}
+                  computedOverrideId={computedOverrideId}
                 />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
 
-          {requestCollapsed && (
+          {requestCollapsed && !isDefaultOverride && (
             <div
               role="button"
               tabIndex={0}
@@ -264,7 +267,11 @@ export function OverrideEditorUI({
             onClick={() =>
               void addBreakpointFromOverride(
                 {
-                  name: overrideForm.name.trim() || of.defaultOverrideName,
+                  name:
+                    [overrideForm.matchHost, overrideForm.matchPath]
+                      .map((x) => (x ?? '').trim())
+                      .filter(Boolean)
+                      .join(' ') || 'Override',
                   matchHost: overrideForm.matchHost || null,
                   matchPath: overrideForm.matchPath || null,
                 },

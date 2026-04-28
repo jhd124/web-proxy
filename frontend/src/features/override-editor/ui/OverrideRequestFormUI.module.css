@@ -4,6 +4,66 @@
   gap: 0.6rem;
 }
 
+.matchIdBlock {
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  background: #0f1218;
+  border: 1px solid var(--border);
+}
+
+.idHex {
+  display: block;
+  margin: 0.2rem 0 0;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.matchIdDrift {
+  margin: 0.35rem 0 0;
+  line-height: 1.35;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.subLabel {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.kvList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kvHelp {
+  margin: 0 0 0.15rem;
+  line-height: 1.35;
+}
+
+.kvRow {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.kvRow input {
+  flex: 1;
+  min-width: 0;
+}
+
+.kvRemove {
+  flex-shrink: 0;
+  padding: 0.2rem 0.45rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .form label {
   display: flex;
   flex-direction: column;

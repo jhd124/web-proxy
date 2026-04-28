@@ -1,7 +1,4 @@
 export const overrideEditorTexts = {
-  form: {
-    defaultOverrideName: 'Override',
-  },
   shell: {
     title: 'Override response',
     subtitle:
@@ -22,36 +19,45 @@ export const overrideEditorTexts = {
       'Body import/export applies to the rule you are editing in the center editor. Click a card in the list below to switch to another rule.',
     importToBody: 'Import to body',
     exportBody: 'Export body',
-    clearBody: 'Clear body',
     listIntroLead: 'Rule list (SQLite). You can also add a rule from',
     listIntroOr: ', or',
     listIntroAbove: 'above, then use',
     listIntroTail: 'to fill match and body.',
     noRulesLead: 'No rules yet. Use',
     noRulesTail: 'or open one from captured traffic.',
-    openRule: (name: string) => `Open rule: ${name}`,
+    openRule: (label: string) => `Open rule: ${label}`,
     deleteRule: 'Delete rule',
     deleteRuleConfirm: 'Delete this override from SQLite?',
-    overrideId: 'Override id:',
-    httpStatus: (n: number) => `HTTP ${n}`,
-    streamed: (ms: number) =>
-      `Streamed: ${ms} ms between chunks (body split on blank lines)`,
-    streamBodyLabel: 'Stream body content',
-    responseBodyLabel: 'Response body content',
-    reset: 'Reset',
-    saveContent: 'Save content',
     saving: 'Saving…',
     enable: 'Enable',
     disable: 'Disable',
-    disabled: 'disabled',
   },
   request: {
-    name: 'Name',
     enableRule: 'Enable this override rule',
-    matchMethod: 'Match method',
-    matchMethodPlaceholder: 'GET',
-    host: 'Host contains',
+    matchIdLabel: 'Override id (SHA-256 of match fields)',
+    matchIdDrift:
+      'Differs from saved id until you save; changing match fields changes the id.',
+    protocol: 'Protocol',
+    protocolHint: 'http or https; leave empty to match any',
+    host: 'Hostname',
+    hostHint:
+      'Required. Must match the Host header exactly (e.g. example.com:8080). No match-all / wildcard.',
+    hostRequired: 'Hostname is required: set a specific host (no empty / wildcard).',
+    duplicateMatchIdentity:
+      'An override with the same match identity already exists (duplicate id). Change match fields to produce a different id, or open the existing rule from the list.',
+    saveIdConflict:
+      'Could not save: another rule already uses this id.',
     path: 'Path',
+    pathHint: 'Path only, no query string; leave empty to match any path',
+    matchHeaders: 'Request headers to match',
+    matchHeadersHelp:
+      'Name: value per line, or add rows. Empty = match all requests (ignore header matching).',
+    addHeaderRow: 'Add header',
+    matchQuery: 'Search parameters to match',
+    matchQueryHelp: 'Empty = match all. Each key must appear on the request with the given value.',
+    addQueryRow: 'Add parameter',
+    matchBody: 'Request body to match',
+    matchBodyHelp: 'Empty = any body. When set, must match the full request body (UTF-8).',
     status: 'Status',
     responseHeaders: 'Response headers (one',
     codeName: 'Name: value',

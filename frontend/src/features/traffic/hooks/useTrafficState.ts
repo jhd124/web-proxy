@@ -76,18 +76,6 @@ export function useTrafficState() {
     }
   }, [])
 
-  const sendTestProxy = useCallback(async () => {
-    setTestError(null)
-    try {
-      const r = await fetch('/api/self-test', { method: 'POST' })
-      const j = (await r.json()) as { ok?: boolean; error?: string }
-      if (!r.ok || !j.ok) {
-        setTestError(j.error ?? `HTTP ${r.status}`)
-      }
-    } catch (e) {
-      setTestError(String(e))
-    }
-  }, [])
 
   return {
     entries,
@@ -103,7 +91,6 @@ export function useTrafficState() {
     selected,
     selectedIsEventStream,
     clearTraffic,
-    sendTestProxy,
     resumeRequest,
     resumeSaving,
     streamActionSaving,

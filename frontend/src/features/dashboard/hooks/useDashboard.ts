@@ -5,10 +5,12 @@ import { useTrafficState } from '../../traffic/hooks/useTrafficState'
 import {
   breakpointMatches,
   escapeRegex,
+  getDefaultOverrideForm,
   headersToText,
-  normalizePath,
+  urlMatchPartsForForm,
   urlOrigin,
 } from '../../../lib/dashboardUtils'
+import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
 import { useAppWebSocket } from './useAppWebSocket'
 
 export function useDashboard() {
@@ -70,11 +72,7 @@ export function useDashboard() {
     if (!selected || selected.kind !== 'http') return null
     return (
       overrides.find(
-        (o) =>
-          o.enabled &&
-          (o.matchMethod ?? '').toLowerCase() === selected.method.toLowerCase() &&
-          (o.matchHost ?? '') === selected.host &&
-          normalizePath(o.matchPath ?? '') === normalizePath(selected.path),
+        (o) => o.enabled && trafficEntryMatchesOverride(selected, o),
       ) ?? null
     )
   }, [overrides, selected])
@@ -147,46 +145,21 @@ export function useDashboard() {
   const openOverrideDrawer = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
     setOverrideError(null)
-    const pathNorm = normalizePath(selected.path)
-    const existing = overrides.find(
-      (o) =>
-        (o.matchMethod ?? '') === selected.method &&
-        (o.matchHost ?? '') === selected.host &&
-        normalizePath(o.matchPath ?? '') === pathNorm,
-    )
-    if (existing) {
-      setOverrideEditingId(existing.id)
-      setOverrideForm({
-        name: existing.name,
-        enabled: existing.enabled,
-        status: existing.status,
-        body: existing.body,
-        headersText: headersToText(existing.headers),
-        matchMethod: existing.matchMethod ?? '',
-        matchHost: existing.matchHost ?? '',
-        matchPath: existing.matchPath ?? '',
-        streamEnabled: existing.streamIntervalMs != null,
-        streamIntervalMs: existing.streamIntervalMs ?? 500,
-      })
-    } else {
-      setOverrideEditingId(null)
-      setOverrideForm({
-        name: `Override ${selected.method} ${selected.host}`,
-        enabled: true,
-        status: selected.responseStatus ?? 200,
-        body: selected.responseBodyPreview ?? '',
-        headersText: headersToText(selected.responseHeaders ?? undefined),
-        matchMethod: selected.method,
-        matchHost: selected.host,
-        matchPath: selected.path,
-        streamEnabled: false,
-        streamIntervalMs: 500,
-      })
-    }
+    const m = urlMatchPartsForForm(selected)
+    setOverrideEditingId(null)
+    setOverrideForm({
+      ...getDefaultOverrideForm(),
+      status: selected.responseStatus ?? 200,
+      body: selected.responseBodyPreview ?? '',
+      headersText: headersToText(selected.responseHeaders ?? undefined),
+      matchProtocol: m.matchProtocol,
+      matchHost: m.matchHost,
+      matchPath: m.matchPath,
+      matchQuery: m.matchQuery,
+    })
     bumpRequestPanel()
     setOverridesPanel({ state: 'edit', source: 'traffic' })
   }, [
-    overrides,
     selected,
     bumpRequestPanel,
     setOverrideEditingId,
@@ -209,7 +182,6 @@ export function useDashboard() {
     urlFilter: traffic.urlFilter,
     setUrlFilter: traffic.setUrlFilter,
     testError: traffic.testError,
-    sendTestProxy: traffic.sendTestProxy,
     clearTraffic: traffic.clearTraffic,
     filteredEntries: traffic.filteredEntries,
     selectedId: traffic.selectedId,
@@ -235,6 +207,7 @@ export function useDashboard() {
     overrideToggleSaving: ovr.overrideToggleSaving,
     setOverrideEnabled: ovr.setOverrideEnabled,
     deleteOverrideRule: ovr.deleteOverrideRule,
+    computedOverrideId: ovr.computedOverrideId,
     selectedMatchingOverride,
     overrideEditingId: ovr.overrideEditingId,
     selectedCanControlStream,

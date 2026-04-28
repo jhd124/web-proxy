@@ -37,7 +37,6 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/health", get(health))
         .route("/api/requests", get(list_requests))
         .route("/api/requests", delete(clear_requests))
-        .route("/api/self-test", post(self_test))
         .route("/api/mitm/ca.pem", get(mitm_ca))
         .route("/api/overrides", get(crate::overrides::list_overrides))
         .route("/api/overrides", post(crate::overrides::create_override))
@@ -133,44 +132,6 @@ async fn pause_stream(
         StatusCode::NO_CONTENT
     } else {
         StatusCode::NOT_FOUND
-    }
-}
-
-/// Sends one HTTP GET through the local proxy so the traffic list proves the pipeline works.
-/// Browsers do not use `HTTP_PROXY` from the shell; this is the reliable way to see a row.
-async fn self_test() -> Json<serde_json::Value> {
-    let proxy_port: u16 = std::env::var("PROXY_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9090);
-    let proxy_url = format!("http://127.0.0.1:{}", proxy_port);
-
-    let proxy = match reqwest::Proxy::http(&proxy_url) {
-        Ok(p) => p,
-        Err(e) => {
-            return Json(serde_json::json!({
-                "ok": false,
-                "error": format!("invalid proxy: {}", e),
-            }));
-        }
-    };
-
-    let client = match reqwest::Client::builder().proxy(proxy).build() {
-        Ok(c) => c,
-        Err(e) => {
-            return Json(serde_json::json!({
-                "ok": false,
-                "error": format!("client: {}", e),
-            }));
-        }
-    };
-
-    match client.get("http://example.com/").send().await {
-        Ok(resp) => {
-            let status = resp.status().as_u16();
-            Json(serde_json::json!({ "ok": true, "upstreamStatus": status }))
-        }
-        Err(e) => Json(serde_json::json!({ "ok": false, "error": e.to_string() })),
     }
 }
 

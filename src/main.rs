@@ -1,6 +1,7 @@
 mod api;
 mod breakpoints;
 mod mitm;
+mod override_identity;
 mod overrides;
 mod proxy;
 mod state;

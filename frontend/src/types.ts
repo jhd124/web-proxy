@@ -26,13 +26,16 @@ export interface TrafficEntry {
 
 export interface OverrideRule {
   id: string
-  name: string
   enabled: boolean
-  matchMethod?: string | null
+  matchProtocol?: string | null
   matchHost?: string | null
-  /** Plain request path; compared (after normalization) to the incoming path. */
+  /** Plain request path (no query); compared (after normalization) to the incoming path. */
   matchPath?: string | null
+  matchRequestHeaders?: [string, string][]
+  matchQuery?: [string, string][]
+  matchRequestBody?: string | null
   status: number
+  /** Response headers for the override. */
   headers: [string, string][]
   body: string
   streamIntervalMs?: number | null
@@ -48,14 +51,16 @@ export interface BreakpointRule {
 
 /** Editable state for the override full-screen editor (form + Monaco). */
 export interface OverrideFormState {
-  name: string
   enabled: boolean
   status: number
   body: string
   headersText: string
-  matchMethod: string
+  matchProtocol: string
   matchHost: string
   matchPath: string
+  matchRequestHeaders: [string, string][]
+  matchQuery: [string, string][]
+  matchRequestBody: string
   streamEnabled: boolean
   streamIntervalMs: number
 }

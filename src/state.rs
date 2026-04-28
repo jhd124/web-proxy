@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use http::header::HeaderMap;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,15 +11,25 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OverrideRule {
-    pub id: Uuid,
-    pub name: String,
+    /// SHA-256 hex (64 chars) from match identity, or an older id string from pre-hash DB rows.
+    pub id: String,
     pub enabled: bool,
-    pub match_method: Option<String>,
+    /// e.g. `http` / `https`
+    pub match_protocol: Option<String>,
     pub match_host: Option<String>,
     /// Request path (plain), compared after normalization. Serialized as `matchPath`.
-    /// Legacy DB values like `^/foo$` are coerced to `/foo` on load.
+    /// Old stored values like `^/foo$` are coerced to `/foo` on load.
     pub match_path: Option<String>,
+    /// Headers the **incoming** request must carry (empty = match all). Name is case-insensitive.
+    #[serde(default)]
+    pub match_request_headers: Vec<(String, String)>,
+    /// Query parameters the request must carry (empty = match all).
+    #[serde(default)]
+    pub match_query: Vec<(String, String)>,
+    /// If set and non-empty, request body (UTF-8) must equal this string.
+    pub match_request_body: Option<String>,
     pub status: u16,
+    /// Response headers to send with the override.
     pub headers: Vec<(String, String)>,
     pub body: String,
     #[serde(default)]
@@ -26,27 +37,100 @@ pub struct OverrideRule {
 }
 
 impl OverrideRule {
-    pub fn matches(&self, method: &str, host: &str, path: &str) -> bool {
+    pub fn matches(
+        &self,
+        _method: &str,
+        scheme: &str,
+        host: &str,
+        _path_with_query: &str,
+        path_only: &str,
+        request_query: &[(String, String)],
+        request_headers: &HeaderMap,
+        request_body: &[u8],
+    ) -> bool {
         if !self.enabled {
             return false;
         }
-        if let Some(ref m) = self.match_method {
-            if !m.eq_ignore_ascii_case(method) {
-                return false;
-            }
+        // Host is always required: no "match any host" / wildcard.
+        let host_want = match self.match_host.as_deref().map(str::trim) {
+            Some(t) if !t.is_empty() => t,
+            _ => return false,
+        };
+        if host.to_lowercase() != host_want.to_lowercase() {
+            return false;
         }
-        if let Some(ref h) = self.match_host {
-            if !host.to_lowercase().contains(&h.to_lowercase()) {
+        if let Some(ref p) = self.match_protocol {
+            if !p.eq_ignore_ascii_case(scheme) {
                 return false;
             }
         }
         if let Some(ref want) = self.match_path {
-            if !want.trim().is_empty() && !paths_equal(path, want) {
+            if !want.trim().is_empty() && !paths_equal(path_only, want) {
                 return false;
+            }
+        }
+        if !request_headers_satisfied(request_headers, &self.match_request_headers) {
+            return false;
+        }
+        if !query_satisfied(request_query, &self.match_query) {
+            return false;
+        }
+        if let Some(ref want_body) = self.match_request_body {
+            if !want_body.trim().is_empty() {
+                let got = String::from_utf8_lossy(request_body);
+                if got != *want_body {
+                    return false;
+                }
             }
         }
         true
     }
+}
+
+fn request_headers_satisfied(req: &HeaderMap, rules: &[(String, String)]) -> bool {
+    for (rk, rv) in rules {
+        let rkl = rk.to_ascii_lowercase();
+        let mut any = false;
+        for (name, val) in req.iter() {
+            if name.as_str().to_ascii_lowercase() == rkl {
+                if rv.is_empty() {
+                    any = true;
+                    break;
+                }
+                if val.to_str().ok() == Some(rv.as_str()) {
+                    any = true;
+                    break;
+                }
+            }
+        }
+        if !any {
+            return false;
+        }
+    }
+    true
+}
+
+/// Each rule (k, v) must be satisfied: key present; if v non-empty, one value must equal.
+fn query_satisfied(request: &[(String, String)], rules: &[(String, String)]) -> bool {
+    for (k, v) in rules {
+        let mut any = false;
+        for (qk, qv) in request {
+            if qk == k {
+                if v.is_empty() {
+                    any = true;
+                    break;
+                }
+                if qv == v {
+                    any = true;
+                    break;
+                }
+            }
+        }
+        if !any {
+            return false;
+        }
+    }
+    true
 }
 
 fn normalize_path(p: &str) -> String {

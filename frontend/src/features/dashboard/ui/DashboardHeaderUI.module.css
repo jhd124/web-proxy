@@ -37,16 +37,6 @@
   flex-wrap: wrap;
 }
 
-.hint {
-  font-size: 0.72rem;
-  color: var(--muted);
-  padding: 0.35rem 0.5rem;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 6px;
-  max-width: 100%;
-  overflow: auto;
-}
-
 .pill {
   font-size: 0.75rem;
   padding: 0.2rem 0.55rem;

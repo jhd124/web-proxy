@@ -32,7 +32,6 @@ export function DashboardUI(p: DashboardViewModel) {
           urlFilter={p.urlFilter}
           setUrlFilter={p.setUrlFilter}
           testError={p.testError}
-          sendTestProxy={p.sendTestProxy}
           clearTraffic={p.clearTraffic}
           filteredEntries={p.filteredEntries}
           selectedId={p.selectedId}
@@ -71,6 +70,7 @@ export function DashboardUI(p: DashboardViewModel) {
           streamActionSaving={p.streamActionSaving}
           playControlledStream={p.playControlledStream}
           pauseControlledStream={p.pauseControlledStream}
+          computedOverrideId={p.computedOverrideId}
         />
       )}
 

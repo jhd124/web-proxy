@@ -36,4 +36,6 @@ export type OverrideEditorUIProps = {
   streamActionSaving: Record<string, boolean>
   playControlledStream: (id: string) => void
   pauseControlledStream: (id: string) => void
+  /** SHA-256 hex from current match fields (may differ from saved `id` until save). */
+  computedOverrideId: string | null
 }

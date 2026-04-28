@@ -1,5 +1,4 @@
 export const trafficTexts = {
-  testProxy: 'Test proxy',
   clear: 'Clear',
   filterAria: 'Filter by URL substring',
   filterPlaceholder: 'Filter URL…',

@@ -227,6 +227,45 @@ fn parse_host_path(url: &str) -> (String, String) {
     }
 }
 
+/// Scheme, host, path with query, path only, and query pairs for override matching.
+fn parse_url_for_override(url: &str) -> (String, String, String, String, Vec<(String, String)>) {
+    if let Ok(u) = url::Url::parse(url) {
+        let scheme = u.scheme().to_string();
+        let host = u.host_str().unwrap_or("").to_string();
+        let path_only = u.path();
+        let path_only = if path_only.is_empty() {
+            "/".to_string()
+        } else {
+            path_only.to_string()
+        };
+        let path_with_query = match u.query() {
+            Some(q) => format!("{path_only}?{q}"),
+            None => path_only.clone(),
+        };
+        let q: Vec<(String, String)> = u.query_pairs().into_owned().collect();
+        (scheme, host, path_with_query, path_only, q)
+    } else {
+        let (host, pq) = parse_host_path(url);
+        let scheme = if url.starts_with("https://") {
+            "https".to_string()
+        } else {
+            "http".to_string()
+        };
+        let path_only = pq
+            .split('?')
+            .next()
+            .map(|s| {
+                if s.is_empty() {
+                    "/".to_string()
+                } else {
+                    s.to_string()
+                }
+            })
+            .unwrap_or_else(|| "/".to_string());
+        (scheme, host, pq, path_only, Vec::new())
+    }
+}
+
 fn parse_origin(url: &str) -> String {
     if let Ok(u) = url::Url::parse(url) {
         let scheme = u.scheme();
@@ -244,13 +283,29 @@ fn parse_origin(url: &str) -> String {
 fn find_override(
     state: &AppState,
     method: &str,
+    scheme: &str,
     host: &str,
-    path: &str,
+    path_with_query: &str,
+    path_only: &str,
+    request_query: &[(String, String)],
+    request_headers: &hyper::header::HeaderMap,
+    request_body: &[u8],
 ) -> Option<crate::state::OverrideRule> {
     let rules = state.overrides.read();
     rules
         .iter()
-        .find(|r| r.matches(method, host, path))
+        .find(|r| {
+            r.matches(
+                method,
+                scheme,
+                host,
+                path_with_query,
+                path_only,
+                request_query,
+                request_headers,
+                request_body,
+            )
+        })
         .cloned()
 }
 
@@ -691,18 +746,22 @@ async fn forward_proxied_http(
     request_headers: &hyper::header::HeaderMap,
     collected: Bytes,
 ) -> Result<Response<ProxyBody>, Infallible> {
-    let (host, path) = parse_host_path(&url);
+    let (scheme, host, path_with_query, path_only, request_query) = parse_url_for_override(&url);
     let origin = parse_origin(&url);
-    let scheme = if url.starts_with("https://") {
-        "https"
-    } else {
-        "http"
-    }
-    .to_string();
 
     let req_body_preview = preview_bytes(&collected);
     let req_headers = reqwest_headers_for_upstream(request_headers);
-    let matched_override = find_override(&state, method.as_str(), &host, &path);
+    let matched_override = find_override(
+        &state,
+        method.as_str(),
+        &scheme,
+        &host,
+        &path_with_query,
+        &path_only,
+        &request_query,
+        request_headers,
+        collected.as_ref(),
+    );
 
     let entry_id = Uuid::new_v4();
     let entry = TrafficEntry {
@@ -711,9 +770,9 @@ async fn forward_proxied_http(
         peer: peer.to_string(),
         method: method.to_string(),
         url: url.clone(),
-        scheme,
+        scheme: scheme.clone(),
         host: host.clone(),
-        path: path.clone(),
+        path: path_with_query.clone(),
         request_headers: request_headers
             .iter()
             .map(|(k, v)| {
@@ -738,7 +797,7 @@ async fn forward_proxied_http(
     state.push_traffic(entry);
 
     let mut stream_ctrl = None;
-    if let Some(rule) = find_breakpoint(&state, &origin, &path) {
+    if let Some(rule) = find_breakpoint(&state, &origin, &path_with_query) {
         let has_controlled_stream = matched_override
             .as_ref()
             .and_then(|r| r.stream_interval_ms)

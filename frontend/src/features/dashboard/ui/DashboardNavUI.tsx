@@ -28,10 +28,6 @@ export function DashboardNavUI({
       <button type="button" className={tabClass(tab === 'traffic')} onClick={() => setTab('traffic')}>
         {t.traffic}
       </button>
-      <button type="button" className={s.tabLaunch} onClick={onOverridesClick}>
-        {t.overrides}
-        {overrideCount > 0 && <span className={s.tabCount}>{overrideCount}</span>}
-      </button>
       <button
         type="button"
         className={tabClass(tab === 'breakpoints')}
@@ -42,6 +38,12 @@ export function DashboardNavUI({
           <span className={s.tabCount}>{breakpointCount}</span>
         )}
       </button>
+      <div className="ml-auto flex items-center">
+        <button type="button" className={s.tabLaunch} onClick={onOverridesClick}>
+          {t.overrides}
+          {overrideCount > 0 && <span className={s.tabCount}>{overrideCount}</span>}
+        </button>
+      </div>
     </nav>
   )
 }
