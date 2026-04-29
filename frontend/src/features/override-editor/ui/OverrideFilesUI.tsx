@@ -1,11 +1,12 @@
-import { useMemo, type ReactNode } from 'react'
-import type { OverrideFormState, OverrideRule } from '../../../types'
+import { useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 import {
-  buildPathGroups,
-  formatPathPrefix,
-  overrideListLabel,
-  type PathNode,
-} from '../overrideFileTree'
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import type { OverrideFormState, OverrideRule } from '../../../types'
+import { buildPathGroups, overrideListLabel } from '../overrideFileTree'
 import { overrideEditorTexts } from '../texts'
 import type { SetOverrideForm } from '../types'
 import s from './OverrideFilesUI.module.css'
@@ -45,75 +46,6 @@ function RuleItem({
         </div>  
       </button>
     </div>
-  )
-}
-
-function PathTreeList({
-  node,
-  pathPrefix,
-  openOverrideEditorForKey,
-}: {
-  node: PathNode
-  pathPrefix: string[]
-  openOverrideEditorForKey: (o: OverrideRule) => void
-}): ReactNode {
-  if (node.rules.length === 0 && node.children.size === 1) {
-    const [seg, child] = node.children.entries().next().value! as [
-      string,
-      PathNode,
-    ]
-    return (
-      <PathTreeList
-        node={child}
-        pathPrefix={[...pathPrefix, seg]}
-        openOverrideEditorForKey={openOverrideEditorForKey}
-      />
-    )
-  }
-
-  const childKeys = [...node.children.keys()].sort((a, b) =>
-    a.localeCompare(b, undefined, { sensitivity: 'base' }),
-  )
-  const showChildSegment = childKeys.length > 1 || node.rules.length > 0
-
-  return (
-    <>
-      {node.rules.length > 0 && (
-        <ul className={s.ruleGroup}>
-          {node.rules.map((override) => (
-            <li key={override.id}>
-              <RuleItem
-                override={override}
-                openOverrideEditorForKey={openOverrideEditorForKey}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-      {childKeys.length > 0 && (
-        <ul className={s.pathBranches}>
-          {childKeys.map((k) => (
-            <li key={k} className={s.pathBranchItem}>
-              {showChildSegment && (
-                <div
-                  className={s.pathSegRow}
-                  title={formatPathPrefix([...pathPrefix, k])}
-                >
-                  <span className={s.pathSegMono} aria-hidden="true">
-                    {k}
-                  </span>
-                </div>
-              )}
-              <PathTreeList
-                node={node.children.get(k)!}
-                pathPrefix={[...pathPrefix, k]}
-                openOverrideEditorForKey={openOverrideEditorForKey}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
   )
 }
 
@@ -196,27 +128,67 @@ export function OverrideFilesUI({
         <>
           {pathGroups.length > 0 ? (
             <div className={s.originGroupList}>
-              {pathGroups.map((group) => (
-                <section
-                  key={group.host}
-                  className={s.originSection}
-                  aria-label={group.host}
-                >
-                  <h3
-                    className={s.originHeading}
-                    id={`ov-origin-${String(group.host).replace(/\s+/g, '_')}`}
+              {pathGroups.map((group) => {
+                const hostId = `ov-origin-${String(group.host).replace(/\s+/g, '_')}`
+                const contentId = `${hostId}-rules`
+                return (
+                  <section
+                    key={group.host}
+                    className={s.originSection}
+                    aria-label={group.host}
                   >
-                    <span className="mono">{group.host}</span>
-                  </h3>
-                  <div className={s.originTree}>
-                    <PathTreeList
-                      node={group.root}
-                      pathPrefix={[]}
-                      openOverrideEditorForKey={openOverrideEditorForKey}
-                    />
-                  </div>
-                </section>
-              ))}
+                    <Collapsible defaultOpen className={s.originCollapsible}>
+                      <h3
+                        className={s.originHeading}
+                        id={hostId}
+                      >
+                        <CollapsibleTrigger
+                          className={s.originTrigger}
+                          type="button"
+                          aria-label={tf.toggleHostGroup(group.host)}
+                          aria-controls={contentId}
+                        >
+                          <ChevronDown
+                            className={s.originChevron}
+                            data-icon="inline-start"
+                            aria-hidden
+                          />
+                          <span className={`mono ${s.originHostLabel}`}>
+                            {group.host}
+                          </span>
+                          <span
+                            className={`small muted ${s.originRuleCount}`}
+                            aria-hidden
+                          >
+                            ({group.rules.length})
+                          </span>
+                        </CollapsibleTrigger>
+                      </h3>
+                      <CollapsibleContent
+                        id={contentId}
+                        className={s.originCollapsibleContent}
+                        role="region"
+                        aria-labelledby={hostId}
+                      >
+                        <div className={s.originTree}>
+                          <ul className={s.ruleGroup}>
+                            {group.rules.map((override) => (
+                              <li key={override.id}>
+                                <RuleItem
+                                  override={override}
+                                  openOverrideEditorForKey={
+                                    openOverrideEditorForKey
+                                  }
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </section>
+                )
+              })}
             </div>
           ) : null}
         </>

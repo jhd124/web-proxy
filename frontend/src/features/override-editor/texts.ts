@@ -26,6 +26,7 @@ export const overrideEditorTexts = {
     noRulesLead: 'No rules yet. Use',
     noRulesTail: 'or open one from captured traffic.',
     openRule: (label: string) => `Open rule: ${label}`,
+    toggleHostGroup: (host: string) => `Show or hide rules for ${host}`,
     deleteRule: 'Delete rule',
     deleteRuleConfirm: 'Delete this override from SQLite?',
     saving: 'Saving…',

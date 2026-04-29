@@ -123,7 +123,7 @@ export function OverrideEditorUI({
           >
             <ResizablePanel
               className="min-h-0 min-w-0"
-              defaultSize="24%"
+              defaultSize={380}
               id="override-tools"
               minSize={16}
             >

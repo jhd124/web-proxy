@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OverrideRule } from '../../types'
-import { buildPathGroups, type PathNode } from './overrideFileTree'
+import { buildPathGroups } from './overrideFileTree'
 
 function rule(
   partial: Partial<OverrideRule> & Pick<OverrideRule, 'id'>,
@@ -14,13 +14,6 @@ function rule(
     matchQuery: [],
     ...partial,
   }
-}
-
-function pathNode(
-  rules: OverrideRule[],
-  children: Record<string, PathNode> = {},
-): PathNode {
-  return { rules, children: new Map(Object.entries(children)) }
 }
 
 describe('buildPathGroups', () => {
@@ -37,7 +30,7 @@ describe('buildPathGroups', () => {
     expect(buildPathGroups(overrides)).toEqual([])
   })
 
-  it('groups by trimmed host and merges same host under one root', () => {
+  it('groups by trimmed host and sorts rules by path', () => {
     const r1 = rule({
       id: '1',
       matchHost: '  example.com  ',
@@ -49,22 +42,12 @@ describe('buildPathGroups', () => {
       matchPath: '/b',
     })
     const overrides: OverrideRule[] = [r1, r2]
-    const expected: { host: string; root: PathNode }[] = [
-      {
-        host: 'example.com',
-        root: pathNode(
-          [],
-          {
-            a: pathNode([r1]),
-            b: pathNode([r2]),
-          },
-        ),
-      },
-    ]
-    expect(buildPathGroups(overrides)).toEqual(expected)
+    expect(buildPathGroups(overrides)).toEqual([
+      { host: 'example.com', rules: [r1, r2] },
+    ])
   })
 
-  it('normalizes path: leading slash, empty and "/" map to root; bare segment becomes one path level', () => {
+  it('sorts paths with normalizePath; ties by rule id', () => {
     const r1 = rule({
       id: '1',
       matchHost: 'h.test',
@@ -81,21 +64,12 @@ describe('buildPathGroups', () => {
       matchPath: 'api',
     })
     const overrides: OverrideRule[] = [r1, r2, r3]
-    const expected: { host: string; root: PathNode }[] = [
-      {
-        host: 'h.test',
-        root: pathNode(
-          [r1, r2],
-          {
-            api: pathNode([r3]),
-          },
-        ),
-      },
-    ]
-    expect(buildPathGroups(overrides)).toEqual(expected)
+    expect(buildPathGroups(overrides)).toEqual([
+      { host: 'h.test', rules: [r1, r2, r3] },
+    ])
   })
 
-  it('places path segments in a trie; rule ids sorted at each node', () => {
+  it('orders by path; same path uses id for stable order', () => {
     const r1 = rule({
       id: '1',
       matchHost: 'x.com',
@@ -112,24 +86,9 @@ describe('buildPathGroups', () => {
       matchPath: '/other',
     })
     const overrides: OverrideRule[] = [r1, r2, r3]
-    const expected: { host: string; root: PathNode }[] = [
-      {
-        host: 'x.com',
-        root: pathNode(
-          [],
-          {
-            api: pathNode(
-              [],
-              {
-                v1: pathNode([r1, r2]),
-              },
-            ),
-            other: pathNode([r3]),
-          },
-        ),
-      },
-    ]
-    expect(buildPathGroups(overrides)).toEqual(expected)
+    expect(buildPathGroups(overrides)).toEqual([
+      { host: 'x.com', rules: [r1, r2, r3] },
+    ])
   })
 
   it('sorts host groups with localeCompare (case-insensitive base)', () => {
@@ -144,16 +103,9 @@ describe('buildPathGroups', () => {
       matchPath: '/',
     })
     const overrides: OverrideRule[] = [r1, r2]
-    const expected: { host: string; root: PathNode }[] = [
-      {
-        host: 'a.example',
-        root: pathNode([r2], {}),
-      },
-      {
-        host: 'B.example',
-        root: pathNode([r1], {}),
-      },
-    ]
-    expect(buildPathGroups(overrides)).toEqual(expected)
+    expect(buildPathGroups(overrides)).toEqual([
+      { host: 'a.example', rules: [r2] },
+      { host: 'B.example', rules: [r1] },
+    ])
   })
 })
