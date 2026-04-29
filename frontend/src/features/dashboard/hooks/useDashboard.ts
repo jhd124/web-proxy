@@ -19,6 +19,7 @@ export function useDashboard() {
     'connecting',
   )
   const [mitmEnabled, setMitmEnabled] = useState(false)
+  const [mitmCaPemPath, setMitmCaPemPath] = useState<string | null>(null)
 
   const traffic = useTrafficState()
   const ovr = useOverrideEditorState()
@@ -57,8 +58,16 @@ export function useDashboard() {
       try {
         const r = await fetch('/api/health')
         if (!r.ok) return
-        const h = (await r.json()) as { mitmEnabled?: boolean }
+        const h = (await r.json()) as {
+          mitmEnabled?: boolean
+          mitmCaPemPath?: string | null
+        }
         setMitmEnabled(Boolean(h.mitmEnabled))
+        setMitmCaPemPath(
+          typeof h.mitmCaPemPath === 'string' && h.mitmCaPemPath.length > 0
+            ? h.mitmCaPemPath
+            : null,
+        )
       } catch {
         /* ignore */
       }
@@ -174,6 +183,7 @@ export function useDashboard() {
     filteredCount: filteredEntries.length,
     totalCount: entries.length,
     mitmEnabled,
+    mitmCaPemPath,
     tab,
     setTab,
     overrideCount: ovr.overrides.length,

@@ -41,20 +41,48 @@ async fn main() -> anyhow::Result<()> {
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 
+    let data_dir: Option<PathBuf> = std::env::var("PROXY_DATA_DIR")
+        .ok()
+        .map(PathBuf::from);
+    if let Some(ref d) = data_dir {
+        let _ = std::fs::create_dir_all(d);
+    }
+
     let mitm_enabled = std::env::var("MITM")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
-    let mitm = if mitm_enabled {
-        let dir = std::env::var("MITM_CA_DIR").unwrap_or_else(|_| "mitm-ca".to_string());
+    let mitm_dir: Option<PathBuf> = if mitm_enabled {
+        Some(
+            std::env::var("MITM_CA_DIR")
+                .ok()
+                .map(PathBuf::from)
+                .or_else(|| data_dir.as_ref().map(|d| d.join("mitm-ca")))
+                .unwrap_or_else(|| PathBuf::from("mitm-ca")),
+        )
+    } else {
+        None
+    };
+    let mitm = if let Some(ref dir) = mitm_dir {
         Some(Arc::new(
-            mitm::Mitm::load_or_create(&PathBuf::from(dir)).context("MITM CA")?,
+            mitm::Mitm::load_or_create(dir).context("MITM CA")?,
         ))
     } else {
         None
     };
+    let mitm_ca_pem_path = mitm_dir.map(|d| {
+        let pem = d.join("ca.pem");
+        std::fs::canonicalize(&pem).unwrap_or(pem)
+    });
 
-    let override_db_path =
-        PathBuf::from(std::env::var("OVERRIDE_DB").unwrap_or_else(|_| "proxy-overrides.sqlite3".to_string()));
+    let override_db_path = std::env::var("OVERRIDE_DB")
+        .ok()
+        .map(PathBuf::from)
+        .or_else(|| {
+            data_dir
+                .as_ref()
+                .map(|d| d.join("proxy-overrides.sqlite3"))
+        })
+        .unwrap_or_else(|| PathBuf::from("proxy-overrides.sqlite3"));
     let overrides = overrides::init_and_load(&override_db_path).context("override sqlite init")?;
     let breakpoints = Vec::new();
 
@@ -79,6 +107,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState::new(
         max_traffic,
         mitm,
+        mitm_ca_pem_path,
         override_db_path,
         overrides,
         breakpoints,

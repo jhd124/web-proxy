@@ -243,12 +243,15 @@ pub struct AppState {
     pub max_traffic: usize,
     /// When set, HTTPS CONNECT is intercepted (TLS MITM) so decrypted HTTP is logged.
     pub mitm: Option<Arc<crate::mitm::Mitm>>,
+    /// Absolute path to `ca.pem` on disk when MITM is enabled (for desktop cert installers).
+    pub mitm_ca_pem_path: Option<PathBuf>,
 }
 
 impl AppState {
     pub fn new(
         max_traffic: usize,
         mitm: Option<Arc<crate::mitm::Mitm>>,
+        mitm_ca_pem_path: Option<PathBuf>,
         override_db_path: PathBuf,
         overrides: Vec<OverrideRule>,
         breakpoints: Vec<BreakpointRule>,
@@ -270,6 +273,7 @@ impl AppState {
             upstream_http3_enabled,
             max_traffic,
             mitm,
+            mitm_ca_pem_path,
         }
     }
 

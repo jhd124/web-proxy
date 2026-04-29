@@ -1,7 +1,7 @@
 # Override 规则 ID 的计算规则
 
 每条 override 规则的主键 `id` 不是随机 UUID，而是对**规范匹配串**做 **SHA-256** 后得到的 **64 位小写十六进制**字符串。  
-后端实现：`src/override_identity.rs`；前端预览（与后端一致）：`frontend/src/lib/overrideIdentity.ts`。
+后端实现：`backend/src/override_identity.rs`；前端预览（与后端一致）：`frontend/src/lib/overrideIdentity.ts`。
 
 ## 规范串 `identity_material` 的拼接顺序
 
@@ -57,7 +57,7 @@ id = 小写十六进制( SHA256( UTF-8( material ) ) )
 ## 稳定性与变更
 
 - 同一条规则、同一套 match 相关字段，计算出的 `id` **稳定、可复现**。
-- 若修改任何参与 `material` 的字段，会得到**新的** `id`；服务端在更新时若新 id 与旧 id 不同，会按实现删除旧行再插入新行（以实际 `src/overrides.rs` 为准）。
+- 若修改任何参与 `material` 的字段，会得到**新的** `id`；服务端在更新时若新 id 与旧 id 不同，会按实现删除旧行再插入新行（以实际 `backend/src/overrides.rs` 为准）。
 
 ## 相同 host、path 下多条约规则能否并存
 
@@ -70,8 +70,8 @@ id = 小写十六进制( SHA256( UTF-8( material ) ) )
 
 ### 与代理「首条命中」的关系
 
-`src/proxy.rs` 的 `find_override` 在内存规则列表上按**顺序**查找，**第一个** `matches` 为真的规则生效。  
-若存在多条在「某次实际请求」上**同时**满足 `matches` 的规则（例如仅 host+path 重叠、其它条件在这一次请求上也都满足），则**先被遍历到**的那条 wins。列表顺序以加载/插入后的 `Vec` 为准（新创建会插到前面等，以 `src/overrides.rs` 为准）。需要避免歧义时，应让各条规则在 P / H_blob / Q_blob / B 等维度上**互斥**，或接受顺序带来的优先级。
+`backend/src/proxy.rs` 的 `find_override` 在内存规则列表上按**顺序**查找，**第一个** `matches` 为真的规则生效。  
+若存在多条在「某次实际请求」上**同时**满足 `matches` 的规则（例如仅 host+path 重叠、其它条件在这一次请求上也都满足），则**先被遍历到**的那条 wins。列表顺序以加载/插入后的 `Vec` 为准（新创建会插到前面等，以 `backend/src/overrides.rs` 为准）。需要避免歧义时，应让各条规则在 P / H_blob / Q_blob / B 等维度上**互斥**，或接受顺序带来的优先级。
 
 ## 与响应内容的关系
 

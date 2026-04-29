@@ -20,5 +20,11 @@ export const dashboardTexts = {
     linkDownload: 'proxy-mitm-ca.pem',
     afterLink:
       'and add it to your system keychain (macOS: Keychain Access → import → always trust). Then restart the browser. Without the CA, HTTPS sites will show certificate errors.',
+    desktopMacInstall:
+      'Add to System keychain (macOS, admin password)…',
+    desktopOpenFile: 'Open certificate file…',
+    desktopInstallFailed: (detail: string) =>
+      `Could not install CA: ${detail}`,
+    desktopOpenFailed: (detail: string) => `Could not open file: ${detail}`,
   },
 } as const

@@ -17,7 +17,9 @@ export function DashboardUI(p: DashboardViewModel) {
         totalCount={p.totalCount}
       />
 
-      {p.mitmEnabled && <MitmBannerUI />}
+      {p.mitmEnabled && (
+        <MitmBannerUI mitmCaPemPath={p.mitmCaPemPath} />
+      )}
 
       <DashboardNavUI
         tab={p.tab}

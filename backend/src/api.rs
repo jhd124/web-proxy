@@ -8,6 +8,7 @@ use axum::Json;
 use axum::Router;
 use serde::Serialize;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
@@ -20,8 +21,21 @@ struct Health {
     pub dashboard_port: u16,
     /// When true, HTTPS is decrypted (MITM); install CA from `/api/mitm/ca.pem`.
     pub mitm_enabled: bool,
+    /// Absolute filesystem path to the CA PEM (same bytes as `/api/mitm/ca.pem`); for desktop trust installers.
+    pub mitm_ca_pem_path: Option<String>,
     /// When true, outbound HTTPS requests prefer an HTTP/3-only reqwest client.
     pub upstream_http3_enabled: bool,
+}
+
+/// `DASHBOARD_DIST` is set by the Tauri sidecar; otherwise we use the Vite `frontend/dist` next to the repo root.
+fn dashboard_dist_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("DASHBOARD_DIST") {
+        return PathBuf::from(p);
+    }
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CARGO_MANIFEST_DIR has parent (repo root)")
+        .join("frontend/dist")
 }
 
 pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()> {
@@ -30,7 +44,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("frontend/dist");
+    let dist = dashboard_dist_dir();
     let static_files = ServeDir::new(&dist);
 
     let app = Router::new()
@@ -74,6 +88,10 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
         proxy_port,
         dashboard_port,
         mitm_enabled: state.mitm.is_some(),
+        mitm_ca_pem_path: state
+            .mitm_ca_pem_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().into_owned()),
         upstream_http3_enabled: state.upstream_http3_enabled,
     })
 }

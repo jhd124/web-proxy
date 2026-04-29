@@ -31,8 +31,11 @@ impl Mitm {
             let ca_key = KeyPair::from_pem(&key_pem).context("parse CA key PEM")?;
             (ca_cert_pem, ca_key)
         } else {
-            let mut params = CertificateParams::new(vec!["proxy-app MITM CA".to_string()])
-                .context("CA cert params")?;
+            let ca_name = format!(
+                "proxy-app MITM CA @ {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+            );
+            let mut params = CertificateParams::new(vec![ca_name]).context("CA cert params")?;
             params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
             params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
             let ca_key = KeyPair::generate().context("generate CA key")?;

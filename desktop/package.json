@@ -1,0 +1,15 @@
+{
+  "name": "proxy",
+  "private": true,
+  "scripts": {
+    "dev:tauri-stack": "concurrently -k -n proxy,ui -c blue,green \"cd .. && MITM=1 cargo run -p proxy-app\" \"cd ../frontend && npm run dev\"",
+    "tauri": "tauri",
+    "tauri:prebuild": "cd ../frontend && npm run build && cd .. && cargo build --release -p proxy-app && node desktop/scripts/prepare-tauri-sidecar.cjs",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "concurrently": "^9.1.0"
+  }
+}
