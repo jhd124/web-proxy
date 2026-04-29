@@ -146,7 +146,6 @@ export function OverrideEditorUI({
             />
             <ResizablePanel
               className="min-h-0 min-w-0"
-              defaultSize="52%"
               id="override-monaco"
               minSize={28}
             >
