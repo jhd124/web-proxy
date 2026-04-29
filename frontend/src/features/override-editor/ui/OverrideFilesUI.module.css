@@ -81,6 +81,7 @@
   background: transparent;
   border-radius: 0;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   box-sizing: border-box;
   text-align: left;
