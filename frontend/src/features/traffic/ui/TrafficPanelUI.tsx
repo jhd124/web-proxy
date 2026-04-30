@@ -1,3 +1,4 @@
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { trafficTexts as t } from '../texts'
 import type { TrafficPanelUIProps } from '../types'
@@ -32,7 +33,7 @@ export function TrafficPanelUI({
               </button>
               <label className={s.listFilter}>
                 <span className="sr-only">{t.filterAria}</span>
-                <input
+                <Input
                   type="search"
                   value={urlFilter}
                   onChange={(e) => setUrlFilter(e.target.value)}

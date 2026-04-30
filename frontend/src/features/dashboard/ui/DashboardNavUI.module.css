@@ -26,7 +26,7 @@
 .tabLaunch {
   appearance: none;
   border: 1px solid #34d39944;
-  background: var(--panel);
+  background: var(--panel-bg);
   color: var(--accent);
   padding: 0.5rem 0.85rem;
   margin: 0.4rem 0.25rem 0.4rem 0.5rem;

@@ -20,27 +20,6 @@
   min-width: 0;
 }
 
-.listFilter input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #0f1218;
-  color: var(--text);
-}
-
-.listFilter input::placeholder {
-  color: var(--muted);
-}
-
-.listFilter input:focus {
-  outline: none;
-  border-color: #3d4a63;
-  box-shadow: 0 0 0 1px rgba(110, 231, 183, 0.15);
-}
-
 .testErr {
   margin: 0 0 8px 0;
 }

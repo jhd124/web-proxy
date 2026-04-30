@@ -33,7 +33,7 @@
   padding: 0.45rem 0.55rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: var(--panel);
+  background: var(--panel-bg);
   color: var(--text);
   font-family: inherit;
   font-size: 0.85rem;
@@ -57,7 +57,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  background: var(--panel);
+  background: var(--panel-bg);
 }
 
 .cardDisabled {
