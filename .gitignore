@@ -1,6 +1,7 @@
 target/
 node_modules/
 frontend/dist/
+frontend/.proxy-dev-ports.json
 
 # Runtime data
 proxy-overrides.sqlite3
@@ -10,6 +11,7 @@ proxy-overrides.sqlite3-*
 
 # Generated local MITM CA material
 mitm-ca/
+mitm-ca-rsa/
 
 # Local IDE/debug artifacts
 .cursor/debug-*.log

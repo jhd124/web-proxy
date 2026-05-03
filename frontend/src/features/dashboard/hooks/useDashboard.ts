@@ -14,12 +14,17 @@ import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
 import { useAppWebSocket } from './useAppWebSocket'
 
 export function useDashboard() {
-  const [tab, setTab] = useState<'traffic' | 'breakpoints'>('traffic')
+  const [breakpointsOpen, setBreakpointsOpen] = useState(false)
+  const openBreakpointsPanel = useCallback(() => setBreakpointsOpen(true), [])
+  const closeBreakpointsPanel = useCallback(() => setBreakpointsOpen(false), [])
   const [wsStatus, setWsStatus] = useState<'connecting' | 'open' | 'closed'>(
     'connecting',
   )
   const [mitmEnabled, setMitmEnabled] = useState(false)
   const [mitmCaPemPath, setMitmCaPemPath] = useState<string | null>(null)
+  const [proxyListenAddress, setProxyListenAddress] = useState<string | null>(
+    null,
+  )
 
   const traffic = useTrafficState()
   const ovr = useOverrideEditorState()
@@ -31,7 +36,7 @@ export function useDashboard() {
     bumpRequestPanel,
     setOverridesPanel,
   } = ovr
-  const brk = useBreakpointState({ setTab })
+  const brk = useBreakpointState({ openBreakpointsPanel })
   const { breakpoints, setBreakpointForm, refreshBreakpoints } = brk
 
   const selectedIdRef = useRef<string | null>(null)
@@ -54,6 +59,16 @@ export function useDashboard() {
   }, [brk.refreshBreakpoints, ovr.refreshOverrides])
 
   useEffect(() => {
+    if (!breakpointsOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      closeBreakpointsPanel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [breakpointsOpen, closeBreakpointsPanel])
+
+  useEffect(() => {
     const loadHealth = async () => {
       try {
         const r = await fetch('/api/health')
@@ -61,6 +76,8 @@ export function useDashboard() {
         const h = (await r.json()) as {
           mitmEnabled?: boolean
           mitmCaPemPath?: string | null
+          proxyPort?: number
+          proxyListenIpv4?: string | null
         }
         setMitmEnabled(Boolean(h.mitmEnabled))
         setMitmCaPemPath(
@@ -68,6 +85,20 @@ export function useDashboard() {
             ? h.mitmCaPemPath
             : null,
         )
+        const ipv4 =
+          typeof h.proxyListenIpv4 === 'string' &&
+          /^\d{1,3}(\.\d{1,3}){3}$/.test(h.proxyListenIpv4)
+            ? h.proxyListenIpv4
+            : null
+        if (
+          ipv4 != null &&
+          typeof h.proxyPort === 'number' &&
+          Number.isFinite(h.proxyPort) &&
+          h.proxyPort > 0 &&
+          h.proxyPort <= 65535
+        ) {
+          setProxyListenAddress(`${ipv4}:${h.proxyPort}`)
+        }
       } catch {
         /* ignore */
       }
@@ -117,7 +148,7 @@ export function useDashboard() {
       matchOrigin,
       matchPathRegex,
     })
-    setTab('breakpoints')
+    openBreakpointsPanel()
     if (existing) {
       return
     }
@@ -134,7 +165,13 @@ export function useDashboard() {
     if (r.ok) {
       await refreshBreakpoints()
     }
-  }, [breakpoints, refreshBreakpoints, selected, setBreakpointForm, setTab])
+  }, [
+    breakpoints,
+    openBreakpointsPanel,
+    refreshBreakpoints,
+    selected,
+    setBreakpointForm,
+  ])
 
   const { addBreakpointFromOverride: addBreakpointFromOverrideApi } = brk
   const addBreakpointFromOverride = useCallback(
@@ -184,10 +221,9 @@ export function useDashboard() {
     totalCount: entries.length,
     mitmEnabled,
     mitmCaPemPath,
-    tab,
-    setTab,
-    overrideCount: ovr.overrides.length,
-    breakpointCount: brk.breakpoints.length,
+    proxyListenAddress,
+    breakpointsOpen,
+    closeBreakpointsPanel,
     onOverridesNavClick: ovr.onOverridesNavClick,
     urlFilter: traffic.urlFilter,
     setUrlFilter: traffic.setUrlFilter,
@@ -232,6 +268,7 @@ export function useDashboard() {
     removeBreakpoint: brk.removeBreakpoint,
     setBreakpointEnabled: brk.setBreakpointEnabled,
     breakpointToggleSaving: brk.breakpointToggleSaving,
+    onBreakpointsNavClick: openBreakpointsPanel,
   }
 }
 

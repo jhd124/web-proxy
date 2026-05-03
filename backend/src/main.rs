@@ -3,6 +3,7 @@ mod breakpoints;
 mod mitm;
 mod override_identity;
 mod overrides;
+mod ports;
 mod proxy;
 mod state;
 
@@ -23,15 +24,6 @@ async fn main() -> anyhow::Result<()> {
                 .add_directive("proxy_app=info".parse().unwrap()),
         )
         .init();
-
-    let proxy_port: u16 = std::env::var("PROXY_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9090);
-    let dashboard_port: u16 = std::env::var("DASHBOARD_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9091);
 
     let max_traffic: usize = std::env::var("MAX_TRAFFIC")
         .ok()
@@ -56,8 +48,8 @@ async fn main() -> anyhow::Result<()> {
             std::env::var("MITM_CA_DIR")
                 .ok()
                 .map(PathBuf::from)
-                .or_else(|| data_dir.as_ref().map(|d| d.join("mitm-ca")))
-                .unwrap_or_else(|| PathBuf::from("mitm-ca")),
+                .or_else(|| data_dir.as_ref().map(|d| d.join("mitm-ca-rsa")))
+                .unwrap_or_else(|| PathBuf::from("mitm-ca-rsa")),
         )
     } else {
         None
@@ -118,6 +110,8 @@ async fn main() -> anyhow::Result<()> {
     let proxy_state = state.clone();
     let dashboard_state = state.clone();
 
+    let (proxy_port, dashboard_port) = ports::resolve_proxy_dashboard_ports()?;
+
     let proxy_addr: SocketAddr = format!("127.0.0.1:{}", proxy_port)
         .parse()
         .context("parse PROXY_PORT")?;
@@ -144,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
         dashboard_addr,
         proxy_port,
         if mitm_enabled {
-            " MITM=1: open /api/mitm/ca.pem and install the CA to decrypt HTTPS in the dashboard"
+            " MITM=1: open /api/mitm/ca.pem and install the RSA CA (mitm-ca-rsa/) to decrypt HTTPS"
         } else {
             ""
         },

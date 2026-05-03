@@ -10,14 +10,8 @@
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-}
-
-.listFilter {
-  flex: 1 1 100%;
-  min-width: 0;
 }
 
 .testErr {
@@ -90,6 +84,10 @@
   color: #f59e0b;
 }
 
+.tagErr {
+  color: #f87171;
+}
+
 .detail {
   padding: 1rem 1.25rem;
   overflow: auto;
@@ -156,10 +154,6 @@
 }
 
 @media (max-width: 800px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
   .listPanel {
     border-right: none;
     max-height: 40vh;

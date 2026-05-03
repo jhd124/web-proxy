@@ -1,10 +1,17 @@
 export const trafficTexts = {
   clear: 'Clear',
-  filterAria: 'Filter by URL substring',
   filterPlaceholder: 'Filter URL…',
   schemeHttps: 'HTTPS',
   connectTunnel: (url: string) => `${url} (TLS tunnel)`,
+  connectMitmBypassed: (url: string) => `${url} (MITM bypassed, TLS tunnel)`,
+  connectMitmHandshakeFailed: (url: string) => `${url} (MITM handshake failed)`,
+  mitmHandshakeNote:
+    'MITM: the client did not complete TLS to the proxy-issued certificate (pinning, unknown CA, or aborted connection).',
+  mitmBypassedNote:
+    'MITM was skipped for this host after a previous handshake failure. The CONNECT tunnel is shown, but encrypted paths and bodies are not visible.',
   tagPending: 'pending',
+  tagError: 'error',
+  tagBypassed: 'bypassed',
   sectionRequest: 'Request',
   sectionResponse: 'Response',
   addBreakpoint: 'Add breakpoint',

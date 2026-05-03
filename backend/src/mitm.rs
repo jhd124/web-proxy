@@ -1,15 +1,18 @@
-//! TLS interception for HTTPS: dynamic leaf certs signed by a local CA.
+//! TLS interception for HTTPS: dynamic leaf certs signed by a local **RSA-2048** CA
+//! (`PKCS_RSA_SHA256` / PKCS#8 keys via rcgen). Persisted under `MITM_CA_DIR` (default `mitm-ca-rsa/`).
 //! Users must install the CA PEM (see `/api/mitm/ca.pem`) to avoid browser errors.
+//!
+//! 与浏览器之间的 TLS 终止使用 `native-tls`（系统 Security.framework / OpenSSL / SChannel），
+//! 避免 rustls 服务端对 ClientHello 强制要求顶层 `signature_algorithms` 扩展
+//!（ECH 外层 ClientHello 等场景会缺失该扩展，触发 `SignatureAlgorithmsExtensionRequired`）。
 
 use anyhow::Context;
+use native_tls::Identity;
 use rcgen::{
-    BasicConstraints, Certificate, CertificateParams, ExtendedKeyUsagePurpose, IsCa,
-    Issuer, KeyPair, KeyUsagePurpose,
+    date_time_ymd, BasicConstraints, Certificate, CertificateParams, DistinguishedName, DnType,
+    ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair, KeyUsagePurpose, RsaKeySize, PKCS_RSA_SHA256,
 };
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls::ServerConfig;
 use std::path::Path;
-use std::sync::Arc;
 
 pub struct Mitm {
     ca_cert_pem: String,
@@ -32,13 +35,26 @@ impl Mitm {
             (ca_cert_pem, ca_key)
         } else {
             let ca_name = format!(
-                "proxy-app MITM CA @ {}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+                "Proxy App MITM CA ({})",
+                chrono::Local::now().format("%Y-%m-%d")
             );
-            let mut params = CertificateParams::new(vec![ca_name]).context("CA cert params")?;
+            let mut params = CertificateParams::new(Vec::<String>::new()).context("CA cert params")?;
+            params.distinguished_name = DistinguishedName::new();
+            params.distinguished_name.push(DnType::CountryName, "US");
+            params
+                .distinguished_name
+                .push(DnType::OrganizationName, "Proxy App Local");
+            params.distinguished_name.push(DnType::CommonName, ca_name);
             params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
             params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
-            let ca_key = KeyPair::generate().context("generate CA key")?;
+            params.extended_key_usages = vec![
+                ExtendedKeyUsagePurpose::ServerAuth,
+                ExtendedKeyUsagePurpose::ClientAuth,
+            ];
+            params.not_before = date_time_ymd(2026, 1, 1);
+            params.not_after = date_time_ymd(2028, 12, 31);
+            let ca_key = KeyPair::generate_rsa_for(&PKCS_RSA_SHA256, RsaKeySize::_2048)
+                .context("generate RSA CA key")?;
             let ca_cert: Certificate = params.self_signed(&ca_key).context("self-sign CA")?;
             let ca_cert_pem = ca_cert.pem();
             std::fs::write(&ca_cert_path, &ca_cert_pem).with_context(|| format!("write {:?}", ca_cert_path))?;
@@ -57,26 +73,34 @@ impl Mitm {
         &self.ca_cert_pem
     }
 
-    /// Per-connection TLS config: leaf cert for `host`, signed by our CA. Advertises HTTP/1.1 only.
-    pub fn server_config(&self, host: &str) -> anyhow::Result<Arc<ServerConfig>> {
+    /// 为 `host` 签发叶子证书并打包为 `native_tls::Identity`（PEM 证书链 + PKCS#8 PEM 私钥）。
+    ///
+    /// 注意：`native_tls::Identity::from_pkcs8` 在各平台实现里要求私钥为 **PEM**（`BEGIN PRIVATE KEY`），
+    /// 不能传 DER；否则会失败（macOS 上常为 `errSecParam`）。
+    pub fn native_tls_identity(&self, host: &str) -> anyhow::Result<Identity> {
         let issuer = Issuer::from_ca_cert_pem(&self.ca_cert_pem, &self.ca_key)
             .context("issuer from CA")?;
 
         let mut params = CertificateParams::new(vec![host.to_string()]).context("leaf params")?;
+        params.distinguished_name = DistinguishedName::new();
+        params.distinguished_name.push(DnType::CommonName, host);
+        params.key_usages = vec![
+            KeyUsagePurpose::DigitalSignature,
+            KeyUsagePurpose::KeyEncipherment,
+        ];
         params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
-        let leaf_key = KeyPair::generate().context("leaf key")?;
+        params.not_before = date_time_ymd(2026, 1, 1);
+        params.not_after = date_time_ymd(2028, 12, 31);
+        let leaf_key = KeyPair::generate_rsa_for(&PKCS_RSA_SHA256, RsaKeySize::_2048)
+            .context("generate RSA leaf key")?;
         let leaf_cert: Certificate = params
             .signed_by(&leaf_key, &issuer)
             .context("sign leaf")?;
 
-        let cert_der = CertificateDer::from(leaf_cert.der().to_vec());
-        let key_der = PrivateKeyDer::Pkcs8(leaf_key.serialize_der().into());
-
-        let mut config = ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(vec![cert_der], key_der)
-            .context("rustls server config")?;
-        config.alpn_protocols = vec![b"http/1.1".to_vec()];
-        Ok(Arc::new(config))
+        let cert_chain_pem = format!("{}{}", leaf_cert.pem(), self.ca_cert_pem);
+        let key_pem = leaf_key.serialize_pem();
+        Identity::from_pkcs8(cert_chain_pem.as_bytes(), key_pem.as_bytes()).map_err(|e| {
+            anyhow::anyhow!("native_tls Identity::from_pkcs8: {e}")
+        })
     }
 }

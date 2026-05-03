@@ -12,6 +12,7 @@ use hyper::body::Incoming;
 use hyper::header::{HeaderName, HeaderValue};
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use native_tls::{Protocol, TlsAcceptor as NativeTlsAcceptor};
 use std::convert::Infallible;
 use std::io::{Cursor, Read, Write};
 use std::net::SocketAddr;
@@ -21,6 +22,7 @@ use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
+use tokio_native_tls::TlsAcceptor as TokioNativeTlsAcceptor;
 use uuid::Uuid;
 
 /// Response body: buffered (`Full`) or streamed (SSE / `text/event-stream`).
@@ -198,6 +200,44 @@ fn header_pairs(req: &Request<Incoming>) -> Vec<(String, String)> {
         .collect()
 }
 
+fn mitm_handshake_failure_entry(
+    peer: SocketAddr,
+    host: &str,
+    port: u16,
+    request_headers: &[(String, String)],
+    error: String,
+    started: Instant,
+) -> TrafficEntry {
+    let url = if port == 443 {
+        format!("https://{}", host)
+    } else {
+        format!("https://{}:{}", host, port)
+    };
+    TrafficEntry {
+        id: Uuid::new_v4(),
+        at: chrono::Utc::now(),
+        peer: peer.to_string(),
+        method: "CONNECT".to_string(),
+        url: url.clone(),
+        scheme: "https".to_string(),
+        host: host.to_string(),
+        path: String::new(),
+        request_headers: request_headers.to_vec(),
+        request_body_preview: None,
+        kind: TrafficKind::Connect,
+        mitm_bypassed: false,
+        response_status: None,
+        response_headers: None,
+        response_body_preview: None,
+        duration_ms: Some(started.elapsed().as_millis() as u64),
+        error: Some(error),
+        pending: false,
+        breakpoint_name: None,
+        stream_controllable: false,
+        stream_playing: None,
+    }
+}
+
 fn normalize_proxy_url(req: &Request<Incoming>) -> Option<String> {
     let uri = req.uri();
     if uri.scheme().is_some() {
@@ -354,10 +394,6 @@ async fn handle_connect(
     peer: SocketAddr,
     req: Request<Incoming>,
 ) -> Result<Response<ProxyBody>, Infallible> {
-    if state.mitm.is_some() {
-        return handle_connect_mitm(state, peer, req).await;
-    }
-
     let authority = match req.uri().authority().cloned() {
         Some(a) => a,
         None => {
@@ -366,6 +402,11 @@ async fn handle_connect(
     };
     let host = authority.host().to_string();
     let port = authority.port_u16().unwrap_or(443);
+    let is_mitm_bypassed = state.mitm.is_some() && state.should_auto_bypass_mitm(&host);
+    if state.mitm.is_some() && !is_mitm_bypassed {
+        return handle_connect_mitm(state, peer, req).await;
+    }
+
     let addr = format!("{}:{}", host, port);
     let pq = req
         .uri()
@@ -391,6 +432,7 @@ async fn handle_connect(
         request_headers: header_pairs(&req),
         request_body_preview: None,
         kind: TrafficKind::Connect,
+        mitm_bypassed: is_mitm_bypassed,
         response_status: None,
         response_headers: None,
         response_body_preview: None,
@@ -478,29 +520,74 @@ async fn handle_connect_mitm(
         None => return Ok(bad_request("MITM not configured")),
     };
 
+    let request_headers = header_pairs(&req);
     let state2 = state.clone();
     let host_spawn = host.clone();
     tokio::spawn(async move {
+        let started = Instant::now();
         let upgraded = match hyper::upgrade::on(req).await {
             Ok(u) => u,
             Err(e) => {
                 tracing::debug!("mitm upgrade: {}", e);
+                state2.push_traffic(mitm_handshake_failure_entry(
+                    peer,
+                    &host_spawn,
+                    port,
+                    &request_headers,
+                    format!("CONNECT upgrade: {e}"),
+                    started,
+                ));
                 return;
             }
         };
         let io = TokioIo::new(upgraded);
-        let cfg = match mitm.server_config(&host_spawn) {
-            Ok(c) => c,
+        let identity = match mitm.native_tls_identity(&host_spawn) {
+            Ok(i) => i,
             Err(e) => {
                 tracing::warn!("mitm cert {}: {}", host_spawn, e);
+                state2.push_traffic(mitm_handshake_failure_entry(
+                    peer,
+                    &host_spawn,
+                    port,
+                    &request_headers,
+                    format!("MITM certificate: {e}"),
+                    started,
+                ));
                 return;
             }
         };
-        let acceptor = tokio_rustls::TlsAcceptor::from(cfg);
+        let std_acceptor = match NativeTlsAcceptor::builder(identity)
+            .min_protocol_version(Some(Protocol::Tlsv12))
+            .build()
+        {
+            Ok(a) => a,
+            Err(e) => {
+                tracing::warn!("mitm tls acceptor {}: {}", host_spawn, e);
+                state2.push_traffic(mitm_handshake_failure_entry(
+                    peer,
+                    &host_spawn,
+                    port,
+                    &request_headers,
+                    format!("MITM TLS acceptor: {e}"),
+                    started,
+                ));
+                return;
+            }
+        };
+        let acceptor = TokioNativeTlsAcceptor::from(std_acceptor);
         let tls_stream = match acceptor.accept(io).await {
             Ok(s) => s,
             Err(e) => {
+                state2.mark_auto_bypass_mitm(&host_spawn);
                 tracing::warn!("mitm tls accept {}: {}", host_spawn, e);
+                state2.push_traffic(mitm_handshake_failure_entry(
+                    peer,
+                    &host_spawn,
+                    port,
+                    &request_headers,
+                    format!("MITM TLS accept: {e}"),
+                    started,
+                ));
                 return;
             }
         };
@@ -784,6 +871,7 @@ async fn forward_proxied_http(
             .collect(),
         request_body_preview: req_body_preview.clone(),
         kind: TrafficKind::Http,
+        mitm_bypassed: false,
         response_status: None,
         response_headers: None,
         response_body_preview: None,

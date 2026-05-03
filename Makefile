@@ -9,9 +9,9 @@ help:
 	@echo "Targets:"
 	@echo "  make install   – npm install (frontend) + fetch Rust deps"
 	@echo "  make build     – release Rust binary + Vite production bundle"
-	@echo "  make dev       – proxy + dashboard API (9090/9091) and Vite (5173) together"
+	@echo "  make dev       – proxy + dashboard + Vite (ports auto-increment if busy; see scripts/run-dev.sh)"
 	@echo "  make backend   – only \`cargo run -p proxy-app\` (proxy + API on 9090/9091)"
-	@echo "  make frontend  – only \`npm run dev\` in frontend/ (proxies to 9091)"
+	@echo "  make frontend  – only \`npm run dev\` in frontend/ (dashboard port: env DASHBOARD_PORT or frontend/.proxy-dev-ports.json)"
 	@echo "  make run       – build UI then run Rust; open http://127.0.0.1:9091"
 	@echo "  make clean     – cargo clean + remove frontend/dist"
 	@echo "  make tauri-dev  – Tauri 2 + Vite + proxy (cd desktop/ && npm install first)"
@@ -27,9 +27,9 @@ build:
 	cd frontend && npm run build
 	cargo build --release -p proxy-app
 
-# Run backend and Vite in parallel (output may interleave).
+# Backend writes frontend/.proxy-dev-ports.json before servers accept traffic; Vite starts after.
 dev:
-	$(MAKE) -j2 backend frontend
+	bash scripts/run-dev.sh
 
 backend:
 	MITM=1 cargo run -p proxy-app

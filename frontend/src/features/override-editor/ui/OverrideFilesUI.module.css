@@ -137,50 +137,6 @@
   gap: 0.45rem;
 }
 
-.pathBranches {
-  list-style: none;
-  margin: 0.2rem 0 0 0.15rem;
-  padding: 0 0 0 0.45rem;
-  border-left: 1px solid #4a6b8a55;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.pathBranchItem {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pathSegRow {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 1.1rem;
-  margin-bottom: 0.2rem;
-}
-
-.pathSegRow::before {
-  content: "";
-  display: block;
-  width: 0.4rem;
-  height: 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: #1a1f2a;
-  flex-shrink: 0;
-  opacity: 0.9;
-}
-
-.pathSegMono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.7rem;
-  color: #9fb0c3;
-  word-break: break-all;
-  line-height: 1.35;
-}
-
 .itemWrap {
   margin: 0;
   padding: 0;

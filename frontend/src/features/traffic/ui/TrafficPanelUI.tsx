@@ -4,6 +4,26 @@ import { trafficTexts as t } from '../texts'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { Trash } from 'lucide-react'
+import { SimpleTooltip } from '@/components/ui/tooltip'
+
+function isMitmHandshakeFailureError(err: string | null | undefined): boolean {
+  return Boolean(
+    err && (err.startsWith('CONNECT upgrade:') || err.includes('MITM ')),
+  )
+}
+
+function connectSummary(url: string, error: string | null | undefined, mitmBypassed?: boolean): string {
+  if (mitmBypassed) return t.connectMitmBypassed(url)
+  if (isMitmHandshakeFailureError(error)) return t.connectMitmHandshakeFailed(url)
+  return t.connectTunnel(url)
+}
+
+function connectDetailNote(error: string | null | undefined, mitmBypassed?: boolean): string {
+  if (mitmBypassed) return t.mitmBypassedNote
+  if (isMitmHandshakeFailureError(error)) return t.mitmHandshakeNote
+  return t.connectNote
+}
 
 export function TrafficPanelUI({
   urlFilter,
@@ -27,13 +47,8 @@ export function TrafficPanelUI({
           minSize={16}
         >
           <aside className={s.listPanel}>
-            <div className={s.listTools}>
-              <button type="button" className="ghost" onClick={clearTraffic}>
-                {t.clear}
-              </button>
-              <label className={s.listFilter}>
-                <span className="sr-only">{t.filterAria}</span>
-                <Input
+            <div className={`${s.listTools} flex items-center gap-2 flex-nowrap`}>
+              <Input
                   type="search"
                   value={urlFilter}
                   onChange={(e) => setUrlFilter(e.target.value)}
@@ -41,7 +56,13 @@ export function TrafficPanelUI({
                   autoComplete="off"
                   spellCheck={false}
                 />
-              </label>
+              <SimpleTooltip
+                label={t.clear}
+              >
+                <button type="button" className="ghost" onClick={clearTraffic}>
+                  <Trash />
+                </button>
+              </SimpleTooltip>
             </div>
             {testError && (
               <p className={`small err ${s.testErr}`}>
@@ -53,7 +74,9 @@ export function TrafficPanelUI({
                 {[...filteredEntries].reverse().map((e) => {
                   const schemeLabel = e.kind === 'connect' ? t.schemeHttps : e.scheme.toUpperCase()
                   const summary =
-                    e.kind === 'connect' ? t.connectTunnel(e.url) : e.url
+                    e.kind === 'connect'
+                      ? connectSummary(e.url, e.error, e.mitmBypassed)
+                      : e.url
                   return (
                     <li key={e.id}>
                       <button
@@ -66,6 +89,12 @@ export function TrafficPanelUI({
                         <span className={s.u} title={summary}>
                           {summary}
                         </span>
+                        {e.error && (
+                          <span className={`${s.tag} ${s.tagErr}`}>{t.tagError}</span>
+                        )}
+                        {e.mitmBypassed && (
+                          <span className={`${s.tag} ${s.tagWarn}`}>{t.tagBypassed}</span>
+                        )}
                         {e.pending && (
                           <span className={`${s.tag} ${s.tagWarn}`}>{t.tagPending}</span>
                         )}
@@ -108,7 +137,9 @@ export function TrafficPanelUI({
                     </p>
                   )}
                   {selected.kind === 'connect' && (
-                    <p className="small muted">{t.connectNote}</p>
+                    <p className="small muted">
+                      {connectDetailNote(selected.error, selected.mitmBypassed)}
+                    </p>
                   )}
                   <pre className={s.pre}>
                     {selected.requestHeaders.map(([k, v]) => `${k}: ${v}\n`).join('')}

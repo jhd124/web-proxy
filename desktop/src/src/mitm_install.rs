@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Reject path injection: must be `.../mitm-ca/ca.pem` and exist.
+/// Reject path injection: must be `.../mitm-ca-rsa/ca.pem` and exist.
 fn validate_mitm_ca_path(ca_pem_path: &str) -> Result<PathBuf, String> {
     let p = Path::new(ca_pem_path);
     if !p.is_absolute() {
@@ -13,8 +13,8 @@ fn validate_mitm_ca_path(ca_pem_path: &str) -> Result<PathBuf, String> {
         return Err("expected a file named ca.pem".into());
     }
     match p.parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()) {
-        Some("mitm-ca") => {}
-        _ => return Err("expected .../mitm-ca/ca.pem".into()),
+        Some("mitm-ca-rsa") => {}
+        _ => return Err("expected .../mitm-ca-rsa/ca.pem".into()),
     }
     if !p.is_file() {
         return Err("CA file not found (start proxy with MITM=1 and wait for the CA to be created)".into());

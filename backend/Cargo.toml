@@ -31,8 +31,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 url = "2"
-rcgen = { version = "0.14", features = ["pem", "x509-parser"] }
-tokio-rustls = "0.26.4"
+rcgen = { version = "0.14", features = ["pem", "x509-parser", "aws_lc_rs"] }
+native-tls = "0.2.14"
+tokio-native-tls = "0.3.1"
 rustls = "0.23.37"
-rustls-pemfile = "2.2.0"
 zstd = "0.13"

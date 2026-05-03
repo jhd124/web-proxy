@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use http::header::HeaderMap;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{broadcast, oneshot, watch};
@@ -209,6 +209,8 @@ pub struct TrafficEntry {
     pub request_headers: Vec<(String, String)>,
     pub request_body_preview: Option<String>,
     pub kind: TrafficKind,
+    #[serde(default)]
+    pub mitm_bypassed: bool,
     pub response_status: Option<u16>,
     pub response_headers: Option<Vec<(String, String)>>,
     pub response_body_preview: Option<String>,
@@ -236,6 +238,7 @@ pub struct AppState {
     pub breakpoints: Arc<RwLock<Vec<BreakpointRule>>>,
     pub pending_requests: Arc<Mutex<HashMap<Uuid, oneshot::Sender<()>>>>,
     pub stream_controllers: Arc<Mutex<HashMap<Uuid, watch::Sender<bool>>>>,
+    pub auto_mitm_bypass_hosts: Arc<RwLock<HashSet<String>>>,
     pub override_db_path: PathBuf,
     pub upstream_http_client: reqwest::Client,
     pub upstream_http3_client: Option<reqwest::Client>,
@@ -243,7 +246,7 @@ pub struct AppState {
     pub max_traffic: usize,
     /// When set, HTTPS CONNECT is intercepted (TLS MITM) so decrypted HTTP is logged.
     pub mitm: Option<Arc<crate::mitm::Mitm>>,
-    /// Absolute path to `ca.pem` on disk when MITM is enabled (for desktop cert installers).
+    /// Absolute path to `ca.pem` on disk when MITM is enabled (default `…/mitm-ca-rsa/ca.pem`; desktop installers).
     pub mitm_ca_pem_path: Option<PathBuf>,
 }
 
@@ -267,6 +270,7 @@ impl AppState {
             breakpoints: Arc::new(RwLock::new(breakpoints)),
             pending_requests: Arc::new(Mutex::new(HashMap::new())),
             stream_controllers: Arc::new(Mutex::new(HashMap::new())),
+            auto_mitm_bypass_hosts: Arc::new(RwLock::new(HashSet::new())),
             override_db_path,
             upstream_http_client,
             upstream_http3_client,
@@ -393,6 +397,18 @@ impl AppState {
 
     pub fn clear_all_stream_controllers(&self) {
         self.stream_controllers.lock().clear();
+    }
+
+    pub fn should_auto_bypass_mitm(&self, host: &str) -> bool {
+        self.auto_mitm_bypass_hosts
+            .read()
+            .contains(&host.to_ascii_lowercase())
+    }
+
+    pub fn mark_auto_bypass_mitm(&self, host: &str) -> bool {
+        self.auto_mitm_bypass_hosts
+            .write()
+            .insert(host.to_ascii_lowercase())
     }
 }
 

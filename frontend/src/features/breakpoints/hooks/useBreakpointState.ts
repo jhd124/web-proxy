@@ -9,10 +9,8 @@ type BreakpointFormState = {
   matchPathRegex: string
 }
 
-type Tab = 'traffic' | 'breakpoints'
-
-export function useBreakpointState(p: { setTab: (t: Tab) => void }) {
-  const { setTab } = p
+export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
+  const { openBreakpointsPanel } = p
   const t = breakpointTexts
   const [breakpoints, setBreakpoints] = useState<BreakpointRule[]>([])
   const [breakpointToggleSaving, setBreakpointToggleSaving] = useState<
@@ -42,9 +40,9 @@ export function useBreakpointState(p: { setTab: (t: Tab) => void }) {
     })
     if (r.ok) {
       await refreshBreakpoints()
-      setTab('breakpoints')
+      openBreakpointsPanel()
     }
-  }, [breakpointForm, refreshBreakpoints, setTab, t])
+  }, [breakpointForm, openBreakpointsPanel, refreshBreakpoints, t])
 
   const removeBreakpoint = useCallback(
     async (id: string) => {
@@ -99,7 +97,7 @@ export function useBreakpointState(p: { setTab: (t: Tab) => void }) {
         matchOrigin,
         matchPathRegex,
       })
-      setTab('breakpoints')
+      openBreakpointsPanel()
       if (!matchOrigin || !matchPathRegex) {
         return
       }
@@ -125,7 +123,7 @@ export function useBreakpointState(p: { setTab: (t: Tab) => void }) {
         await refreshBreakpoints()
       }
     },
-    [breakpoints, refreshBreakpoints, setTab, t],
+    [breakpoints, openBreakpointsPanel, refreshBreakpoints, t],
   )
 
   return {

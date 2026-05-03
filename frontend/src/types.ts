@@ -13,6 +13,7 @@ export interface TrafficEntry {
   requestHeaders: [string, string][]
   requestBodyPreview?: string | null
   kind: TrafficKind
+  mitmBypassed?: boolean
   responseStatus?: number | null
   responseHeaders?: [string, string][] | null
   responseBodyPreview?: string | null

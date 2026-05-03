@@ -7,7 +7,7 @@ use axum::routing::{delete, get, post, put};
 use axum::Json;
 use axum::Router;
 use serde::Serialize;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -19,12 +19,24 @@ struct Health {
     ok: bool,
     pub proxy_port: u16,
     pub dashboard_port: u16,
-    /// When true, HTTPS is decrypted (MITM); install CA from `/api/mitm/ca.pem`.
+    /// When true, HTTPS is decrypted (MITM); install RSA CA PEM from `/api/mitm/ca.pem`.
     pub mitm_enabled: bool,
     /// Absolute filesystem path to the CA PEM (same bytes as `/api/mitm/ca.pem`); for desktop trust installers.
     pub mitm_ca_pem_path: Option<String>,
     /// When true, outbound HTTPS requests prefer an HTTP/3-only reqwest client.
     pub upstream_http3_enabled: bool,
+    /// IPv4 used for outbound traffic (not the proxy bind address). Pair with `proxy_port` for client configuration.
+    pub proxy_listen_ipv4: Option<String>,
+}
+
+/// Best-effort primary IPv4 on the default route (UDP connect does not send packets).
+fn local_ipv4_egress() -> Option<Ipv4Addr> {
+    let socket = UdpSocket::bind(("0.0.0.0", 0)).ok()?;
+    socket.connect(("8.8.8.8", 80)).ok()?;
+    match socket.local_addr().ok()?.ip() {
+        IpAddr::V4(v4) if !v4.is_loopback() && !v4.is_unspecified() => Some(v4),
+        _ => None,
+    }
 }
 
 /// `DASHBOARD_DIST` is set by the Tauri sidecar; otherwise we use the Vite `frontend/dist` next to the repo root.
@@ -93,13 +105,21 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
             .as_ref()
             .map(|p| p.to_string_lossy().into_owned()),
         upstream_http3_enabled: state.upstream_http3_enabled,
+        proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
     })
 }
 
 async fn mitm_ca(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match &state.mitm {
         Some(m) => (
-            [(header::CONTENT_TYPE, "application/x-pem-file")],
+            [
+                (header::CONTENT_TYPE, "application/x-pem-file"),
+                (
+                    header::CONTENT_DISPOSITION,
+                    "attachment; filename=\"proxy-mitm-ca-rsa.pem\"",
+                ),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
             m.ca_pem().to_string(),
         )
             .into_response(),

@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
@@ -6,6 +7,30 @@ import { defineConfig } from 'vite'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+function readDevDashboardPort(): number {
+  const fromEnv = process.env.DASHBOARD_PORT
+  if (fromEnv !== undefined && fromEnv !== '') {
+    const n = Number(fromEnv)
+    if (Number.isFinite(n) && n > 0 && n <= 65535) return n
+  }
+  const filePath = resolve(__dirname, '.proxy-dev-ports.json')
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8')
+    const j = JSON.parse(raw) as { dashboardPort?: number }
+    const n = Number(j.dashboardPort)
+    if (Number.isFinite(n) && n > 0 && n <= 65535) return n
+  } catch {
+    /* missing or invalid */
+  }
+  return 9091
+}
+
+const dashboardPort = readDevDashboardPort()
+const dashboardOrigin = `http://127.0.0.1:${dashboardPort}`
+const dashboardWs = `ws://127.0.0.1:${dashboardPort}`
+
+const viteDevPort = Number(process.env.VITE_PORT ?? process.env.PORT) || 5173
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -13,11 +38,18 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
+  define: {
+    'import.meta.env.VITE_DASHBOARD_PORT': JSON.stringify(String(dashboardPort)),
+  },
   server: {
-    port: 5173,
+    // 与 Tauri `build.devUrl`（127.0.0.1:5173）一致；避免仅监听 ::1 时 Tauri 探测失败
+    host: '127.0.0.1',
+    port: viteDevPort,
+    // 禁止静默换端口，否则 Tauri 仍等 5173 直至超时
+    strictPort: true,
     proxy: {
-      '/api': { target: 'http://127.0.0.1:9091', changeOrigin: true },
-      '/ws': { target: 'ws://127.0.0.1:9091', ws: true },
+      '/api': { target: dashboardOrigin, changeOrigin: true },
+      '/ws': { target: dashboardWs, ws: true },
     },
   },
 })

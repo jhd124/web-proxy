@@ -1,11 +1,15 @@
 export const breakpointTexts = {
+  shell: {
+    title: 'Breakpoints',
+    subtitle:
+      'Pause matching HTTP requests before overrides or upstream fetches. Resume pending requests from the traffic detail view or the overrides editor.',
+    closeAria: 'Close',
+  },
   defaultFormName: 'Pause API request',
   defaultPathRegex: '^/api/',
   defaultRuleName: 'Breakpoint',
   /** New breakpoint name from override/traffic: Pause <name> */
   pauseName: (name: string) => `Pause ${name}`,
-  intro:
-    'Breakpoints pause matching HTTP requests before overrides or upstream fetches. When a request is pending, resume it from the request detail view or from the Overrides response editor.',
   nameLabel: 'Name',
   originLabel: 'Origin',
   pathRegexLabel: 'Path regex',
