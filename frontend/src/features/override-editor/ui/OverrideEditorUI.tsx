@@ -99,9 +99,6 @@ export function OverrideEditorUI({
         <div className={s.fsHead}>
           <div>
             <h2 id="override-fs-title">{t.title}</h2>
-            <p className="small muted" style={{ margin: '0.15rem 0 0' }}>
-              {t.subtitle}
-            </p>
           </div>
           <button
             type="button"

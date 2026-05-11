@@ -11,8 +11,7 @@ use http_body_util::{BodyExt, Either, Full, StreamBody};
 use hyper::body::Incoming;
 use hyper::header::{HeaderName, HeaderValue};
 use hyper::{Method, Request, Response, StatusCode};
-use hyper_util::rt::TokioIo;
-use native_tls::{Protocol, TlsAcceptor as NativeTlsAcceptor};
+use hyper_util::rt::{TokioExecutor, TokioIo};
 use std::convert::Infallible;
 use std::io::{Cursor, Read, Write};
 use std::net::SocketAddr;
@@ -20,9 +19,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
-use tokio_native_tls::TlsAcceptor as TokioNativeTlsAcceptor;
+use tokio_rustls::TlsAcceptor as RustlsAcceptor;
 use uuid::Uuid;
 
 /// Response body: buffered (`Full`) or streamed (SSE / `text/event-stream`).
@@ -35,6 +35,160 @@ const SSE_RESPONSE_BODY_MAX: usize = 64 * 1024 * 1024;
 /// Minimize WebSocket spam while still showing SSE content as it arrives.
 const SSE_PREVIEW_EMIT_MIN_BYTES: usize = 2048;
 const SSE_PREVIEW_EMIT_MIN_MS: u128 = 150;
+
+/// MITM TLS accept 失败的归类，决定"是否自动把该 host 加进永久 bypass"以及"在 dashboard 上怎么提示"。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MitmAcceptFailureKind {
+    /// 客户端发了明确的拒绝 alert（未信任 CA、pinning 等）。安装/信任 CA 后可恢复 MITM，
+    /// 不应 auto-bypass。
+    ClientCertRejection,
+    /// 握手中途 EOF：TLS 1.3 客户端校验证书失败时常常静默关闭连接（Apple Network.framework、
+    /// boringssl、部分 JSSE 实现），表象是 EOF 而不是 alert；也可能是客户端在做连通性探测。
+    /// 两种情况都不应 auto-bypass：前者用户后续可能装 CA 解决；后者下次请求会重新建连。
+    HandshakeEof,
+    /// 其他握手失败（cipher 不匹配、协议版本不支持、上游真有 bug 等）。这类错误代表 MITM
+    /// 当前与客户端不兼容，加进 auto-bypass 让后续请求走透明隧道更好。
+    Other,
+}
+
+/// 关键词来源：rustls / openssl / native-tls (Security.framework, SChannel) 在
+/// `received fatal alert`、`peer alert: <N>`、`errSSL*` 等不同后端上的错误信息差异。
+fn classify_mitm_accept_error(err: &impl std::fmt::Display) -> MitmAcceptFailureKind {
+    let msg = err.to_string().to_ascii_lowercase();
+    let is_cert_rejection = msg.contains("unknown certificate")
+        || msg.contains("certificate unknown")
+        || msg.contains("bad certificate")
+        || msg.contains("self signed certificate")
+        || msg.contains("self-signed certificate")
+        || msg.contains("certificate_verify_failed")
+        || msg.contains("unknown ca")
+        || msg.contains("unknown_ca")
+        || msg.contains("certificate required")
+        // rustls 0.23 把 AlertDescription 直接 Debug 成 CamelCase
+        || msg.contains("badcertificate")
+        || msg.contains("certificateunknown")
+        || msg.contains("certificaterequired")
+        || msg.contains("unknownca")
+        || msg.contains("peerbadcert")
+        // OpenSSL/Security.framework 部分实现只暴露 alert 编号
+        || msg.contains("alert 42") // bad_certificate
+        || msg.contains("alert 43") // unsupported_certificate
+        || msg.contains("alert 44") // certificate_revoked
+        || msg.contains("alert 45") // certificate_expired
+        || msg.contains("alert 46") // certificate_unknown
+        || msg.contains("alert 48"); // unknown_ca
+    if is_cert_rejection {
+        return MitmAcceptFailureKind::ClientCertRejection;
+    }
+    // tokio-rustls 0.26 / rustls 0.23 在握手期 IO 提前结束时返回 `tls handshake eof`；
+    // 也兼容 io::Error::kind == UnexpectedEof 的常见英文措辞。
+    if msg.contains("tls handshake eof")
+        || msg.contains("unexpected eof")
+        || msg.contains("connection reset by peer")
+        || msg.contains("broken pipe")
+    {
+        return MitmAcceptFailureKind::HandshakeEof;
+    }
+    MitmAcceptFailureKind::Other
+}
+
+fn mitm_accept_failure_hint(kind: MitmAcceptFailureKind, host: &str) -> &'static str {
+    match kind {
+        MitmAcceptFailureKind::ClientCertRejection => {
+            "客户端拒绝代理证书（未信任 CA 或证书 pinning）。装好 /api/mitm/ca.pem 并信任后可重试 MITM。"
+        }
+        MitmAcceptFailureKind::HandshakeEof => {
+            "握手中 EOF。常见于 TLS 1.3 客户端静默拒绝证书（同样请确认 CA 已被信任），\
+             或客户端只是做了一次连通性探测；不会自动加入 bypass。"
+        }
+        MitmAcceptFailureKind::Other => {
+            // host 暂不直接用于文案，但保留参数以便后续按域名定制提示。
+            let _ = host;
+            "握手失败（cipher / 协议版本 / 客户端 bug 等）。已自动加入 auto-bypass，后续请求走透明隧道。"
+        }
+    }
+}
+
+/// CONNECT 隧道里前几个字节看起来像 TLS ClientHello（`type=handshake`，`legacy_version=0x03,0x0[0..4]`）。
+/// 仅检查 record header 即可可靠区分 TLS 与 MQTT/XMPP/WebSocket(plain)/HTTP 等明文协议。
+fn looks_like_tls_clienthello(buf: &[u8]) -> bool {
+    buf.len() >= 3 && buf[0] == 0x16 && buf[1] == 0x03 && buf[2] <= 0x04
+}
+
+/// MITM 隧道在 TLS accept 之前 peek 的字节数。覆盖完整的 5 字节 record header，
+/// 之后即可确定是否要走 TLS 终止。
+const MITM_PEEK_BYTES: usize = 5;
+/// peek 整体超时；超过则按"非 TLS / 客户端尚未发送"处理。值取得宽松一些以兼容慢速移动网络。
+const MITM_PEEK_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// 在不消耗后续流量的前提下，尽量读满 `MITM_PEEK_BYTES` 个字节；超时或对端先关也直接返回已读到的部分。
+async fn peek_initial_bytes<I: AsyncRead + Unpin>(io: &mut I) -> std::io::Result<Vec<u8>> {
+    let mut buf = vec![0u8; MITM_PEEK_BYTES];
+    let mut filled = 0;
+    let started = tokio::time::Instant::now();
+    while filled < MITM_PEEK_BYTES {
+        let elapsed = started.elapsed();
+        if elapsed >= MITM_PEEK_TIMEOUT {
+            break;
+        }
+        let remaining = MITM_PEEK_TIMEOUT - elapsed;
+        match tokio::time::timeout(remaining, io.read(&mut buf[filled..])).await {
+            Ok(Ok(0)) => break,
+            Ok(Ok(n)) => filled += n,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => break,
+        }
+    }
+    buf.truncate(filled);
+    Ok(buf)
+}
+
+/// 把 peek 阶段已经从底层 IO 中读出的字节"还回"到流的最前面，让后续 TLS 解析器看到完整的 ClientHello。
+struct PrependedReadIo<I> {
+    prefix: Vec<u8>,
+    pos: usize,
+    inner: I,
+}
+
+impl<I> PrependedReadIo<I> {
+    fn new(prefix: Vec<u8>, inner: I) -> Self {
+        Self { prefix, pos: 0, inner }
+    }
+}
+
+impl<I: AsyncRead + Unpin> AsyncRead for PrependedReadIo<I> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        if this.pos < this.prefix.len() {
+            let take = (this.prefix.len() - this.pos).min(buf.remaining());
+            let end = this.pos + take;
+            buf.put_slice(&this.prefix[this.pos..end]);
+            this.pos = end;
+            return Poll::Ready(Ok(()));
+        }
+        Pin::new(&mut this.inner).poll_read(cx, buf)
+    }
+}
+
+impl<I: AsyncWrite + Unpin> AsyncWrite for PrependedReadIo<I> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.get_mut().inner).poll_write(cx, buf)
+    }
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().inner).poll_flush(cx)
+    }
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().inner).poll_shutdown(cx)
+    }
+}
 
 fn maybe_decode_response_body(
     headers: &reqwest::header::HeaderMap,
@@ -231,6 +385,45 @@ fn mitm_handshake_failure_entry(
         response_body_preview: None,
         duration_ms: Some(started.elapsed().as_millis() as u64),
         error: Some(error),
+        pending: false,
+        breakpoint_name: None,
+        stream_controllable: false,
+        stream_playing: None,
+    }
+}
+
+/// 在 MITM 启用的情况下，CONNECT 隧道里跑了非 TLS 协议（MQTT/XMPP/raw binary 等）。
+/// 我们已经透明地把字节流转给上游，在控制台中以 `mitm_bypassed=true` 标记，便于排查。
+fn mitm_raw_tunnel_entry(
+    peer: SocketAddr,
+    host: &str,
+    port: u16,
+    request_headers: &[(String, String)],
+    started: Instant,
+) -> TrafficEntry {
+    let url = if port == 443 {
+        format!("https://{}", host)
+    } else {
+        format!("https://{}:{}", host, port)
+    };
+    TrafficEntry {
+        id: Uuid::new_v4(),
+        at: chrono::Utc::now(),
+        peer: peer.to_string(),
+        method: "CONNECT".to_string(),
+        url,
+        scheme: "https".to_string(),
+        host: host.to_string(),
+        path: String::new(),
+        request_headers: request_headers.to_vec(),
+        request_body_preview: None,
+        kind: TrafficKind::Connect,
+        mitm_bypassed: true,
+        response_status: Some(200),
+        response_headers: None,
+        response_body_preview: None,
+        duration_ms: Some(started.elapsed().as_millis() as u64),
+        error: None,
         pending: false,
         breakpoint_name: None,
         stream_controllable: false,
@@ -540,9 +733,65 @@ async fn handle_connect_mitm(
                 return;
             }
         };
-        let io = TokioIo::new(upgraded);
-        let identity = match mitm.native_tls_identity(&host_spawn) {
-            Ok(i) => i,
+        let mut io = TokioIo::new(upgraded);
+
+        // 先 peek 几个字节区分 TLS / 非 TLS。某些 App 会用 CONNECT 隧道转发 MQTT、XMPP、
+        // 自定义二进制等非 TLS 协议；如果不识别就贸然走 TLS accept，会以 "MITM TLS accept:
+        // received corrupt message" 之类失败，并误导用户以为 MITM 出了问题。
+        let peeked = match peek_initial_bytes(&mut io).await {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!("mitm peek {}: {}", host_spawn, e);
+                state2.push_traffic(mitm_handshake_failure_entry(
+                    peer,
+                    &host_spawn,
+                    port,
+                    &request_headers,
+                    format!("MITM peek: {e}"),
+                    started,
+                ));
+                return;
+            }
+        };
+
+        if !looks_like_tls_clienthello(&peeked) {
+            // 非 TLS：透明隧道转发，并把该 host 加入 auto-bypass，后续 CONNECT 走 fast path。
+            // peek 为空（客户端尚未发送任何字节）也走这条路径，以兼容 server-first 协议。
+            let addr = format!("{}:{}", host_spawn, port);
+            match TcpStream::connect(&addr).await {
+                Ok(mut upstream) => {
+                    state2.mark_auto_bypass_mitm(&host_spawn);
+                    if !peeked.is_empty() {
+                        if let Err(e) = upstream.write_all(&peeked).await {
+                            tracing::debug!("mitm raw tunnel write {}: {}", host_spawn, e);
+                            return;
+                        }
+                    }
+                    state2.push_traffic(mitm_raw_tunnel_entry(
+                        peer,
+                        &host_spawn,
+                        port,
+                        &request_headers,
+                        started,
+                    ));
+                    let _ = tokio::io::copy_bidirectional(&mut io, &mut upstream).await;
+                }
+                Err(e) => {
+                    state2.push_traffic(mitm_handshake_failure_entry(
+                        peer,
+                        &host_spawn,
+                        port,
+                        &request_headers,
+                        format!("CONNECT raw upstream {addr}: {e}"),
+                        started,
+                    ));
+                }
+            }
+            return;
+        }
+
+        let server_cfg = match mitm.rustls_server_config(&host_spawn) {
+            Ok(c) => c,
             Err(e) => {
                 tracing::warn!("mitm cert {}: {}", host_spawn, e);
                 state2.push_traffic(mitm_handshake_failure_entry(
@@ -556,36 +805,35 @@ async fn handle_connect_mitm(
                 return;
             }
         };
-        let std_acceptor = match NativeTlsAcceptor::builder(identity)
-            .min_protocol_version(Some(Protocol::Tlsv12))
-            .build()
-        {
-            Ok(a) => a,
-            Err(e) => {
-                tracing::warn!("mitm tls acceptor {}: {}", host_spawn, e);
-                state2.push_traffic(mitm_handshake_failure_entry(
-                    peer,
-                    &host_spawn,
-                    port,
-                    &request_headers,
-                    format!("MITM TLS acceptor: {e}"),
-                    started,
-                ));
-                return;
-            }
-        };
-        let acceptor = TokioNativeTlsAcceptor::from(std_acceptor);
-        let tls_stream = match acceptor.accept(io).await {
+        let acceptor = RustlsAcceptor::from(server_cfg);
+        // peek 阶段已经从 io 中消耗了若干字节，需要"还回"到 ClientHello 前面再交给 TLS。
+        let prepended = PrependedReadIo::new(peeked, io);
+        let tls_stream = match acceptor.accept(prepended).await {
             Ok(s) => s,
             Err(e) => {
-                state2.mark_auto_bypass_mitm(&host_spawn);
-                tracing::warn!("mitm tls accept {}: {}", host_spawn, e);
+                let kind = classify_mitm_accept_error(&e);
+                let hint = mitm_accept_failure_hint(kind, &host_spawn);
+                match kind {
+                    MitmAcceptFailureKind::ClientCertRejection
+                    | MitmAcceptFailureKind::HandshakeEof => {
+                        tracing::info!(
+                            "mitm tls accept {}: {} ({:?}, 不加入 auto-bypass)",
+                            host_spawn,
+                            e,
+                            kind
+                        );
+                    }
+                    MitmAcceptFailureKind::Other => {
+                        state2.mark_auto_bypass_mitm(&host_spawn);
+                        tracing::warn!("mitm tls accept {}: {} (auto-bypass)", host_spawn, e);
+                    }
+                }
                 state2.push_traffic(mitm_handshake_failure_entry(
                     peer,
                     &host_spawn,
                     port,
                     &request_headers,
-                    format!("MITM TLS accept: {e}"),
+                    format!("MITM TLS accept: {e} — {hint}"),
                     started,
                 ));
                 return;
@@ -603,8 +851,9 @@ async fn handle_connect_mitm(
                 handle_mitm_https_request(st, peer_c, host_svc, port_svc, req).await
             }
         });
-        let conn = hyper::server::conn::http1::Builder::new().serve_connection(tls_io, service);
-        if let Err(e) = conn.await {
+        // 用 auto::Builder 让接收侧根据 ALPN 自动选 HTTP/2 或 HTTP/1.1，匹配 rustls 协商结果。
+        let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+        if let Err(e) = builder.serve_connection(tls_io, service).await {
             tracing::debug!("mitm http connection {}: {}", host_spawn, e);
         }
     });

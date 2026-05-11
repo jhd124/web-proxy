@@ -410,6 +410,11 @@ impl AppState {
             .write()
             .insert(host.to_ascii_lowercase())
     }
+
+    /// 清空因 TLS 失败而自动走隧道的域名集合（例如误 bypass 后或希望重新尝试 MITM）。
+    pub fn clear_auto_mitm_bypass_hosts(&self) {
+        self.auto_mitm_bypass_hosts.write().clear();
+    }
 }
 
 pub struct TrafficUpdate {

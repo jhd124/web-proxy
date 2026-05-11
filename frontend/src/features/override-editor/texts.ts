@@ -1,8 +1,6 @@
 export const overrideEditorTexts = {
   shell: {
     title: 'Override response',
-    subtitle:
-      'Future requests that match the rule receive this response (plain HTTP; first matching rule wins).',
     closeAria: 'Close',
     fabRequest: 'Request',
     fabDrag: 'Drag to move',

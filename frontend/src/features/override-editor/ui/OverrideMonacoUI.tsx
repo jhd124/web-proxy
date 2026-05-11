@@ -28,7 +28,7 @@ export function OverrideMonacoUI({
           height="100%"
           theme="vs-dark"
           defaultLanguage="plaintext"
-          value={overrideForm.body}
+          value={overrideForm.body || ''}
           onChange={(v) => setOverrideForm((f) => ({ ...f, body: v ?? '' }))}
           options={{
             minimap: { enabled: false },

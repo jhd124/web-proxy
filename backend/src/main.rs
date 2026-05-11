@@ -112,12 +112,8 @@ async fn main() -> anyhow::Result<()> {
 
     let (proxy_port, dashboard_port) = ports::resolve_proxy_dashboard_ports()?;
 
-    let proxy_addr: SocketAddr = format!("127.0.0.1:{}", proxy_port)
-        .parse()
-        .context("parse PROXY_PORT")?;
-    let dashboard_addr: SocketAddr = format!("127.0.0.1:{}", dashboard_port)
-        .parse()
-        .context("parse DASHBOARD_PORT")?;
+    let proxy_addr: SocketAddr = (ports::LISTEN_IPV4, proxy_port).into();
+    let dashboard_addr: SocketAddr = (ports::LISTEN_IPV4, dashboard_port).into();
 
     tokio::spawn(async move {
         if let Err(e) = proxy::run_proxy(proxy_addr, proxy_state).await {
@@ -133,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     tracing::info!(
-        "proxy={} dashboard=http://{} (set HTTP_PROXY=http://127.0.0.1:{}){}{}",
+        "proxy={} dashboard=http://{} (LAN: use GET /api/health field proxyListenIpv4 + proxyPort; local HTTP_PROXY=http://127.0.0.1:{}){}{}",
         proxy_addr,
         dashboard_addr,
         proxy_port,

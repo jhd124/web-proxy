@@ -3,8 +3,11 @@
 //! `PROXY_DATA_DIR/listen-ports.json` so the shell can open the correct dashboard URL.
 
 use anyhow::Context;
-use std::net::TcpListener;
+use std::net::{Ipv4Addr, TcpListener};
 use std::path::Path;
+
+/// 代理与控制台监听 IPv4（全零地址 → 本机 + 局域网均可连）。
+pub const LISTEN_IPV4: Ipv4Addr = Ipv4Addr::UNSPECIFIED;
 
 const DEFAULT_PROXY: u16 = 9090;
 const DEFAULT_DASHBOARD: u16 = 9091;
@@ -26,7 +29,7 @@ fn parse_port_from_env(key: &str, default: u16) -> u16 {
         .unwrap_or(default)
 }
 
-/// First port >= `start` that accepts `127.0.0.1` bind and is not in `avoid`.
+/// First port >= `start` that accepts `LISTEN_IPV4` bind and is not in `avoid`.
 pub fn find_free_listen_port(start: u16, avoid: &[u16]) -> anyhow::Result<u16> {
     let hint = start;
     let mut port = start;
@@ -35,7 +38,7 @@ pub fn find_free_listen_port(start: u16, avoid: &[u16]) -> anyhow::Result<u16> {
             port = port.checked_add(1).context("no free TCP port (avoid list)")?;
             continue;
         }
-        match TcpListener::bind(("127.0.0.1", port)) {
+        match TcpListener::bind((LISTEN_IPV4, port)) {
             Ok(listener) => {
                 drop(listener);
                 return Ok(port);

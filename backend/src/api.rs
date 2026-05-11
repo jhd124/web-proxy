@@ -64,6 +64,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/requests", get(list_requests))
         .route("/api/requests", delete(clear_requests))
         .route("/api/mitm/ca.pem", get(mitm_ca))
+        .route("/api/mitm/auto-bypass", post(clear_mitm_auto_bypass))
         .route("/api/overrides", get(crate::overrides::list_overrides))
         .route("/api/overrides", post(crate::overrides::create_override))
         .route("/api/overrides/:id", put(crate::overrides::update_override))
@@ -107,6 +108,11 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
         upstream_http3_enabled: state.upstream_http3_enabled,
         proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
     })
+}
+
+async fn clear_mitm_auto_bypass(State(state): State<Arc<AppState>>) -> StatusCode {
+    state.clear_auto_mitm_bypass_hosts();
+    StatusCode::NO_CONTENT
 }
 
 async fn mitm_ca(State(state): State<Arc<AppState>>) -> impl IntoResponse {
