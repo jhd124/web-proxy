@@ -1068,7 +1068,7 @@ fn reqwest_headers_for_upstream(
             reqwest::header::HeaderName::from_bytes(k.as_str().as_bytes()),
             reqwest::header::HeaderValue::from_bytes(v.as_bytes()),
         ) {
-            req_headers.insert(name, val);
+            req_headers.append(name, val);
         }
     }
     req_headers
@@ -1438,5 +1438,46 @@ fn preview_bytes_limited(slice: &[u8], max: usize) -> Option<String> {
     match std::str::from_utf8(slice) {
         Ok(s) => Some(s.to_string()),
         Err(_) => Some(format!("<binary {} bytes>", slice.len())),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyper::header::{HeaderMap, HeaderValue, COOKIE, HOST};
+
+    #[test]
+    fn reqwest_headers_for_upstream_preserves_duplicate_request_headers() {
+        let mut headers = HeaderMap::new();
+        headers.append(COOKIE, HeaderValue::from_static("session=abc"));
+        headers.append(COOKIE, HeaderValue::from_static("prefs=dark"));
+
+        let upstream_headers = reqwest_headers_for_upstream(&headers);
+        let cookies = upstream_headers
+            .get_all(reqwest::header::COOKIE)
+            .iter()
+            .map(|value| value.to_str().unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(cookies, vec!["session=abc", "prefs=dark"]);
+    }
+
+    #[test]
+    fn reqwest_headers_for_upstream_skips_proxy_specific_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert(HOST, HeaderValue::from_static("example.com"));
+        headers.insert("proxy-connection", HeaderValue::from_static("keep-alive"));
+        headers.insert("x-request-id", HeaderValue::from_static("request-1"));
+
+        let upstream_headers = reqwest_headers_for_upstream(&headers);
+
+        assert!(upstream_headers.get(reqwest::header::HOST).is_none());
+        assert!(upstream_headers.get("proxy-connection").is_none());
+        assert_eq!(
+            upstream_headers
+                .get("x-request-id")
+                .and_then(|value| value.to_str().ok()),
+            Some("request-1")
+        );
     }
 }

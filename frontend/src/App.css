@@ -1,12 +1,11 @@
 :root {
-  --bg: var(--background);
-  --panel-bg: var(--background);
-  --border: var(--border);
-  --text: #e8eaf0;
-  --muted: #8b93a7;
-  --accent: #6ee7b7;
-  --warn: #fbbf24;
-  --bad: #f87171;
+  --bg: var(--background-base);
+  --panel-bg: var(--background-card);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --accent: var(--text-active);
+  --warn: var(--text-warning);
+  --bad: var(--text-error);
 }
 
 * {
@@ -36,25 +35,25 @@ body {
 }
 
 .pill.ok {
-  border-color: #34d39955;
-  color: #6ee7b7;
+  border-color: var(--text-success);
+  color: var(--text-success);
 }
 
 .pill.warn {
-  border-color: #fbbf2455;
-  color: #fbbf24;
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 .pill.bad {
-  border-color: #f8717155;
-  color: #f87171;
+  border-color: var(--bad);
+  color: var(--bad);
 }
 
 .pill.subtle {
   text-transform: none;
   letter-spacing: normal;
   color: var(--muted);
-  border-color: #2a3142;
+  border-color: var(--border);
 }
 
 .sr-only {
@@ -72,9 +71,9 @@ body {
 .pre {
   margin: 0.5rem 0 0;
   padding: 0.75rem;
-  background: #12151c;
+  background: var(--background-popover);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-button-md);
   overflow: auto;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -123,7 +122,7 @@ body {
   background: transparent;
   color: var(--text);
   padding: 0.35rem 0.65rem;
-  border-radius: 6px;
+  border-radius: var(--radius-button-sm);
   cursor: pointer;
   font-size: 0.8rem;
 }
@@ -134,17 +133,17 @@ body {
 
 .ghost.danger {
   color: var(--bad);
-  border-color: #f8717144;
+  border-color: var(--bad);
 }
 
 .primary {
   appearance: none;
   border: none;
-  background: linear-gradient(135deg, #34d399, #2dd4bf);
-  color: #0f1218;
+  background: var(--background-button-primary);
+  color: var(--gray-50);
   font-weight: 600;
   padding: 0.55rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-button-md);
   cursor: pointer;
 }
 
