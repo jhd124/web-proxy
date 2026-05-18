@@ -1,5 +1,6 @@
 import { BreakpointsPanelPortal } from '../../breakpoints/portal'
 import { OverrideEditorPortal } from '../../override-editor/portal'
+import { SavedRequestsPanelPortal } from '../../saved-requests/portal'
 import { TrafficPanelPortal } from '../../traffic/portal'
 import type { DashboardViewModel } from '../hooks/useDashboard'
 import { DashboardHeaderUI } from './DashboardHeaderUI'
@@ -12,6 +13,7 @@ export function DashboardUI(p: DashboardViewModel) {
         proxyListenAddress={p.proxyListenAddress}
         onBreakpointsEntryClick={p.onBreakpointsNavClick}
         onOverridesEntryClick={p.onOverridesNavClick}
+        onSavedRequestsEntryClick={p.openSavedRequestsPanel}
       />
 
       <TrafficPanelPortal
@@ -24,11 +26,24 @@ export function DashboardUI(p: DashboardViewModel) {
         setSelectedId={p.setSelectedId}
         selected={p.selected}
         selectedIsEventStream={p.selectedIsEventStream}
+        selectedIsSaved={p.selectedIsSaved}
         openOverrideDrawer={p.openOverrideDrawer}
+        saveSelectedRequest={p.saveSelectedRequest}
         addBreakpointFromSelected={p.addBreakpointFromSelected}
         resumeRequest={p.resumeRequest}
         resumeSaving={p.resumeSaving}
       />
+
+      {p.savedRequestsOpen && (
+        <SavedRequestsPanelPortal
+          savedRequests={p.savedRequests}
+          selectedSavedRequestId={p.selectedSavedRequestId}
+          setSelectedSavedRequestId={p.setSelectedSavedRequestId}
+          closeSavedRequestsPanel={p.closeSavedRequestsPanel}
+          removeSavedRequest={p.removeSavedRequest}
+          clearSavedRequests={p.clearSavedRequests}
+        />
+      )}
 
       {p.breakpointsOpen && (
         <BreakpointsPanelPortal

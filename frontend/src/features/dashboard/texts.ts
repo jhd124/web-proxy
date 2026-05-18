@@ -9,6 +9,8 @@ export const dashboardTexts = {
     openOverridesAriaLabel: 'Open overrides',
     openBreakpointsTooltip: 'Open breakpoints',
     openBreakpointsAriaLabel: 'Open breakpoints',
+    openSavedRequestsTooltip: 'Open saved requests',
+    openSavedRequestsAriaLabel: 'Open saved requests',
     proxyListenPrefix: '代理服务器监听在',
     proxyListenAriaLabel: (addr: string) => `代理服务器监听在 ${addr}`,
   },

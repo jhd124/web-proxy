@@ -25,6 +25,12 @@ export interface TrafficEntry {
   streamPlaying?: boolean | null
 }
 
+export interface SavedRequest {
+  id: string
+  savedAt: string
+  entry: TrafficEntry
+}
+
 export interface OverrideRule {
   id: string
   enabled: boolean

@@ -226,6 +226,14 @@ pub struct TrafficEntry {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SavedRequest {
+    pub id: Uuid,
+    pub saved_at: DateTime<Utc>,
+    pub entry: TrafficEntry,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum TrafficKind {
     Http,
     Connect,

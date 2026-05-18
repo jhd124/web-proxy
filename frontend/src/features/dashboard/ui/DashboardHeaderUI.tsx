@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { KeyRound, Replace, Signpost } from 'lucide-react'
+import { Bookmark, KeyRound, Replace, Signpost } from 'lucide-react'
 import { dashboardTexts } from '../texts'
 import s from './DashboardHeaderUI.module.css'
 import { Button } from '@/components/ui/button'
@@ -10,12 +10,14 @@ type Props = {
   proxyListenAddress: string | null
   onBreakpointsEntryClick: () => void
   onOverridesEntryClick: () => void
+  onSavedRequestsEntryClick: () => void
 }
 
 export function DashboardHeaderUI({
   proxyListenAddress,
   onBreakpointsEntryClick,
   onOverridesEntryClick,
+  onSavedRequestsEntryClick,
 }: Props) {
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
@@ -69,6 +71,16 @@ export function DashboardHeaderUI({
             onClick={onOverridesEntryClick}
           >
             <Replace />
+          </Button>
+        </SimpleTooltip>
+        <SimpleTooltip label={t.openSavedRequestsTooltip}>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={t.openSavedRequestsAriaLabel}
+            onClick={onSavedRequestsEntryClick}
+          >
+            <Bookmark />
           </Button>
         </SimpleTooltip>
         <SimpleTooltip label={t.openBreakpointsTooltip}>

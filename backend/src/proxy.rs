@@ -26,7 +26,8 @@ use tokio_rustls::TlsAcceptor as RustlsAcceptor;
 use uuid::Uuid;
 
 /// Response body: buffered (`Full`) or streamed (SSE / `text/event-stream`).
-type SseStream = Pin<Box<dyn futures_util::Stream<Item = Result<Frame<Bytes>, reqwest::Error>> + Send>>;
+type SseStream =
+    Pin<Box<dyn futures_util::Stream<Item = Result<Frame<Bytes>, reqwest::Error>> + Send>>;
 type ProxyBody = Either<Full<Bytes>, StreamBody<SseStream>>;
 
 const BODY_PREVIEW_MAX: usize = 64 * 1024;
@@ -152,7 +153,11 @@ struct PrependedReadIo<I> {
 
 impl<I> PrependedReadIo<I> {
     fn new(prefix: Vec<u8>, inner: I) -> Self {
-        Self { prefix, pos: 0, inner }
+        Self {
+            prefix,
+            pos: 0,
+            inner,
+        }
     }
 }
 
@@ -207,10 +212,14 @@ fn maybe_decode_response_body(
     let mut out = Vec::new();
     match first {
         "gzip" | "x-gzip" => {
-            GzDecoder::new(Cursor::new(bytes)).read_to_end(&mut out).ok()?;
+            GzDecoder::new(Cursor::new(bytes))
+                .read_to_end(&mut out)
+                .ok()?;
         }
         "deflate" => {
-            ZlibDecoder::new(Cursor::new(bytes)).read_to_end(&mut out).ok()?;
+            ZlibDecoder::new(Cursor::new(bytes))
+                .read_to_end(&mut out)
+                .ok()?;
         }
         "br" => {
             brotli::Decompressor::new(Cursor::new(bytes), 4096)
@@ -345,12 +354,7 @@ fn skip_header_for_streamed_body(name: &str) -> bool {
 fn header_pairs(req: &Request<Incoming>) -> Vec<(String, String)> {
     req.headers()
         .iter()
-        .map(|(k, v)| {
-            (
-                k.to_string(),
-                v.to_str().unwrap_or("<binary>").to_string(),
-            )
-        })
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
         .collect()
 }
 
@@ -542,7 +546,11 @@ fn find_override(
         .cloned()
 }
 
-fn find_breakpoint(state: &AppState, origin: &str, path: &str) -> Option<crate::state::BreakpointRule> {
+fn find_breakpoint(
+    state: &AppState,
+    origin: &str,
+    path: &str,
+) -> Option<crate::state::BreakpointRule> {
     let rules = state.breakpoints.read();
     rules.iter().find(|r| r.matches(origin, path)).cloned()
 }
@@ -563,7 +571,8 @@ pub async fn run_proxy(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Result
             });
             // CONNECT (HTTPS in browsers) requires HTTP/1 upgrade support; plain
             // `serve_connection` does not enable `.with_upgrades()` on the http1 path.
-            let conn = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new());
+            let conn =
+                hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new());
             if let Err(e) = conn.serve_connection_with_upgrades(io, service).await {
                 tracing::debug!(?peer, "connection closed: {}", e);
             }
@@ -601,11 +610,7 @@ async fn handle_connect(
     }
 
     let addr = format!("{}:{}", host, port);
-    let pq = req
-        .uri()
-        .path_and_query()
-        .map(|p| p.as_str())
-        .unwrap_or("");
+    let pq = req.uri().path_and_query().map(|p| p.as_str()).unwrap_or("");
     let url = if port == 443 {
         format!("https://{}{}", host, pq)
     } else {
@@ -847,9 +852,7 @@ async fn handle_connect_mitm(
         let service = hyper::service::service_fn(move |req| {
             let st = svc_state.clone();
             let host_svc = host_svc.clone();
-            async move {
-                handle_mitm_https_request(st, peer_c, host_svc, port_svc, req).await
-            }
+            async move { handle_mitm_https_request(st, peer_c, host_svc, port_svc, req).await }
         });
         // 用 auto::Builder 让接收侧根据 ALPN 自动选 HTTP/2 或 HTTP/1.1，匹配 rustls 协商结果。
         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
@@ -900,7 +903,9 @@ async fn handle_mitm_https_request(
 fn bad_request(msg: &'static str) -> Response<ProxyBody> {
     Response::builder()
         .status(StatusCode::BAD_REQUEST)
-        .body(Either::Left(Full::new(Bytes::copy_from_slice(msg.as_bytes()))))
+        .body(Either::Left(Full::new(Bytes::copy_from_slice(
+            msg.as_bytes(),
+        ))))
         .unwrap()
 }
 
@@ -925,10 +930,13 @@ async fn respond_with_rule(
         .as_deref()
         .map(|enc| encode_body_for_content_encoding(body.as_bytes(), enc).is_some())
         .unwrap_or(true);
-    let effective_headers = filtered_rule_headers(&headers, stream_interval_ms.is_some(), keep_content_encoding);
-    let mut res = Response::builder().status(
-        StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+    let effective_headers = filtered_rule_headers(
+        &headers,
+        stream_interval_ms.is_some(),
+        keep_content_encoding,
     );
+    let mut res = Response::builder()
+        .status(StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR));
     for (k, v) in &effective_headers {
         if let (Ok(name), Ok(val)) = (
             HeaderName::from_bytes(k.as_bytes()),
@@ -996,12 +1004,15 @@ async fn respond_with_rule(
     }
 
     let final_body = if let Some(ref enc) = content_encoding {
-        encode_body_for_content_encoding(body.as_bytes(), enc).unwrap_or_else(|| body.as_bytes().to_vec())
+        encode_body_for_content_encoding(body.as_bytes(), enc)
+            .unwrap_or_else(|| body.as_bytes().to_vec())
     } else {
         body.as_bytes().to_vec()
     };
     let body_bytes = Bytes::from(final_body);
-    let resp = res.body(Either::Left(Full::new(body_bytes.clone()))).unwrap();
+    let resp = res
+        .body(Either::Left(Full::new(body_bytes.clone())))
+        .unwrap();
     let preview = preview_bytes(&Bytes::copy_from_slice(body.as_bytes()));
     state.update_traffic(
         entry_id,
@@ -1029,7 +1040,11 @@ async fn handle_http_proxy(
     let method = req.method().clone();
     let url = match normalize_proxy_url(&req) {
         Some(u) => u,
-        None => return Ok(bad_request("could not determine target URL (need absolute URI or Host)")),
+        None => {
+            return Ok(bad_request(
+                "could not determine target URL (need absolute URI or Host)",
+            ))
+        }
     };
 
     let (parts, body) = req.into_parts();
@@ -1047,9 +1062,7 @@ async fn handle_http_proxy(
     forward_proxied_http(state, peer, method, url, &parts.headers, collected).await
 }
 
-fn reqwest_headers_for_upstream(
-    headers: &hyper::header::HeaderMap,
-) -> reqwest::header::HeaderMap {
+fn reqwest_headers_for_upstream(headers: &hyper::header::HeaderMap) -> reqwest::header::HeaderMap {
     let mut req_headers = reqwest::header::HeaderMap::new();
     for (k, v) in headers.iter() {
         if k == "proxy-connection"
@@ -1111,12 +1124,7 @@ async fn forward_proxied_http(
         path: path_with_query.clone(),
         request_headers: request_headers
             .iter()
-            .map(|(k, v)| {
-                (
-                    k.to_string(),
-                    v.to_str().unwrap_or("<binary>").to_string(),
-                )
-            })
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
             .collect(),
         request_body_preview: req_body_preview.clone(),
         kind: TrafficKind::Http,
@@ -1233,12 +1241,7 @@ async fn forward_proxied_http(
     let resp_headers: Vec<(String, String)> = upstream
         .headers()
         .iter()
-        .map(|(k, v)| {
-            (
-                k.to_string(),
-                v.to_str().unwrap_or("<binary>").to_string(),
-            )
-        })
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
         .collect();
 
     let header_map = upstream.headers().clone();
@@ -1329,9 +1332,8 @@ async fn forward_proxied_http(
             })),
         };
         let stream: SseStream = Box::pin(stream);
-        let mut res = Response::builder().status(
-            StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-        );
+        let mut res = Response::builder()
+            .status(StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR));
         for (k, v) in header_map.iter() {
             if skip_header_for_streamed_body(k.as_str()) {
                 continue;
@@ -1386,9 +1388,8 @@ async fn forward_proxied_http(
         },
     );
 
-    let mut res = Response::builder().status(
-        StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-    );
+    let mut res = Response::builder()
+        .status(StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR));
     for (k, v) in header_map.iter() {
         let skip = matches!(
             k.as_str(),

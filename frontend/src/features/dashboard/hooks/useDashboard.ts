@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBreakpointState } from '../../breakpoints/hooks/useBreakpointState'
 import { useOverrideEditorState } from '../../override-editor/hooks/useOverrideEditorState'
+import { useSavedRequests } from '../../saved-requests/hooks/useSavedRequests'
 import { useTrafficState } from '../../traffic/hooks/useTrafficState'
 import {
   breakpointMatches,
@@ -17,6 +18,12 @@ export function useDashboard() {
   const [breakpointsOpen, setBreakpointsOpen] = useState(false)
   const openBreakpointsPanel = useCallback(() => setBreakpointsOpen(true), [])
   const closeBreakpointsPanel = useCallback(() => setBreakpointsOpen(false), [])
+  const [savedRequestsOpen, setSavedRequestsOpen] = useState(false)
+  const openSavedRequestsPanel = useCallback(() => setSavedRequestsOpen(true), [])
+  const closeSavedRequestsPanel = useCallback(
+    () => setSavedRequestsOpen(false),
+    [],
+  )
   const [wsStatus, setWsStatus] = useState<'connecting' | 'open' | 'closed'>(
     'connecting',
   )
@@ -27,6 +34,16 @@ export function useDashboard() {
   )
 
   const traffic = useTrafficState()
+  const savedRequestsState = useSavedRequests()
+  const {
+    savedRequests,
+    selectedSavedRequestId,
+    setSelectedSavedRequestId,
+    saveRequest,
+    isRequestSaved,
+    removeSavedRequest,
+    clearSavedRequests,
+  } = savedRequestsState
   const ovr = useOverrideEditorState()
   const {
     overrides,
@@ -35,28 +52,32 @@ export function useDashboard() {
     setOverrideForm,
     bumpRequestPanel,
     setOverridesPanel,
+    refreshOverrides,
   } = ovr
   const brk = useBreakpointState({ openBreakpointsPanel })
   const { breakpoints, setBreakpointForm, refreshBreakpoints } = brk
 
   const selectedIdRef = useRef<string | null>(null)
-  selectedIdRef.current = traffic.selectedId
+
+  useEffect(() => {
+    selectedIdRef.current = traffic.selectedId
+  }, [traffic.selectedId])
 
   useAppWebSocket({
     setEntries: traffic.setEntries,
     selectedIdRef,
     setSelectedId: traffic.setSelectedId,
     setWsStatus,
-    refreshOverrides: ovr.refreshOverrides,
-    refreshBreakpoints: brk.refreshBreakpoints,
+    refreshOverrides,
+    refreshBreakpoints,
   })
 
   useEffect(() => {
     queueMicrotask(() => {
-      void ovr.refreshOverrides()
-      void brk.refreshBreakpoints()
+      void refreshOverrides()
+      void refreshBreakpoints()
     })
-  }, [brk.refreshBreakpoints, ovr.refreshOverrides])
+  }, [refreshBreakpoints, refreshOverrides])
 
   useEffect(() => {
     if (!breakpointsOpen) return
@@ -67,6 +88,16 @@ export function useDashboard() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [breakpointsOpen, closeBreakpointsPanel])
+
+  useEffect(() => {
+    if (!savedRequestsOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      closeSavedRequestsPanel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [closeSavedRequestsPanel, savedRequestsOpen])
 
   useEffect(() => {
     const loadHealth = async () => {
@@ -107,6 +138,20 @@ export function useDashboard() {
   }, [])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
+
+  const selectedIsSaved = useMemo(
+    () => Boolean(selected && isRequestSaved(selected.id)),
+    [isRequestSaved, selected],
+  )
+
+  const saveSelectedRequest = useCallback(async () => {
+    if (!selected) return
+    try {
+      await saveRequest(selected)
+    } catch (e) {
+      window.alert(String(e))
+    }
+  }, [saveRequest, selected])
 
   const selectedMatchingOverride = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
@@ -223,7 +268,10 @@ export function useDashboard() {
     mitmCaPemPath,
     proxyListenAddress,
     breakpointsOpen,
+    savedRequestsOpen,
     closeBreakpointsPanel,
+    openSavedRequestsPanel,
+    closeSavedRequestsPanel,
     onOverridesNavClick: ovr.onOverridesNavClick,
     urlFilter: traffic.urlFilter,
     setUrlFilter: traffic.setUrlFilter,
@@ -234,7 +282,9 @@ export function useDashboard() {
     setSelectedId: traffic.setSelectedId,
     selected: traffic.selected,
     selectedIsEventStream: traffic.selectedIsEventStream,
+    selectedIsSaved,
     openOverrideDrawer,
+    saveSelectedRequest,
     addBreakpointFromSelected,
     resumeRequest: traffic.resumeRequest,
     resumeSaving: traffic.resumeSaving,
@@ -269,6 +319,11 @@ export function useDashboard() {
     setBreakpointEnabled: brk.setBreakpointEnabled,
     breakpointToggleSaving: brk.breakpointToggleSaving,
     onBreakpointsNavClick: openBreakpointsPanel,
+    savedRequests,
+    selectedSavedRequestId,
+    setSelectedSavedRequestId,
+    removeSavedRequest,
+    clearSavedRequests,
   }
 }
 

@@ -10,7 +10,9 @@ export type TrafficPanelUIProps = {
   setSelectedId: (id: string) => void
   selected: TrafficEntry | null
   selectedIsEventStream: boolean
+  selectedIsSaved: boolean
   openOverrideDrawer: () => void
+  saveSelectedRequest: () => Promise<void>
   addBreakpointFromSelected: () => void
   resumeRequest: (id: string) => void
   resumeSaving: Record<string, boolean>

@@ -35,7 +35,9 @@ export function TrafficPanelUI({
   setSelectedId,
   selected,
   selectedIsEventStream,
+  selectedIsSaved,
   openOverrideDrawer,
+  saveSelectedRequest,
   addBreakpointFromSelected,
   resumeRequest,
   resumeSaving,
@@ -119,7 +121,18 @@ export function TrafficPanelUI({
             {selected ? (
               <>
                 <section className={s.block}>
-                  <h2>{t.sectionRequest}</h2>
+                  <div className={s.blockHead}>
+                    <h2>{t.sectionRequest}</h2>
+                    <div className={s.detailActions}>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => void saveSelectedRequest()}
+                      >
+                        {selectedIsSaved ? t.requestSaved : t.saveRequest}
+                      </button>
+                    </div>
+                  </div>
                   <p className="mono small">
                     {selected.method} {selected.url}
                   </p>

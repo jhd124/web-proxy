@@ -14,6 +14,8 @@ export const trafficTexts = {
   tagBypassed: 'bypassed',
   sectionRequest: 'Request',
   sectionResponse: 'Response',
+  saveRequest: 'Save request',
+  requestSaved: 'Saved',
   addBreakpoint: 'Add breakpoint',
   resuming: 'Resuming…',
   resume: 'Resume',
