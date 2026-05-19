@@ -7,11 +7,16 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Context;
+use tauri::AppHandle;
 use tauri::Manager;
 use tauri::RunEvent;
 use tauri::Url;
+use tauri::WebviewUrl;
+use tauri::WebviewWindowBuilder;
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
+
+const FLOATING_TRAFFIC_WINDOW_LABEL: &str = "floating-traffic";
 
 /// Holds the bundled `proxy-app` process so we can kill it on exit (release builds only).
 pub struct ProxySidecarChild(pub Mutex<Option<CommandChild>>);
@@ -37,13 +42,46 @@ fn dev_workspace_proxy_ports_path() -> Option<PathBuf> {
         .map(|repo_root| repo_root.join("frontend/.proxy-dev-ports.json"))
 }
 
+#[tauri::command]
+async fn open_floating_traffic_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(FLOATING_TRAFFIC_WINDOW_LABEL) {
+        window.unminimize().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    let main = app
+        .get_webview_window("main")
+        .ok_or_else(|| "missing main webview window".to_string())?;
+    let mut floating_url = main.url().map_err(|e| e.to_string())?;
+    floating_url.set_query(Some("view=floating-traffic"));
+
+    WebviewWindowBuilder::new(
+        &app,
+        FLOATING_TRAFFIC_WINDOW_LABEL,
+        WebviewUrl::External(floating_url),
+    )
+    .title("Proxy Traffic")
+    .inner_size(380.0, 560.0)
+    .min_inner_size(300.0, 360.0)
+    .resizable(true)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .focused(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             mitm_install::install_mitm_ca_system_trust,
-            mitm_install::open_mitm_ca_file
+            mitm_install::open_mitm_ca_file,
+            open_floating_traffic_window
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

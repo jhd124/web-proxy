@@ -1,29 +1,16 @@
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { trafficTexts as t } from '../texts'
+import {
+  getTrafficConnectDetailNote,
+  getTrafficSchemeLabel,
+  getTrafficSummary,
+} from '../trafficDisplay'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Trash } from 'lucide-react'
 import { SimpleTooltip } from '@/components/ui/tooltip'
-
-function isMitmHandshakeFailureError(err: string | null | undefined): boolean {
-  return Boolean(
-    err && (err.startsWith('CONNECT upgrade:') || err.includes('MITM ')),
-  )
-}
-
-function connectSummary(url: string, error: string | null | undefined, mitmBypassed?: boolean): string {
-  if (mitmBypassed) return t.connectMitmBypassed(url)
-  if (isMitmHandshakeFailureError(error)) return t.connectMitmHandshakeFailed(url)
-  return t.connectTunnel(url)
-}
-
-function connectDetailNote(error: string | null | undefined, mitmBypassed?: boolean): string {
-  if (mitmBypassed) return t.mitmBypassedNote
-  if (isMitmHandshakeFailureError(error)) return t.mitmHandshakeNote
-  return t.connectNote
-}
 
 export function TrafficPanelUI({
   urlFilter,
@@ -74,11 +61,8 @@ export function TrafficPanelUI({
             <ScrollArea className="min-h-0 flex-1">
               <ul className={s.reqList}>
                 {[...filteredEntries].reverse().map((e) => {
-                  const schemeLabel = e.kind === 'connect' ? t.schemeHttps : e.scheme.toUpperCase()
-                  const summary =
-                    e.kind === 'connect'
-                      ? connectSummary(e.url, e.error, e.mitmBypassed)
-                      : e.url
+                  const schemeLabel = getTrafficSchemeLabel(e)
+                  const summary = getTrafficSummary(e)
                   return (
                     <li key={e.id}>
                       <button
@@ -151,7 +135,7 @@ export function TrafficPanelUI({
                   )}
                   {selected.kind === 'connect' && (
                     <p className="small muted">
-                      {connectDetailNote(selected.error, selected.mitmBypassed)}
+                      {getTrafficConnectDetailNote(selected.error, selected.mitmBypassed)}
                     </p>
                   )}
                   <pre className={s.pre}>

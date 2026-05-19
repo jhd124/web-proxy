@@ -12,7 +12,12 @@ import {
   urlOrigin,
 } from '../../../lib/dashboardUtils'
 import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
+import { isTauri } from '../../../lib/tauriEnv'
+import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
+
+const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
+const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
 
 export function useDashboard() {
   const [breakpointsOpen, setBreakpointsOpen] = useState(false)
@@ -24,6 +29,32 @@ export function useDashboard() {
     () => setSavedRequestsOpen(false),
     [],
   )
+  const openFloatingTrafficWindow = useCallback(async () => {
+    const floatingUrl = new URL(
+      FLOATING_TRAFFIC_VIEW_PATH,
+      window.location.href,
+    ).toString()
+
+    if (!isTauri()) {
+      window.open(
+        floatingUrl,
+        FLOATING_TRAFFIC_WINDOW_LABEL,
+        'popup,width=380,height=560',
+      )
+      return
+    }
+
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_floating_traffic_window')
+    } catch (error) {
+      window.alert(
+        dashboardTexts.header.openFloatingTrafficFailed(
+          error instanceof Error ? error.message : String(error),
+        ),
+      )
+    }
+  }, [])
   const [wsStatus, setWsStatus] = useState<'connecting' | 'open' | 'closed'>(
     'connecting',
   )
@@ -271,6 +302,7 @@ export function useDashboard() {
     savedRequestsOpen,
     closeBreakpointsPanel,
     openSavedRequestsPanel,
+    openFloatingTrafficWindow,
     closeSavedRequestsPanel,
     onOverridesNavClick: ovr.onOverridesNavClick,
     urlFilter: traffic.urlFilter,

@@ -11,6 +11,11 @@ export const dashboardTexts = {
     openBreakpointsAriaLabel: 'Open breakpoints',
     openSavedRequestsTooltip: 'Open saved requests',
     openSavedRequestsAriaLabel: 'Open saved requests',
+    openFloatingTrafficTooltip: 'Open floating traffic window',
+    openFloatingTrafficAriaLabel: 'Open floating traffic window',
+    floatingTrafficTitle: 'Proxy Traffic',
+    openFloatingTrafficFailed: (detail: string) =>
+      `Could not open floating traffic window: ${detail}`,
     proxyListenPrefix: '代理服务器监听在',
     proxyListenAriaLabel: (addr: string) => `代理服务器监听在 ${addr}`,
   },

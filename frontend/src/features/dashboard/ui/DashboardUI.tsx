@@ -14,6 +14,7 @@ export function DashboardUI(p: DashboardViewModel) {
         onBreakpointsEntryClick={p.onBreakpointsNavClick}
         onOverridesEntryClick={p.onOverridesNavClick}
         onSavedRequestsEntryClick={p.openSavedRequestsPanel}
+        onFloatingTrafficEntryClick={p.openFloatingTrafficWindow}
       />
 
       <TrafficPanelPortal
