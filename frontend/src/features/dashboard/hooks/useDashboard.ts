@@ -12,6 +12,7 @@ import {
   urlOrigin,
 } from '../../../lib/dashboardUtils'
 import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
+import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSelect'
 import { isTauri } from '../../../lib/tauriEnv'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
@@ -65,6 +66,7 @@ export function useDashboard() {
   )
 
   const traffic = useTrafficState()
+  useMainWindowTrafficSelect(traffic.setSelectedId)
   const savedRequestsState = useSavedRequests()
   const {
     savedRequests,
@@ -200,6 +202,15 @@ export function useDashboard() {
       null
     )
   }, [breakpoints, selected])
+
+  const activeOverridesCount = useMemo(
+    () => overrides.filter((rule) => rule.enabled).length,
+    [overrides],
+  )
+  const activeBreakpointsCount = useMemo(
+    () => breakpoints.filter((rule) => rule.enabled).length,
+    [breakpoints],
+  )
 
   const selectedCanControlStream = Boolean(
     selected &&
@@ -351,6 +362,8 @@ export function useDashboard() {
     setBreakpointEnabled: brk.setBreakpointEnabled,
     breakpointToggleSaving: brk.breakpointToggleSaving,
     onBreakpointsNavClick: openBreakpointsPanel,
+    activeOverridesCount,
+    activeBreakpointsCount,
     savedRequests,
     selectedSavedRequestId,
     setSelectedSavedRequestId,

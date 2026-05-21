@@ -7,8 +7,12 @@ export const dashboardTexts = {
       `Could not download CA certificate: ${detail}`,
     openOverridesTooltip: 'Open overrides editor',
     openOverridesAriaLabel: 'Open overrides',
+    activeOverridesWarning: (count: number) =>
+      `${count} override rule${count === 1 ? '' : 's'} active — matching requests use your mocked response.`,
     openBreakpointsTooltip: 'Open breakpoints',
     openBreakpointsAriaLabel: 'Open breakpoints',
+    activeBreakpointsWarning: (count: number) =>
+      `${count} breakpoint${count === 1 ? '' : 's'} active — matching requests pause until resumed.`,
     openSavedRequestsTooltip: 'Open saved requests',
     openSavedRequestsAriaLabel: 'Open saved requests',
     openFloatingTrafficTooltip: 'Open floating traffic window',

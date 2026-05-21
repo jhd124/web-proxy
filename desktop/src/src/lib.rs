@@ -1,13 +1,14 @@
 mod mitm_install;
 mod system_proxy;
 
-use std::net::SocketAddr;
+use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Context;
 use tauri::AppHandle;
+use tauri::Emitter;
 use tauri::Manager;
 use tauri::RunEvent;
 use tauri::Url;
@@ -17,6 +18,54 @@ use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
 const FLOATING_TRAFFIC_WINDOW_LABEL: &str = "floating-traffic";
+
+/// 与 `desktop/src/tauri.conf.json` 的 `build.devUrl` 默认端口一致。
+const DEFAULT_TAURI_DEV_VITE_PORT: u16 = 5173;
+
+/// 开发模式 WebView 应加载 Vite（HMR），而非 `proxy-app` 提供的静态 `frontend/dist`（9091）。
+fn tauri_dev_vite_url() -> String {
+    if let Ok(url) = std::env::var("VITE_DEV_URL") {
+        if !url.is_empty() {
+            return url;
+        }
+    }
+    let port = std::env::var("VITE_PORT")
+        .or_else(|_| std::env::var("PORT"))
+        .ok()
+        .and_then(|s| s.parse::<u16>().ok())
+        .filter(|p| *p > 0)
+        .unwrap_or(DEFAULT_TAURI_DEV_VITE_PORT);
+    format!("http://127.0.0.1:{port}")
+}
+
+/// 等待 Vite 就绪后将主窗口从 9091（静态 dist）切到开发服务器，浮动窗会继承该 URL。
+fn spawn_dev_navigate_main_to_vite(app: &AppHandle) {
+    let dev_url = tauri_dev_vite_url();
+    let Ok(url) = Url::parse(&dev_url) else {
+        log::warn!("dev: invalid Vite URL: {dev_url}");
+        return;
+    };
+    let port = url.port_or_known_default().unwrap_or(DEFAULT_TAURI_DEV_VITE_PORT);
+    let vite_addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        for i in 0..600u32 {
+            if TcpStream::connect(vite_addr).is_ok() {
+                if let Some(main) = handle.get_webview_window("main") {
+                    match main.navigate(url) {
+                        Ok(()) => log::info!("dev: UI at {dev_url} (Vite HMR)"),
+                        Err(e) => log::warn!("dev: navigate to {dev_url}: {e}"),
+                    }
+                }
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+            if i == 599 {
+                log::warn!("dev: timed out waiting for Vite at {dev_url}");
+            }
+        }
+    });
+}
 
 /// Holds the bundled `proxy-app` process so we can kill it on exit (release builds only).
 pub struct ProxySidecarChild(pub Mutex<Option<CommandChild>>);
@@ -40,6 +89,21 @@ fn dev_workspace_proxy_ports_path() -> Option<PathBuf> {
         .parent()
         .and_then(|p| p.parent())
         .map(|repo_root| repo_root.join("frontend/.proxy-dev-ports.json"))
+}
+
+#[tauri::command]
+async fn focus_main_window(app: AppHandle, request_id: Option<String>) -> Result<(), String> {
+    let main = app
+        .get_webview_window("main")
+        .ok_or_else(|| "missing main webview window".to_string())?;
+    main.unminimize().map_err(|e| e.to_string())?;
+    main.show().map_err(|e| e.to_string())?;
+    main.set_focus().map_err(|e| e.to_string())?;
+    if let Some(id) = request_id.filter(|s| !s.is_empty()) {
+        main.emit("traffic-select", id)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -81,6 +145,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             mitm_install::install_mitm_ca_system_trust,
             mitm_install::open_mitm_ca_file,
+            focus_main_window,
             open_floating_traffic_window
         ])
         .setup(|app| {
@@ -115,6 +180,7 @@ pub fn run() {
                         }
                     });
                 }
+                spawn_dev_navigate_main_to_vite(app.handle());
                 return Ok(());
             }
 

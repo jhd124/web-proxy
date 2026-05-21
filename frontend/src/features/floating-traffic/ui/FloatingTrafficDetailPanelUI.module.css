@@ -1,0 +1,55 @@
+.panel {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.section + .section {
+  margin-top: 0.75rem;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.url {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pre {
+  background: #12151c;
+  border: 1px solid #1e2430;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  margin: 0;
+  max-height: 8rem;
+  overflow: auto;
+  padding: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.footer button {
+  width: 100%;
+}

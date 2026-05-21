@@ -1,11 +1,7 @@
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { trafficTexts as t } from '../texts'
-import {
-  getTrafficConnectDetailNote,
-  getTrafficSchemeLabel,
-  getTrafficSummary,
-} from '../trafficDisplay'
+import { getTrafficConnectDetailNote } from '../trafficDisplay'
+import { TrafficVirtualListUI } from './TrafficVirtualListUI'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
@@ -58,39 +54,12 @@ export function TrafficPanelUI({
                 {testError}
               </p>
             )}
-            <ScrollArea className="min-h-0 flex-1">
-              <ul className={s.reqList}>
-                {[...filteredEntries].reverse().map((e) => {
-                  const schemeLabel = getTrafficSchemeLabel(e)
-                  const summary = getTrafficSummary(e)
-                  return (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        className={`${s.row} ${selectedId === e.id ? s.rowActive : ''}`}
-                        onClick={() => setSelectedId(e.id)}
-                      >
-                        <span className={s.scheme}>{schemeLabel}</span>
-                        <span className={s.m}>{e.method}</span>
-                        <span className={s.u} title={summary}>
-                          {summary}
-                        </span>
-                        {e.error && (
-                          <span className={`${s.tag} ${s.tagErr}`}>{t.tagError}</span>
-                        )}
-                        {e.mitmBypassed && (
-                          <span className={`${s.tag} ${s.tagWarn}`}>{t.tagBypassed}</span>
-                        )}
-                        {e.pending && (
-                          <span className={`${s.tag} ${s.tagWarn}`}>{t.tagPending}</span>
-                        )}
-                        {e.responseStatus != null && <span className={s.s}>{e.responseStatus}</span>}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </ScrollArea>
+            <TrafficVirtualListUI
+              className="min-h-0 flex-1"
+              entries={filteredEntries}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
           </aside>
         </ResizablePanel>
         <ResizableHandle

@@ -1,13 +1,15 @@
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
 import { SimpleTooltip } from '@/components/ui/tooltip'
 import { Trash } from 'lucide-react'
-import {
-  getTrafficSchemeLabel,
-  getTrafficSummary,
-} from '../../traffic/trafficDisplay'
+import { TrafficVirtualListUI } from '../../traffic/ui/TrafficVirtualListUI'
 import { floatingTrafficTexts as t } from '../texts'
 import type { FloatingTrafficViewModel } from '../types'
+import { FloatingTrafficDetailPanelUI } from './FloatingTrafficDetailPanelUI'
 import s from './FloatingTrafficUI.module.css'
 
 export function FloatingTrafficUI({
@@ -16,9 +18,11 @@ export function FloatingTrafficUI({
   clearTraffic,
   filteredEntries,
   selectedId,
+  selected,
   setSelectedId,
+  openMainWindowForEntry,
 }: FloatingTrafficViewModel) {
-  const entries = [...filteredEntries].reverse()
+  const hasDetail = selected != null
 
   return (
     <section className={s.panel}>
@@ -40,41 +44,42 @@ export function FloatingTrafficUI({
         </SimpleTooltip>
       </header>
 
-      <ScrollArea className={s.scrollArea}>
-        {entries.length === 0 ? (
-          <p className={`small muted ${s.empty}`}>{t.empty}</p>
-        ) : (
-          <ul className={s.list}>
-            {entries.map((entry) => {
-              const summary = getTrafficSummary(entry)
+      <ResizablePanelGroup
+        orientation="vertical"
+        className={s.split}
+        id="floating-traffic-panels"
+      >
+        <ResizablePanel
+          className="min-h-0"
+          defaultSize={hasDetail ? 62 : 100}
+          minSize={15}
+        >
+          <div className={s.listPanel}>
+            <TrafficVirtualListUI
+              className={s.listScroll}
+              entries={filteredEntries}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onEntryDoubleClick={(id) => void openMainWindowForEntry(id)}
+              emptyText={t.empty}
+              tagTexts={{
+                tagError: t.tagError,
+                tagBypassed: t.tagBypassed,
+                tagPending: t.tagPending,
+              }}
+            />
+          </div>
+        </ResizablePanel>
 
-              return (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''}`}
-                    onClick={() => setSelectedId(entry.id)}
-                  >
-                    <span className={s.scheme}>{getTrafficSchemeLabel(entry)}</span>
-                    <span className={s.method}>{entry.method}</span>
-                    <span className={s.url} title={summary}>
-                      {summary}
-                    </span>
-                    {entry.error && <span className={s.errorTag}>{t.tagError}</span>}
-                    {entry.mitmBypassed && (
-                      <span className={s.warnTag}>{t.tagBypassed}</span>
-                    )}
-                    {entry.pending && <span className={s.warnTag}>{t.tagPending}</span>}
-                    {entry.responseStatus != null && (
-                      <span className={s.status}>{entry.responseStatus}</span>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+        {hasDetail && (
+          <>
+            <ResizableHandle withHandle className="h-1.5 shrink-0 bg-border/90" />
+            <ResizablePanel className="min-h-0" defaultSize={38} minSize={12}>
+              <FloatingTrafficDetailPanelUI entry={selected} />
+            </ResizablePanel>
+          </>
         )}
-      </ScrollArea>
+      </ResizablePanelGroup>
     </section>
   )
 }

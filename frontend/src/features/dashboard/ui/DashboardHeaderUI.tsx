@@ -8,14 +8,36 @@ import { downloadFromUrl } from '@/lib/download'
 
 type Props = {
   proxyListenAddress: string | null
+  activeOverridesCount: number
+  activeBreakpointsCount: number
   onBreakpointsEntryClick: () => void
   onOverridesEntryClick: () => void
   onSavedRequestsEntryClick: () => void
   onFloatingTrafficEntryClick: () => void
 }
 
+function HeaderEntryTooltipLabel({
+  primary,
+  warning,
+}: {
+  primary: string
+  warning?: string
+}) {
+  if (!warning) {
+    return primary
+  }
+  return (
+    <span className={s.tooltipStack}>
+      <span>{primary}</span>
+      <span className={s.tooltipWarn}>{warning}</span>
+    </span>
+  )
+}
+
 export function DashboardHeaderUI({
   proxyListenAddress,
+  activeOverridesCount,
+  activeBreakpointsCount,
   onBreakpointsEntryClick,
   onOverridesEntryClick,
   onSavedRequestsEntryClick,
@@ -24,6 +46,8 @@ export function DashboardHeaderUI({
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
   const [downloading, setDownloading] = useState(false)
+  const hasActiveOverrides = activeOverridesCount > 0
+  const hasActiveBreakpoints = activeBreakpointsCount > 0
 
   const downloadMitmCa = useCallback(async () => {
     setDownloading(true)
@@ -40,7 +64,6 @@ export function DashboardHeaderUI({
 
   return (
     <header className={s.top}>
-
       <div className={s.meta}>
         {proxyListenAddress != null && (
           <span
@@ -52,9 +75,7 @@ export function DashboardHeaderUI({
           </span>
         )}
 
-        <SimpleTooltip
-          label={t.downloadCaTooltip}
-        >
+        <SimpleTooltip label={t.downloadCaTooltip}>
           <Button
             type="button"
             variant="ghost"
@@ -65,16 +86,38 @@ export function DashboardHeaderUI({
             <KeyRound />
           </Button>
         </SimpleTooltip>
-        <SimpleTooltip label={t.openOverridesTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.openOverridesAriaLabel}
-            onClick={onOverridesEntryClick}
-          >
-            <Replace />
-          </Button>
+
+        <SimpleTooltip
+          label={
+            <HeaderEntryTooltipLabel
+              primary={t.openOverridesTooltip}
+              warning={
+                hasActiveOverrides
+                  ? t.activeOverridesWarning(activeOverridesCount)
+                  : undefined
+              }
+            />
+          }
+        >
+          <span className={s.entryBadgeWrap}>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={
+                hasActiveOverrides
+                  ? `${t.openOverridesAriaLabel}. ${t.activeOverridesWarning(activeOverridesCount)}`
+                  : t.openOverridesAriaLabel
+              }
+              onClick={onOverridesEntryClick}
+            >
+              <Replace />
+            </Button>
+            {hasActiveOverrides && (
+              <span className={s.badgeDot} aria-hidden />
+            )}
+          </span>
         </SimpleTooltip>
+
         <SimpleTooltip label={t.openSavedRequestsTooltip}>
           <Button
             type="button"
@@ -85,6 +128,7 @@ export function DashboardHeaderUI({
             <Bookmark />
           </Button>
         </SimpleTooltip>
+
         <SimpleTooltip label={t.openFloatingTrafficTooltip}>
           <Button
             type="button"
@@ -95,15 +139,36 @@ export function DashboardHeaderUI({
             <Pin />
           </Button>
         </SimpleTooltip>
-        <SimpleTooltip label={t.openBreakpointsTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.openBreakpointsAriaLabel}
-            onClick={onBreakpointsEntryClick}
-          >
-            <Signpost />
-          </Button>
+
+        <SimpleTooltip
+          label={
+            <HeaderEntryTooltipLabel
+              primary={t.openBreakpointsTooltip}
+              warning={
+                hasActiveBreakpoints
+                  ? t.activeBreakpointsWarning(activeBreakpointsCount)
+                  : undefined
+              }
+            />
+          }
+        >
+          <span className={s.entryBadgeWrap}>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={
+                hasActiveBreakpoints
+                  ? `${t.openBreakpointsAriaLabel}. ${t.activeBreakpointsWarning(activeBreakpointsCount)}`
+                  : t.openBreakpointsAriaLabel
+              }
+              onClick={onBreakpointsEntryClick}
+            >
+              <Signpost />
+            </Button>
+            {hasActiveBreakpoints && (
+              <span className={s.badgeDot} aria-hidden />
+            )}
+          </span>
         </SimpleTooltip>
       </div>
     </header>

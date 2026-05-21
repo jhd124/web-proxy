@@ -41,3 +41,32 @@
     'Liberation Mono', 'Courier New', monospace;
   font-variant-numeric: tabular-nums;
 }
+
+.entryBadgeWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.badgeDot {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--bad);
+  border: 1.5px solid var(--panel-bg);
+  pointer-events: none;
+}
+
+.tooltipStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tooltipWarn {
+  color: var(--warn);
+  font-weight: var(--text-weight-emphasized);
+  line-height: 1.35;
+}

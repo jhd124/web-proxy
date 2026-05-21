@@ -1,8 +1,16 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type SetStateAction } from 'react'
 import type { TrafficEntry } from '../../../types'
+import { trimTrafficEntries } from '../trafficEntriesLimit'
 
 export function useTrafficState() {
-  const [entries, setEntries] = useState<TrafficEntry[]>([])
+  const [entries, setEntriesRaw] = useState<TrafficEntry[]>([])
+
+  const setEntries = useCallback((action: SetStateAction<TrafficEntry[]>) => {
+    setEntriesRaw((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action
+      return trimTrafficEntries(next)
+    })
+  }, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [urlFilter, setUrlFilter] = useState('')
   const [testError, setTestError] = useState<string | null>(null)

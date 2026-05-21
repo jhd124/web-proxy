@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react'
 import { useEffect } from 'react'
+import { trimTrafficEntries } from '../../traffic/trafficEntriesLimit'
 import { wsUrl } from '../../../lib/dashboardUtils'
 import type { TrafficEntry, WsMessage } from '../../../types'
 
@@ -32,7 +33,7 @@ export function useAppWebSocket(p: {
         const r = await fetch('/api/requests')
         if (!r.ok) return
         const list = (await r.json()) as TrafficEntry[]
-        setEntries(list)
+        setEntries(trimTrafficEntries(list))
       } catch {
         /* ignore */
       }
@@ -54,7 +55,7 @@ export function useAppWebSocket(p: {
         try {
           const msg = JSON.parse(ev.data) as WsMessage
           if (msg.type === 'snapshot') {
-            setEntries(msg.requests)
+            setEntries(trimTrafficEntries(msg.requests))
             if (msg.requests.length && !selectedIdRef.current) {
               setSelectedId(msg.requests[msg.requests.length - 1]!.id)
             }
@@ -66,9 +67,7 @@ export function useAppWebSocket(p: {
                 next[i] = msg.entry
                 return next
               }
-              const next = [...prev, msg.entry]
-              if (next.length > 2000) next.splice(0, next.length - 2000)
-              return next
+              return trimTrafficEntries([...prev, msg.entry])
             })
           } else if (msg.type === 'overrides_updated') {
             void refreshOverrides()

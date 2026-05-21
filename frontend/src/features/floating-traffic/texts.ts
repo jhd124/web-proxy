@@ -7,4 +7,12 @@ export const floatingTrafficTexts = {
   tagError: 'ERR',
   tagBypassed: 'BYPASS',
   tagPending: 'WAIT',
+  detailTitle: 'Request detail',
+  detailUrl: 'URL',
+  detailRequestBody: 'Request body',
+  detailResponse: 'Response',
+  detailNoResponse: 'No response yet',
+  detailNoBody: 'No response body',
+  openMainWindow: 'Open main window',
+  openMainFailed: (detail: string) => `Could not open main window: ${detail}`,
 } as const
