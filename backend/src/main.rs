@@ -1,4 +1,5 @@
 mod api;
+mod body_format;
 mod breakpoints;
 mod mitm;
 mod override_identity;
@@ -34,9 +35,7 @@ async fn main() -> anyhow::Result<()> {
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 
-    let data_dir: Option<PathBuf> = std::env::var("PROXY_DATA_DIR")
-        .ok()
-        .map(PathBuf::from);
+    let data_dir: Option<PathBuf> = std::env::var("PROXY_DATA_DIR").ok().map(PathBuf::from);
     if let Some(ref d) = data_dir {
         let _ = std::fs::create_dir_all(d);
     }
@@ -70,11 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let override_db_path = std::env::var("OVERRIDE_DB")
         .ok()
         .map(PathBuf::from)
-        .or_else(|| {
-            data_dir
-                .as_ref()
-                .map(|d| d.join("proxy-overrides.sqlite3"))
-        })
+        .or_else(|| data_dir.as_ref().map(|d| d.join("proxy-overrides.sqlite3")))
         .unwrap_or_else(|| PathBuf::from("proxy-overrides.sqlite3"));
     let overrides = overrides::init_and_load(&override_db_path).context("override sqlite init")?;
     saved_requests::init(&override_db_path).context("saved requests sqlite init")?;

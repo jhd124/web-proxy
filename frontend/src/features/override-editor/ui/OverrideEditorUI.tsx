@@ -8,8 +8,8 @@ import {
 import { isDefaultOverrideForm, urlOrigin } from '../../../lib/dashboardUtils'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
+import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
 import { OverrideFilesUI } from './OverrideFilesUI'
-import { OverrideMonacoUI } from './OverrideMonacoUI'
 import { OverrideRequestFormUI } from './OverrideRequestFormUI'
 import s from './OverrideEditorUI.module.css'
 
@@ -146,7 +146,7 @@ export function OverrideEditorUI({
               id="override-monaco"
               minSize={28}
             >
-              <OverrideMonacoUI
+              <OverrideBodyEditorUI
                 overrideEditingId={overrideEditingId}
                 overrideForm={overrideForm}
                 setOverrideForm={setOverrideForm}

@@ -12,9 +12,7 @@ pub fn apply_macos(proxy_port: u16) -> Option<SavedSystemProxies> {
         log::warn!("system_proxy: failed to enable proxy on {service}");
         return None;
     }
-    log::info!(
-        "system_proxy: HTTP/HTTPS proxy enabled on \"{service}\" -> 127.0.0.1:{proxy_port}"
-    );
+    log::info!("system_proxy: HTTP/HTTPS proxy enabled on \"{service}\" -> 127.0.0.1:{proxy_port}");
     Some(SavedSystemProxies {
         snapshots: vec![snap],
     })

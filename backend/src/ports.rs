@@ -35,7 +35,9 @@ pub fn find_free_listen_port(start: u16, avoid: &[u16]) -> anyhow::Result<u16> {
     let mut port = start;
     for _ in 0..MAX_SCAN {
         if avoid.contains(&port) {
-            port = port.checked_add(1).context("no free TCP port (avoid list)")?;
+            port = port
+                .checked_add(1)
+                .context("no free TCP port (avoid list)")?;
             continue;
         }
         match TcpListener::bind((LISTEN_IPV4, port)) {
@@ -44,13 +46,16 @@ pub fn find_free_listen_port(start: u16, avoid: &[u16]) -> anyhow::Result<u16> {
                 return Ok(port);
             }
             Err(_) => {
-                port = port.checked_add(1).context("no free TCP port (u16 overflow)")?;
+                port = port
+                    .checked_add(1)
+                    .context("no free TCP port (u16 overflow)")?;
             }
         }
     }
     anyhow::bail!(
         "no free TCP port after {} attempts starting from {}",
-        MAX_SCAN, hint
+        MAX_SCAN,
+        hint
     );
 }
 
@@ -68,7 +73,10 @@ pub fn resolve_proxy_dashboard_ports() -> anyhow::Result<(u16, u16)> {
     if proxy != proxy_hint || dash != dash_hint {
         tracing::info!(
             "listen ports adjusted from hints: proxy {}→{}, dashboard {}→{}",
-            proxy_hint, proxy, dash_hint, dash
+            proxy_hint,
+            proxy,
+            dash_hint,
+            dash
         );
     }
 

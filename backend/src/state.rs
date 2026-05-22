@@ -370,7 +370,11 @@ impl AppState {
         }
     }
 
-    pub fn register_stream_controller(&self, id: Uuid, initial_playing: bool) -> watch::Receiver<bool> {
+    pub fn register_stream_controller(
+        &self,
+        id: Uuid,
+        initial_playing: bool,
+    ) -> watch::Receiver<bool> {
         let (tx, rx) = watch::channel(initial_playing);
         self.stream_controllers.lock().insert(id, tx);
         rx

@@ -77,5 +77,13 @@ export const overrideEditorTexts = {
   monaco: {
     stream: 'Stream: separate chunks with a blank line in the source.',
     body: 'Response body (override)',
+    imageBody: 'Image response (preview)',
+    imageAlt: (mime: string) => `Override response preview (${mime})`,
+    imagePreviewUnavailable:
+      'Cannot preview: use a data URL or base64 in the body, or import an image file.',
+    languageLabel: (lang: string) => `Syntax: ${lang}`,
+    beautify: 'Beautify',
+    uglify: 'Uglify',
+    formatFailed: 'Format failed',
   },
 } as const

@@ -62,10 +62,7 @@ fn rule_from_body(body: &UpsertOverrideBody, id: String) -> OverrideRule {
         id,
         enabled: body.enabled.unwrap_or(true),
         match_protocol: body.match_protocol.clone(),
-        match_host: body
-            .match_host
-            .as_ref()
-            .map(|s| s.trim().to_string()),
+        match_host: body.match_host.as_ref().map(|s| s.trim().to_string()),
         match_path: body.match_path.clone(),
         match_request_headers: body.match_request_headers.clone().unwrap_or_default(),
         match_query: body.match_query.clone().unwrap_or_default(),
@@ -101,7 +98,10 @@ fn ensure_overrides_schema(conn: &Connection) -> rusqlite::Result<()> {
         )?;
     }
     if !has("match_request_body") {
-        conn.execute("ALTER TABLE overrides ADD COLUMN match_request_body TEXT", [])?;
+        conn.execute(
+            "ALTER TABLE overrides ADD COLUMN match_request_body TEXT",
+            [],
+        )?;
     }
     Ok(())
 }
@@ -169,7 +169,8 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
     )?;
     let rows = stmt.query_map([], |row| {
         let headers_json: String = row.get(9)?;
-        let headers = serde_json::from_str::<Vec<(String, String)>>(&headers_json).unwrap_or_default();
+        let headers =
+            serde_json::from_str::<Vec<(String, String)>>(&headers_json).unwrap_or_default();
         let mrh: String = row
             .get::<_, Option<String>>(5)
             .ok()
@@ -196,9 +197,7 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             status: row.get(8)?,
             headers,
             body: row.get(10)?,
-            stream_interval_ms: row
-                .get::<_, Option<i64>>(11)?
-                .map(|x| x as u64),
+            stream_interval_ms: row.get::<_, Option<i64>>(11)?.map(|x| x as u64),
         })
     })?;
     let mut out = Vec::new();
@@ -210,13 +209,11 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
 
 fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOverrideError> {
     let conn = Connection::open(path).map_err(InsertOverrideError::Sqlite)?;
-    let headers_json =
-        serde_json::to_string(&rule.headers).map_err(InsertOverrideError::Serde)?;
+    let headers_json = serde_json::to_string(&rule.headers).map_err(InsertOverrideError::Serde)?;
     let mrh =
         serde_json::to_string(&rule.match_request_headers).map_err(InsertOverrideError::Serde)?;
     let mq = serde_json::to_string(&rule.match_query).map_err(InsertOverrideError::Serde)?;
-    conn
-        .execute(
+    conn.execute(
         r#"
         INSERT INTO overrides (
             id, name, enabled, match_method, match_host, match_path_regex,
@@ -241,14 +238,14 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOver
             &rule.body,
             &rule.stream_interval_ms,
         ],
-        )
-        .map_err(|e| {
-            if e.sqlite_error_code() == Some(ErrorCode::ConstraintViolation) {
-                InsertOverrideError::DuplicateId
-            } else {
-                InsertOverrideError::Sqlite(e)
-            }
-        })?;
+    )
+    .map_err(|e| {
+        if e.sqlite_error_code() == Some(ErrorCode::ConstraintViolation) {
+            InsertOverrideError::DuplicateId
+        } else {
+            InsertOverrideError::Sqlite(e)
+        }
+    })?;
     Ok(())
 }
 
@@ -323,7 +320,9 @@ pub async fn create_override(
     validate_upsert(&body)?;
     let mut rule = rule_from_body(&body, String::new());
     rule.id = override_id_for_rule(&rule);
-    if override_exists(&state.override_db_path, &rule.id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+    if override_exists(&state.override_db_path, &rule.id)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    {
         return Err(StatusCode::CONFLICT);
     }
     insert_override(&state.override_db_path, &rule).map_err(StatusCode::from)?;
@@ -342,20 +341,29 @@ pub async fn update_override(
     let new_id = override_id_for_rule(&updated);
     updated.id = new_id.clone();
     if new_id == id {
-        if !update_override_row(&state.override_db_path, &updated).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+        if !update_override_row(&state.override_db_path, &updated)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        {
             return Err(StatusCode::NOT_FOUND);
         }
     } else {
-        if override_exists(&state.override_db_path, &new_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+        if override_exists(&state.override_db_path, &new_id)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        {
             return Err(StatusCode::CONFLICT);
         }
-        if !delete_override_row(&state.override_db_path, &id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+        if !delete_override_row(&state.override_db_path, &id)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        {
             return Err(StatusCode::NOT_FOUND);
         }
         insert_override(&state.override_db_path, &updated).map_err(StatusCode::from)?;
     }
     let mut overrides = state.overrides.write();
-    let pos = overrides.iter().position(|r| r.id == id).ok_or(StatusCode::NOT_FOUND)?;
+    let pos = overrides
+        .iter()
+        .position(|r| r.id == id)
+        .ok_or(StatusCode::NOT_FOUND)?;
     if new_id == id {
         overrides[pos] = updated.clone();
     } else {

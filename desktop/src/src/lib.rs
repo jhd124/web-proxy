@@ -45,7 +45,9 @@ fn spawn_dev_navigate_main_to_vite(app: &AppHandle) {
         log::warn!("dev: invalid Vite URL: {dev_url}");
         return;
     };
-    let port = url.port_or_known_default().unwrap_or(DEFAULT_TAURI_DEV_VITE_PORT);
+    let port = url
+        .port_or_known_default()
+        .unwrap_or(DEFAULT_TAURI_DEV_VITE_PORT);
     let vite_addr = SocketAddr::from(([127, 0, 0, 1], port));
     let handle = app.clone();
     std::thread::spawn(move || {
@@ -100,8 +102,7 @@ async fn focus_main_window(app: AppHandle, request_id: Option<String>) -> Result
     main.show().map_err(|e| e.to_string())?;
     main.set_focus().map_err(|e| e.to_string())?;
     if let Some(id) = request_id.filter(|s| !s.is_empty()) {
-        main.emit("traffic-select", id)
-            .map_err(|e| e.to_string())?;
+        main.emit("traffic-select", id).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -208,9 +209,7 @@ pub fn run() {
                 .map_err(|e| anyhow::anyhow!("spawn proxy-app: {e}"))?;
 
             std::thread::spawn(move || {
-                tauri::async_runtime::block_on(async {
-                    while rx.recv().await.is_some() {}
-                });
+                tauri::async_runtime::block_on(async { while rx.recv().await.is_some() {} });
             });
 
             app.manage(ProxySidecarChild(Mutex::new(Some(child))));
@@ -221,19 +220,15 @@ pub fn run() {
                 .get_webview_window("main")
                 .ok_or_else(|| anyhow::anyhow!("missing main webview window"))?;
             for i in 0..600u32 {
-                if let Some((proxy_port, dashboard_port)) =
-                    read_listen_ports_from_file(&ports_path)
+                if let Some((proxy_port, dashboard_port)) = read_listen_ports_from_file(&ports_path)
                 {
                     let addr = SocketAddr::from(([127, 0, 0, 1], dashboard_port));
                     if std::net::TcpStream::connect(addr).is_ok() {
                         let url = format!("http://127.0.0.1:{dashboard_port}");
-                        main
-                            .navigate(Url::parse(&url).map_err(|e| anyhow::anyhow!("url: {e}"))?)
+                        main.navigate(Url::parse(&url).map_err(|e| anyhow::anyhow!("url: {e}"))?)
                             .map_err(|e| anyhow::anyhow!("navigate: {e}"))?;
                         log::info!("dashboard at {url} (after {i} wait polls)");
-                        if let Some(st) =
-                            app.try_state::<system_proxy::SystemProxyRestoreState>()
-                        {
+                        if let Some(st) = app.try_state::<system_proxy::SystemProxyRestoreState>() {
                             if let Ok(mut guard) = st.0.lock() {
                                 *guard = system_proxy::apply_local_proxy(proxy_port);
                             }
@@ -253,12 +248,11 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app, event| {
             // macOS Cmd+Q 等路径下可能先收到 ExitRequested 再收到 Exit；仅依赖 Exit 时偶发收不到恢复时机。
-            let should_restore_system_proxy = matches!(
-                &event,
-                RunEvent::Exit | RunEvent::ExitRequested { .. }
-            );
+            let should_restore_system_proxy =
+                matches!(&event, RunEvent::Exit | RunEvent::ExitRequested { .. });
             if should_restore_system_proxy {
-                if let Some(proxy_state) = app.try_state::<system_proxy::SystemProxyRestoreState>() {
+                if let Some(proxy_state) = app.try_state::<system_proxy::SystemProxyRestoreState>()
+                {
                     let saved = match proxy_state.0.lock() {
                         Ok(mut guard) => guard.take(),
                         Err(poisoned) => poisoned.into_inner().take(),

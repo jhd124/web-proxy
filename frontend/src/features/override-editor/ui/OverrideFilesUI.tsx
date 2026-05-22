@@ -7,6 +7,10 @@ import {
 } from '@/components/ui/collapsible'
 import type { OverrideFormState, OverrideRule } from '../../../types'
 import { buildPathGroups, overrideListLabel } from '../overrideFileTree'
+import {
+  getResponseContentType,
+  isImageContentType,
+} from '../overrideResponseLanguage'
 import { overrideEditorTexts } from '../texts'
 import type { SetOverrideForm } from '../types'
 import s from './OverrideFilesUI.module.css'
@@ -86,7 +90,12 @@ export function OverrideFilesUI({
               body: String(reader.result ?? ''),
             }))
           }
-          reader.readAsText(f)
+          const ct = getResponseContentType(overrideForm.headersText)
+          if (isImageContentType(ct) || f.type.startsWith('image/')) {
+            reader.readAsDataURL(f)
+          } else {
+            reader.readAsText(f)
+          }
           e.target.value = ''
         }}
       />

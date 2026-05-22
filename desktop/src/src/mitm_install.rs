@@ -12,12 +12,18 @@ fn validate_mitm_ca_path(ca_pem_path: &str) -> Result<PathBuf, String> {
     if p.file_name().and_then(|n| n.to_str()) != Some("ca.pem") {
         return Err("expected a file named ca.pem".into());
     }
-    match p.parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()) {
+    match p
+        .parent()
+        .and_then(|d| d.file_name())
+        .and_then(|n| n.to_str())
+    {
         Some("mitm-ca-rsa") => {}
         _ => return Err("expected .../mitm-ca-rsa/ca.pem".into()),
     }
     if !p.is_file() {
-        return Err("CA file not found (start proxy with MITM=1 and wait for the CA to be created)".into());
+        return Err(
+            "CA file not found (start proxy with MITM=1 and wait for the CA to be created)".into(),
+        );
     }
     Ok(p.to_path_buf())
 }
@@ -58,9 +64,7 @@ fn install_trusted_root_macos(_path: &Path) -> Result<(), String> {
 
 /// Open the PEM in the default handler (macOS: Keychain import / preview flow).
 fn open_cert_file(path: &Path) -> Result<(), String> {
-    let path_str = path
-        .to_str()
-        .ok_or("path is not valid UTF-8")?;
+    let path_str = path.to_str().ok_or("path is not valid UTF-8")?;
     #[cfg(target_os = "macos")]
     {
         let s = Command::new("open")

@@ -56,7 +56,8 @@ impl Mitm {
                 "Proxy App MITM CA ({})",
                 chrono::Local::now().format("%Y-%m-%d")
             );
-            let mut params = CertificateParams::new(Vec::<String>::new()).context("CA cert params")?;
+            let mut params =
+                CertificateParams::new(Vec::<String>::new()).context("CA cert params")?;
             params.distinguished_name = DistinguishedName::new();
             params.distinguished_name.push(DnType::CountryName, "US");
             params
@@ -75,13 +76,15 @@ impl Mitm {
                 .context("generate RSA CA key")?;
             let ca_cert: Certificate = params.self_signed(&ca_key).context("self-sign CA")?;
             let ca_cert_pem = ca_cert.pem();
-            std::fs::write(&ca_cert_path, &ca_cert_pem).with_context(|| format!("write {:?}", ca_cert_path))?;
+            std::fs::write(&ca_cert_path, &ca_cert_pem)
+                .with_context(|| format!("write {:?}", ca_cert_path))?;
             std::fs::write(&ca_key_path, ca_key.serialize_pem())
                 .with_context(|| format!("write {:?}", ca_key_path))?;
             (ca_cert_pem, ca_key)
         };
 
-        let ca_cert_der = parse_single_cert_from_pem(&ca_cert_pem).context("decode CA PEM to DER")?;
+        let ca_cert_der =
+            parse_single_cert_from_pem(&ca_cert_pem).context("decode CA PEM to DER")?;
 
         Ok(Self {
             ca_cert_pem,
@@ -107,8 +110,8 @@ impl Mitm {
             return Ok(cfg);
         }
 
-        let issuer = Issuer::from_ca_cert_pem(&self.ca_cert_pem, &self.ca_key)
-            .context("issuer from CA")?;
+        let issuer =
+            Issuer::from_ca_cert_pem(&self.ca_cert_pem, &self.ca_key).context("issuer from CA")?;
 
         let mut params = CertificateParams::new(vec![host.to_string()]).context("leaf params")?;
         params.distinguished_name = DistinguishedName::new();
@@ -125,9 +128,7 @@ impl Mitm {
 
         let leaf_key = KeyPair::generate_rsa_for(&PKCS_RSA_SHA256, RsaKeySize::_2048)
             .context("generate RSA leaf key")?;
-        let leaf_cert: Certificate = params
-            .signed_by(&leaf_key, &issuer)
-            .context("sign leaf")?;
+        let leaf_cert: Certificate = params.signed_by(&leaf_key, &issuer).context("sign leaf")?;
 
         let leaf_der = leaf_cert.der().clone();
         let cert_chain: Vec<CertificateDer<'static>> = vec![leaf_der, self.ca_cert_der.clone()];
