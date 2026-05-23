@@ -89,6 +89,11 @@ export function useOverrideEditorState() {
           ([a, b]) => a.trim() !== '' || b.trim() !== '',
         ),
         matchRequestBody: form.matchRequestBody.trim() || null,
+        mapRemoteProtocol: form.mapRemoteEnabled
+          ? form.mapRemoteProtocol.trim() || null
+          : null,
+        mapRemoteHost: form.mapRemoteEnabled ? form.mapRemoteHost.trim() || null : null,
+        mapRemotePath: form.mapRemoteEnabled ? form.mapRemotePath.trim() || null : null,
         status: form.status,
         headers: parseHeadersText(form.headersText),
         body,
@@ -129,6 +134,8 @@ export function useOverrideEditorState() {
     (override: OverrideRule) => {
       setOverrideError(null)
       setOverrideEditingId(override.id)
+      const mapRemoteEnabled =
+        !!override.mapRemoteProtocol?.trim() && !!override.mapRemoteHost?.trim()
       setOverrideForm({
         enabled: override.enabled,
         status: override.status,
@@ -140,6 +147,10 @@ export function useOverrideEditorState() {
         matchRequestHeaders: [...(override.matchRequestHeaders ?? [])],
         matchQuery: [...(override.matchQuery ?? [])],
         matchRequestBody: override.matchRequestBody ?? '',
+        mapRemoteEnabled,
+        mapRemoteProtocol: override.mapRemoteProtocol ?? '',
+        mapRemoteHost: override.mapRemoteHost ?? '',
+        mapRemotePath: override.mapRemotePath ?? '*',
         streamEnabled: override.streamIntervalMs != null,
         streamIntervalMs: override.streamIntervalMs ?? 500,
       })

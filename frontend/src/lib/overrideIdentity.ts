@@ -90,6 +90,11 @@ export function apiPayloadFromRule(
     matchRequestBody: override.matchRequestBody?.trim()
       ? override.matchRequestBody
       : null,
+    mapRemoteProtocol: override.mapRemoteProtocol?.trim()
+      ? override.mapRemoteProtocol
+      : null,
+    mapRemoteHost: override.mapRemoteHost?.trim() ? override.mapRemoteHost : null,
+    mapRemotePath: override.mapRemotePath?.trim() ? override.mapRemotePath : null,
     status: override.status,
     headers: override.headers,
     body,

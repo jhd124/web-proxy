@@ -6,6 +6,60 @@ function pathOnly(p: string): string {
   return i === -1 ? p : p.slice(0, i)
 }
 
+function wildcardMatch(pattern: string, text: string): boolean {
+  let pIndex = 0
+  let tIndex = 0
+  let starIndex = -1
+  let matchIndex = 0
+
+  while (tIndex < text.length) {
+    if (
+      pIndex < pattern.length &&
+      (pattern[pIndex] === '?' || pattern[pIndex] === text[tIndex])
+    ) {
+      pIndex += 1
+      tIndex += 1
+      continue
+    }
+    if (pIndex < pattern.length && pattern[pIndex] === '*') {
+      starIndex = pIndex
+      pIndex += 1
+      matchIndex = tIndex
+      continue
+    }
+    if (starIndex !== -1) {
+      pIndex = starIndex + 1
+      matchIndex += 1
+      tIndex = matchIndex
+      continue
+    }
+    return false
+  }
+
+  while (pIndex < pattern.length && pattern[pIndex] === '*') {
+    pIndex += 1
+  }
+  return pIndex === pattern.length
+}
+
+function hostMatches(entryHost: string, ruleHost: string): boolean {
+  const entryHostLower = entryHost.toLowerCase()
+  const ruleHostLower = ruleHost.toLowerCase()
+  if (ruleHostLower.includes('*') || ruleHostLower.includes('?')) {
+    return wildcardMatch(ruleHostLower, entryHostLower)
+  }
+  return entryHostLower === ruleHostLower
+}
+
+function pathMatches(entryPath: string, rulePath: string): boolean {
+  const entryNormalized = normalizePath(entryPath)
+  const ruleNormalized = normalizePath(rulePath)
+  if (ruleNormalized.includes('*') || ruleNormalized.includes('?')) {
+    return wildcardMatch(ruleNormalized, entryNormalized)
+  }
+  return entryNormalized === ruleNormalized
+}
+
 function requestHeadersSatisfied(
   request: [string, string][],
   rules: [string, string][],
@@ -88,14 +142,14 @@ export function trafficEntryMatchesOverride(
 ): boolean {
   if (entry.kind !== 'http' || !r.enabled) return false
   if (!r.matchHost?.trim()) return false
-  if (entry.host.toLowerCase() !== r.matchHost.trim().toLowerCase()) {
+  if (!hostMatches(entry.host, r.matchHost.trim())) {
     return false
   }
   if (r.matchProtocol && r.matchProtocol.toLowerCase() !== entry.scheme.toLowerCase()) {
     return false
   }
   if (r.matchPath && r.matchPath.trim() !== '') {
-    if (normalizePath(pathOnlyFromEntry(entry)) !== normalizePath(r.matchPath)) {
+    if (!pathMatches(pathOnlyFromEntry(entry), r.matchPath)) {
       return false
     }
   }

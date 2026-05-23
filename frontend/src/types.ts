@@ -45,6 +45,9 @@ export interface OverrideRule {
   /** Response headers for the override. */
   headers: [string, string][]
   body: string
+  mapRemoteProtocol?: string | null
+  mapRemoteHost?: string | null
+  mapRemotePath?: string | null
   streamIntervalMs?: number | null
 }
 
@@ -68,6 +71,10 @@ export interface OverrideFormState {
   matchRequestHeaders: [string, string][]
   matchQuery: [string, string][]
   matchRequestBody: string
+  mapRemoteEnabled: boolean
+  mapRemoteProtocol: string
+  mapRemoteHost: string
+  mapRemotePath: string
   streamEnabled: boolean
   streamIntervalMs: number
 }

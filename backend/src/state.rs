@@ -32,6 +32,9 @@ pub struct OverrideRule {
     /// Response headers to send with the override.
     pub headers: Vec<(String, String)>,
     pub body: String,
+    pub map_remote_protocol: Option<String>,
+    pub map_remote_host: Option<String>,
+    pub map_remote_path: Option<String>,
     #[serde(default)]
     pub stream_interval_ms: Option<u64>,
 }
@@ -51,12 +54,12 @@ impl OverrideRule {
         if !self.enabled {
             return false;
         }
-        // Host is always required: no "match any host" / wildcard.
+        // Host is always required; wildcard patterns (`*`, `?`) are supported.
         let host_want = match self.match_host.as_deref().map(str::trim) {
             Some(t) if !t.is_empty() => t,
             _ => return false,
         };
-        if host.to_lowercase() != host_want.to_lowercase() {
+        if !host_matches(host, host_want) {
             return false;
         }
         if let Some(ref p) = self.match_protocol {
@@ -145,8 +148,125 @@ fn normalize_path(p: &str) -> String {
     }
 }
 
+fn wildcard_match(pattern: &str, text: &str) -> bool {
+    let p = pattern.as_bytes();
+    let t = text.as_bytes();
+    let mut p_idx = 0usize;
+    let mut t_idx = 0usize;
+    let mut star_idx: Option<usize> = None;
+    let mut match_idx = 0usize;
+
+    while t_idx < t.len() {
+        if p_idx < p.len() && (p[p_idx] == b'?' || p[p_idx] == t[t_idx]) {
+            p_idx += 1;
+            t_idx += 1;
+            continue;
+        }
+        if p_idx < p.len() && p[p_idx] == b'*' {
+            star_idx = Some(p_idx);
+            p_idx += 1;
+            match_idx = t_idx;
+            continue;
+        }
+        if let Some(star) = star_idx {
+            p_idx = star + 1;
+            match_idx += 1;
+            t_idx = match_idx;
+            continue;
+        }
+        return false;
+    }
+
+    while p_idx < p.len() && p[p_idx] == b'*' {
+        p_idx += 1;
+    }
+    p_idx == p.len()
+}
+
+fn host_matches(request_host: &str, rule_host: &str) -> bool {
+    let request = request_host.to_ascii_lowercase();
+    let rule = rule_host.to_ascii_lowercase();
+    if rule.contains('*') || rule.contains('?') {
+        wildcard_match(&rule, &request)
+    } else {
+        request == rule
+    }
+}
+
 fn paths_equal(request_path: &str, rule_path: &str) -> bool {
-    normalize_path(request_path) == normalize_path(rule_path)
+    let request = normalize_path(request_path);
+    let rule = normalize_path(rule_path);
+    if rule.contains('*') || rule.contains('?') {
+        wildcard_match(&rule, &request)
+    } else {
+        request == rule
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use http::header::HeaderMap;
+
+    fn rule_with(host: &str, path: &str) -> OverrideRule {
+        OverrideRule {
+            id: "r".to_string(),
+            enabled: true,
+            match_protocol: Some("https".to_string()),
+            match_host: Some(host.to_string()),
+            match_path: Some(path.to_string()),
+            match_request_headers: Vec::new(),
+            match_query: Vec::new(),
+            match_request_body: None,
+            status: 200,
+            headers: Vec::new(),
+            body: String::new(),
+            map_remote_protocol: Some("http".to_string()),
+            map_remote_host: Some("localhost:3000".to_string()),
+            map_remote_path: Some("*".to_string()),
+            stream_interval_ms: None,
+        }
+    }
+
+    #[test]
+    fn wildcard_host_matches_subdomain() {
+        let rule = rule_with("*.example.com", "/api/*");
+        assert!(rule.matches(
+            "GET",
+            "https",
+            "api.example.com",
+            "/api/v1/users?x=1",
+            "/api/v1/users",
+            &[],
+            &HeaderMap::new(),
+            b"",
+        ));
+    }
+
+    #[test]
+    fn wildcard_path_supports_single_char() {
+        let rule = rule_with("example.com", "/v?/users");
+        assert!(rule.matches(
+            "GET",
+            "https",
+            "example.com",
+            "/v1/users",
+            "/v1/users",
+            &[],
+            &HeaderMap::new(),
+            b"",
+        ));
+        assert!(!rule.matches(
+            "GET",
+            "https",
+            "example.com",
+            "/v10/users",
+            "/v10/users",
+            &[],
+            &HeaderMap::new(),
+            b"",
+        ));
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

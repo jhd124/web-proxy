@@ -517,6 +517,54 @@ fn parse_origin(url: &str) -> String {
     }
 }
 
+fn has_map_remote_rule(rule: &crate::state::OverrideRule) -> bool {
+    let has_protocol = rule
+        .map_remote_protocol
+        .as_deref()
+        .map(str::trim)
+        .map(|v| !v.is_empty())
+        .unwrap_or(false);
+    let has_host = rule
+        .map_remote_host
+        .as_deref()
+        .map(str::trim)
+        .map(|v| !v.is_empty())
+        .unwrap_or(false);
+    has_protocol && has_host
+}
+
+fn build_mapped_remote_url(rule: &crate::state::OverrideRule, path_with_query: &str) -> Option<String> {
+    if !has_map_remote_rule(rule) {
+        return None;
+    }
+    let protocol = rule.map_remote_protocol.as_deref()?.trim();
+    let host = rule.map_remote_host.as_deref()?.trim();
+    if protocol.is_empty() || host.is_empty() {
+        return None;
+    }
+    let incoming_path = if path_with_query.trim().is_empty() {
+        "/"
+    } else {
+        path_with_query
+    };
+    let target_path = match rule.map_remote_path.as_deref().map(str::trim) {
+        None | Some("") | Some("*") => incoming_path.to_string(),
+        Some(path_rule) => {
+            let normalized = if path_rule.starts_with('/') {
+                path_rule.to_string()
+            } else {
+                format!("/{path_rule}")
+            };
+            if normalized.contains('*') {
+                normalized.replace('*', incoming_path.trim_start_matches('/'))
+            } else {
+                normalized
+            }
+        }
+    };
+    Some(format!("{protocol}://{host}{target_path}"))
+}
+
 fn find_override(
     state: &AppState,
     method: &str,
@@ -1111,6 +1159,9 @@ async fn forward_proxied_http(
         request_headers,
         collected.as_ref(),
     );
+    let mapped_remote_url = matched_override
+        .as_ref()
+        .and_then(|rule| build_mapped_remote_url(rule, &path_with_query));
 
     let entry_id = Uuid::new_v4();
     let entry = TrafficEntry {
@@ -1145,6 +1196,7 @@ async fn forward_proxied_http(
     if let Some(rule) = find_breakpoint(&state, &origin, &path_with_query) {
         let has_controlled_stream = matched_override
             .as_ref()
+            .filter(|r| !has_map_remote_rule(r))
             .and_then(|r| r.stream_interval_ms)
             .is_some();
         if has_controlled_stream {
@@ -1184,21 +1236,25 @@ async fn forward_proxied_http(
     }
 
     if let Some(rule) = matched_override {
-        return respond_with_rule(
-            state,
-            entry_id,
-            peer,
-            &url,
-            rule.status,
-            rule.headers,
-            rule.body,
-            rule.stream_interval_ms,
-            stream_ctrl,
-        )
-        .await;
+        if mapped_remote_url.is_none() {
+            return respond_with_rule(
+                state,
+                entry_id,
+                peer,
+                &url,
+                rule.status,
+                rule.headers,
+                rule.body,
+                rule.stream_interval_ms,
+                stream_ctrl,
+            )
+            .await;
+        }
     }
 
-    let client = if state.upstream_http3_enabled && url.starts_with("https://") {
+    let upstream_target_url = mapped_remote_url.unwrap_or_else(|| url.clone());
+
+    let client = if state.upstream_http3_enabled && upstream_target_url.starts_with("https://") {
         state
             .upstream_http3_client
             .as_ref()
@@ -1209,7 +1265,7 @@ async fn forward_proxied_http(
 
     let started = Instant::now();
     let rb = client
-        .request(method.clone(), url.clone())
+        .request(method.clone(), upstream_target_url.clone())
         .headers(req_headers)
         .body(collected.to_vec());
 

@@ -48,6 +48,10 @@ export function getDefaultOverrideForm(): OverrideFormState {
     matchRequestHeaders: [],
     matchQuery: [],
     matchRequestBody: '',
+    mapRemoteEnabled: false,
+    mapRemoteProtocol: '',
+    mapRemoteHost: '',
+    mapRemotePath: '*',
     streamEnabled: false,
     streamIntervalMs: 500,
   }
@@ -65,6 +69,10 @@ export function isDefaultOverrideForm(f: OverrideFormState): boolean {
     f.matchHost === d.matchHost &&
     f.matchPath === d.matchPath &&
     f.matchRequestBody === d.matchRequestBody &&
+    f.mapRemoteEnabled === d.mapRemoteEnabled &&
+    f.mapRemoteProtocol === d.mapRemoteProtocol &&
+    f.mapRemoteHost === d.mapRemoteHost &&
+    f.mapRemotePath === d.mapRemotePath &&
     f.streamEnabled === d.streamEnabled &&
     f.streamIntervalMs === d.streamIntervalMs &&
     f.matchRequestHeaders.length === 0 &&

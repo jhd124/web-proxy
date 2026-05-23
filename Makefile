@@ -9,7 +9,7 @@ help:
 	@echo "Targets:"
 	@echo "  make install   – npm install (frontend) + fetch Rust deps"
 	@echo "  make build     – release Rust binary + Vite production bundle"
-	@echo "  make dev       – proxy + dashboard + Vite (ports auto-increment if busy; see scripts/run-dev.sh)"
+	@echo "  make dev       – watch backend and auto-restart proxy server on code changes"
 	@echo "  make backend   – only \`cargo run -p proxy-app\` (proxy + API on 9090/9091)"
 	@echo "  make frontend  – only \`npm run dev\` in frontend/ (dashboard port: env DASHBOARD_PORT or frontend/.proxy-dev-ports.json)"
 	@echo "  make run       – build UI then run Rust; open http://127.0.0.1:9091"
@@ -27,9 +27,8 @@ build:
 	cd frontend && npm run build
 	cargo build --release -p proxy-app
 
-# Backend writes frontend/.proxy-dev-ports.json before servers accept traffic; Vite starts after.
 dev:
-	bash scripts/run-dev.sh
+	MITM=1 cargo watch -w backend/src -w backend/Cargo.toml -x "run -p proxy-app"
 
 backend:
 	MITM=1 cargo run -p proxy-app

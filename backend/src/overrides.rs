@@ -43,6 +43,9 @@ pub struct UpsertOverrideBody {
     pub status: u16,
     pub headers: Option<Vec<(String, String)>>,
     pub body: Option<String>,
+    pub map_remote_protocol: Option<String>,
+    pub map_remote_host: Option<String>,
+    pub map_remote_path: Option<String>,
     pub stream_interval_ms: Option<u64>,
 }
 
@@ -70,6 +73,30 @@ fn rule_from_body(body: &UpsertOverrideBody, id: String) -> OverrideRule {
         status: body.status,
         headers: body.headers.clone().unwrap_or_default(),
         body: body.body.clone().unwrap_or_default(),
+        map_remote_protocol: body.map_remote_protocol.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
+        map_remote_host: body.map_remote_host.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
+        map_remote_path: body.map_remote_path.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
         stream_interval_ms: body.stream_interval_ms,
     }
 }
@@ -103,7 +130,47 @@ fn ensure_overrides_schema(conn: &Connection) -> rusqlite::Result<()> {
             [],
         )?;
     }
+    if !has("map_remote_url") {
+        conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_url TEXT", [])?;
+    }
+    if !has("map_remote_protocol") {
+        conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_protocol TEXT", [])?;
+    }
+    if !has("map_remote_host") {
+        conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_host TEXT", [])?;
+    }
+    if !has("map_remote_path") {
+        conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_path TEXT", [])?;
+    }
     Ok(())
+}
+
+fn map_remote_rule_from_legacy_url(
+    legacy_url: Option<String>,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let Some(raw) = legacy_url else {
+        return (None, None, None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return (None, None, None);
+    }
+    if let Ok(url) = url::Url::parse(trimmed) {
+        let protocol = Some(url.scheme().to_string());
+        let host = url.host_str().map(|h| {
+            if let Some(port) = url.port() {
+                format!("{h}:{port}")
+            } else {
+                h.to_string()
+            }
+        });
+        let path = match url.query() {
+            Some(q) => Some(format!("{}?{}", url.path(), q)),
+            None => Some(url.path().to_string()),
+        };
+        return (protocol, host, path);
+    }
+    (None, None, None)
 }
 
 pub fn init_and_load(path: &StdPath) -> anyhow::Result<Vec<OverrideRule>> {
@@ -162,6 +229,10 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             status,
             headers_json,
             body,
+            map_remote_protocol,
+            map_remote_host,
+            map_remote_path,
+            map_remote_url,
             stream_interval_ms
         FROM overrides
         ORDER BY rowid DESC
@@ -185,6 +256,32 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             serde_json::from_str::<Vec<(String, String)>>(&mrh).unwrap_or_default();
         let match_query = serde_json::from_str::<Vec<(String, String)>>(&mq).unwrap_or_default();
         let id: String = row.get(0)?;
+        let mut map_remote_protocol: Option<String> = row.get(11)?;
+        let mut map_remote_host: Option<String> = row.get(12)?;
+        let mut map_remote_path: Option<String> = row.get(13)?;
+        if map_remote_protocol
+            .as_deref()
+            .map(str::trim)
+            .map(|v| v.is_empty())
+            .unwrap_or(true)
+            || map_remote_host
+                .as_deref()
+                .map(str::trim)
+                .map(|v| v.is_empty())
+                .unwrap_or(true)
+        {
+            let (legacy_protocol, legacy_host, legacy_path) =
+                map_remote_rule_from_legacy_url(row.get(14)?);
+            if map_remote_protocol.is_none() {
+                map_remote_protocol = legacy_protocol;
+            }
+            if map_remote_host.is_none() {
+                map_remote_host = legacy_host;
+            }
+            if map_remote_path.is_none() {
+                map_remote_path = legacy_path;
+            }
+        }
         Ok(OverrideRule {
             id,
             enabled: row.get::<_, i64>(1)? != 0,
@@ -197,7 +294,10 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             status: row.get(8)?,
             headers,
             body: row.get(10)?,
-            stream_interval_ms: row.get::<_, Option<i64>>(11)?.map(|x| x as u64),
+            map_remote_protocol,
+            map_remote_host,
+            map_remote_path,
+            stream_interval_ms: row.get::<_, Option<i64>>(15)?.map(|x| x as u64),
         })
     })?;
     let mut out = Vec::new();
@@ -218,9 +318,10 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOver
         INSERT INTO overrides (
             id, name, enabled, match_method, match_host, match_path_regex,
             match_protocol, match_request_headers_json, match_query_json, match_request_body,
+            map_remote_protocol, map_remote_host, map_remote_path, map_remote_url,
             status, headers_json, body, stream_interval_ms
         )
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
         "#,
         params![
             &rule.id,
@@ -233,6 +334,10 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOver
             &mrh,
             &mq,
             &rule.match_request_body,
+            &rule.map_remote_protocol,
+            &rule.map_remote_host,
+            &rule.map_remote_path,
+            Option::<String>::None,
             rule.status,
             &headers_json,
             &rule.body,
@@ -267,10 +372,14 @@ fn update_override_row(path: &StdPath, rule: &OverrideRule) -> anyhow::Result<bo
             match_request_headers_json = ?8,
             match_query_json = ?9,
             match_request_body = ?10,
-            status = ?11,
-            headers_json = ?12,
-            body = ?13,
-            stream_interval_ms = ?14
+            map_remote_protocol = ?11,
+            map_remote_host = ?12,
+            map_remote_path = ?13,
+            map_remote_url = ?14,
+            status = ?15,
+            headers_json = ?16,
+            body = ?17,
+            stream_interval_ms = ?18
         WHERE id = ?1
         "#,
         params![
@@ -284,6 +393,10 @@ fn update_override_row(path: &StdPath, rule: &OverrideRule) -> anyhow::Result<bo
             &mrh,
             &mq,
             &rule.match_request_body,
+            &rule.map_remote_protocol,
+            &rule.map_remote_host,
+            &rule.map_remote_path,
+            Option::<String>::None,
             rule.status,
             &headers_json,
             &rule.body,

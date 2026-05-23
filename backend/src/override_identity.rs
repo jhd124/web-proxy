@@ -81,6 +81,9 @@ mod tests {
             status: 200,
             headers: vec![],
             body: String::new(),
+            map_remote_protocol: None,
+            map_remote_host: None,
+            map_remote_path: None,
             stream_interval_ms: None,
         };
         let id1 = override_id_for_rule(&r);

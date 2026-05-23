@@ -190,6 +190,57 @@ export function OverrideRequestFormUI({
         />
         <span className="tiny muted">{t.matchBodyHelp}</span>
       </label>
+      <label className={s.streamToggle}>
+        <span className={s.streamToggleRow}>
+          <input
+            type="checkbox"
+            checked={overrideForm.mapRemoteEnabled}
+            onChange={(e) =>
+              setOverrideForm((f) => ({ ...f, mapRemoteEnabled: e.target.checked }))
+            }
+          />
+          <span>{t.enableMapRemote}</span>
+        </span>
+      </label>
+      {overrideForm.mapRemoteEnabled ? (
+        <div className={s.fieldGroup}>
+          <div className={s.subLabel}>Map remote rule</div>
+          <label>
+            {t.mapRemoteProtocol}
+            <input
+              className="mono"
+              placeholder="http"
+              value={overrideForm.mapRemoteProtocol}
+              onChange={(e) =>
+                setOverrideForm((f) => ({ ...f, mapRemoteProtocol: e.target.value }))
+              }
+            />
+          </label>
+          <label>
+            {t.mapRemoteHost}
+            <input
+              className="mono"
+              placeholder="localhost:3000"
+              value={overrideForm.mapRemoteHost}
+              onChange={(e) =>
+                setOverrideForm((f) => ({ ...f, mapRemoteHost: e.target.value }))
+              }
+            />
+          </label>
+          <label className={s.labelWide}>
+            {t.mapRemotePath}
+            <input
+              className="mono"
+              placeholder="*"
+              value={overrideForm.mapRemotePath}
+              onChange={(e) =>
+                setOverrideForm((f) => ({ ...f, mapRemotePath: e.target.value }))
+              }
+            />
+            <span className="tiny muted">{t.mapRemoteRuleHint}</span>
+          </label>
+        </div>
+      ) : null}
       <label>
         {t.status}
         <input

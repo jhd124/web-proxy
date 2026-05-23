@@ -40,14 +40,15 @@ export const overrideEditorTexts = {
     protocolHint: 'http or https; leave empty to match any',
     host: 'Hostname',
     hostHint:
-      'Required. Must match the Host header exactly (e.g. example.com:8080). No match-all / wildcard.',
-    hostRequired: 'Hostname is required: set a specific host (no empty / wildcard).',
+      'Required. Supports exact host or wildcard (*, ?) such as *.example.com or api-?.example.com.',
+    hostRequired: 'Hostname is required: set an exact host or wildcard pattern.',
     duplicateMatchIdentity:
       'An override with the same match identity already exists (duplicate id). Change match fields to produce a different id, or open the existing rule from the list.',
     saveIdConflict:
       'Could not save: another rule already uses this id.',
     path: 'Path',
-    pathHint: 'Path only, no query string; leave empty to match any path',
+    pathHint:
+      'Path only, no query string; leave empty to match any path. Supports wildcard (*, ?).',
     matchHeaders: 'Request headers to match',
     matchHeadersHelp:
       'Name: value per line, or add rows. Empty = match all requests (ignore header matching).',
@@ -57,6 +58,12 @@ export const overrideEditorTexts = {
     addQueryRow: 'Add parameter',
     matchBody: 'Request body to match',
     matchBodyHelp: 'Empty = any body. When set, must match the full request body (UTF-8).',
+    enableMapRemote: 'Enable map remote',
+    mapRemoteProtocol: 'Map remote protocol',
+    mapRemoteHost: 'Map remote host',
+    mapRemotePath: 'Map remote path',
+    mapRemoteRuleHint:
+      'Optional forwarding rule. When protocol + host are set, matched requests are forwarded to that target. Use path * to keep the incoming path.',
     status: 'Status',
     responseHeaders: 'Response headers (one',
     codeName: 'Name: value',
