@@ -1,5 +1,6 @@
 import { breakpointTexts } from '../texts'
 import type { BreakpointsPanelUIProps } from '../types'
+import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
 import o from './BreakpointsPanelUI.overlay.module.css'
 import s from './BreakpointsPanelUI.module.css'
 
@@ -127,12 +128,13 @@ export function BreakpointsPanelUI({
                         <button
                           type="button"
                           className="ghost danger"
-                          onClick={() => {
-                            if (!window.confirm(t.deleteConfirm)) {
+                          onClick={async () => {
+                            const isConfirmed = await confirmByEnv(t.deleteConfirm)
+                            if (!isConfirmed) {
                               return
                             }
                             void removeBreakpoint(rule.id).catch((e) => {
-                              window.alert(String(e))
+                              void alertByEnv(String(e))
                             })
                           }}
                         >

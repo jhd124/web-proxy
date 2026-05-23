@@ -5,6 +5,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
+import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
 import { isDefaultOverrideForm, urlOrigin } from '../../../lib/dashboardUtils'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
@@ -298,8 +299,9 @@ export function OverrideEditorUI({
               <button
                 type="button"
                 className="ghost danger"
-                onClick={() => {
-                  if (!window.confirm(tf.deleteRuleConfirm)) {
+                onClick={async () => {
+                  const isConfirmed = await confirmByEnv(tf.deleteRuleConfirm)
+                  if (!isConfirmed) {
                     return
                   }
                   void deleteOverrideRule(editingRule.id)
@@ -307,7 +309,7 @@ export function OverrideEditorUI({
                       startNewOverride()
                     })
                     .catch((e) => {
-                      window.alert(String(e))
+                      void alertByEnv(String(e))
                     })
                 }}
               >

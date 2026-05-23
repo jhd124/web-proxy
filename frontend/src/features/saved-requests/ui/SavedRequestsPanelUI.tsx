@@ -1,4 +1,5 @@
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
 import { savedRequestsTexts as t } from '../texts'
 import type { SavedRequestsPanelUIProps } from '../types'
 import s from './SavedRequestsPanelUI.module.css'
@@ -64,10 +65,11 @@ export function SavedRequestsPanelUI({
                 type="button"
                 className="ghost danger"
                 disabled={savedRequests.length === 0}
-                onClick={() => {
-                  if (!window.confirm(t.clearAllConfirm)) return
+                onClick={async () => {
+                  const isConfirmed = await confirmByEnv(t.clearAllConfirm)
+                  if (!isConfirmed) return
                   void clearSavedRequests().catch((e) => {
-                    window.alert(String(e))
+                    void alertByEnv(String(e))
                   })
                 }}
               >
@@ -129,11 +131,12 @@ export function SavedRequestsPanelUI({
                     <button
                       type="button"
                       className="ghost danger"
-                      onClick={() => {
-                        if (!window.confirm(t.deleteConfirm)) return
+                      onClick={async () => {
+                        const isConfirmed = await confirmByEnv(t.deleteConfirm)
+                        if (!isConfirmed) return
                         void removeSavedRequest(selectedSavedRequest.id).catch(
                           (e) => {
-                            window.alert(String(e))
+                            void alertByEnv(String(e))
                           },
                         )
                       }}
