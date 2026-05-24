@@ -66,6 +66,7 @@ export function useDashboard() {
   )
   const [capturePaused, setCapturePaused] = useState(false)
   const [captureToggleSaving, setCaptureToggleSaving] = useState(false)
+  const [wifiProxySaving, setWifiProxySaving] = useState(false)
 
   const traffic = useTrafficState()
   useMainWindowTrafficSelect(traffic.setSelectedId)
@@ -103,6 +104,8 @@ export function useDashboard() {
     selectedIdRef,
     setSelectedId: traffic.setSelectedId,
     setWsStatus,
+    setUrlFilter: traffic.setUrlFilter,
+    openFloatingTrafficWindow,
     refreshOverrides,
     refreshBreakpoints,
   })
@@ -195,6 +198,34 @@ export function useDashboard() {
       setCaptureToggleSaving(false)
     }
   }, [capturePaused])
+
+  const enableWifiHttpHttpsProxy = useCallback(async () => {
+    if (!isTauri()) {
+      window.alert(dashboardTexts.header.desktopOnlyAction)
+      return
+    }
+    if (!proxyListenAddress) {
+      window.alert(dashboardTexts.header.missingProxyAddress)
+      return
+    }
+    const listenAddressParts = proxyListenAddress.split(':')
+    const portPart = listenAddressParts[listenAddressParts.length - 1] ?? ''
+    const proxyPort = Number.parseInt(portPart, 10)
+    if (!Number.isFinite(proxyPort) || proxyPort <= 0 || proxyPort > 65535) {
+      window.alert(dashboardTexts.header.missingProxyAddress)
+      return
+    }
+    setWifiProxySaving(true)
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('enable_system_http_https_proxy', { proxyPort })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      window.alert(dashboardTexts.header.enableWifiProxyFailed(detail))
+    } finally {
+      setWifiProxySaving(false)
+    }
+  }, [proxyListenAddress])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
 
@@ -338,6 +369,8 @@ export function useDashboard() {
     capturePaused,
     captureToggleSaving,
     toggleCapturePaused,
+    wifiProxySaving,
+    enableWifiHttpHttpsProxy,
     breakpointsOpen,
     savedRequestsOpen,
     closeBreakpointsPanel,

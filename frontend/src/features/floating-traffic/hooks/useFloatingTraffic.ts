@@ -29,6 +29,10 @@ export function useFloatingTraffic() {
     selectedIdRef,
     setSelectedId: traffic.setSelectedId,
     setWsStatus,
+    setUrlFilter: traffic.setUrlFilter,
+    openFloatingTrafficWindow: async () => {
+      await Promise.resolve()
+    },
     refreshOverrides: refreshFloatingData,
     refreshBreakpoints: refreshFloatingData,
   })

@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useMemo, useRef, type ReactElement } from 'react'
+import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import {
@@ -9,6 +9,7 @@ import {
 import s from './TrafficVirtualListUI.module.css'
 
 const ROW_HEIGHT_PX = 40
+const TOP_STABLE_THRESHOLD_PX = 8
 
 export type TrafficVirtualListTagTexts = {
   tagError: string
@@ -42,6 +43,8 @@ export function TrafficVirtualListUI({
   }
   const displayEntries = useMemo(() => [...entries].reverse(), [entries])
   const parentRef = useRef<HTMLDivElement>(null)
+  const previousDisplayEntriesRef = useRef<TrafficEntry[]>(displayEntries)
+  const previousScrollTopRef = useRef(0)
 
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
@@ -49,6 +52,34 @@ export function TrafficVirtualListUI({
     estimateSize: () => ROW_HEIGHT_PX,
     overscan: 16,
   })
+
+  useLayoutEffect(() => {
+    const parent = parentRef.current
+    const previousDisplayEntries = previousDisplayEntriesRef.current
+    if (!parent) {
+      previousDisplayEntriesRef.current = displayEntries
+      return
+    }
+
+    const previousScrollTop = previousScrollTopRef.current
+    const isBrowsingHistory = previousScrollTop > TOP_STABLE_THRESHOLD_PX
+    if (isBrowsingHistory && previousDisplayEntries.length > 0) {
+      const previousAnchorIndex = Math.floor(previousScrollTop / ROW_HEIGHT_PX)
+      const previousAnchor = previousDisplayEntries[previousAnchorIndex]
+      if (previousAnchor) {
+        const nextAnchorIndex = displayEntries.findIndex(
+          (entry) => entry.id === previousAnchor.id,
+        )
+        if (nextAnchorIndex >= 0) {
+          const anchorOffset = previousScrollTop - previousAnchorIndex * ROW_HEIGHT_PX
+          parent.scrollTop = nextAnchorIndex * ROW_HEIGHT_PX + anchorOffset
+        }
+      }
+    }
+
+    previousDisplayEntriesRef.current = displayEntries
+    previousScrollTopRef.current = parent.scrollTop
+  }, [displayEntries])
 
   if (displayEntries.length === 0) {
     if (!emptyText) {
@@ -60,7 +91,13 @@ export function TrafficVirtualListUI({
   const scrollerClass = className ? `${s.scroller} ${className}` : s.scroller
 
   return (
-    <div ref={parentRef} className={scrollerClass}>
+    <div
+      ref={parentRef}
+      className={scrollerClass}
+      onScroll={(event) => {
+        previousScrollTopRef.current = event.currentTarget.scrollTop
+      }}
+    >
       <ul
         className={s.list}
         style={{ height: virtualizer.getTotalSize() }}

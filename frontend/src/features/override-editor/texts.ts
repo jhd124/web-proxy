@@ -46,6 +46,7 @@ export const overrideEditorTexts = {
       'An override with the same match identity already exists (duplicate id). Change match fields to produce a different id, or open the existing rule from the list.',
     saveIdConflict:
       'Could not save: another rule already uses this id.',
+    saveSucceeded: 'Override saved successfully.',
     path: 'Path',
     pathHint:
       'Path only, no query string; leave empty to match any path. Supports wildcard (*, ?).',

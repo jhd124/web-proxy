@@ -139,6 +139,28 @@ async fn open_floating_traffic_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn enable_system_http_https_proxy(app: AppHandle, proxy_port: u16) -> Result<(), String> {
+    if proxy_port == 0 {
+        return Err("invalid proxy port".to_string());
+    }
+    let saved = system_proxy::apply_local_proxy(proxy_port)
+        .ok_or_else(|| "failed to enable system proxy".to_string())?;
+    let state = app
+        .try_state::<system_proxy::SystemProxyRestoreState>()
+        .ok_or_else(|| "missing system proxy restore state".to_string())?;
+    match state.0.lock() {
+        Ok(mut guard) => {
+            *guard = Some(saved);
+        }
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            *guard = Some(saved);
+        }
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -147,7 +169,8 @@ pub fn run() {
             mitm_install::install_mitm_ca_system_trust,
             mitm_install::open_mitm_ca_file,
             focus_main_window,
-            open_floating_traffic_window
+            open_floating_traffic_window,
+            enable_system_http_https_proxy
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
