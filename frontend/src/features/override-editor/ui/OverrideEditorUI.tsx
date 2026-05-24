@@ -261,8 +261,8 @@ export function OverrideEditorUI({
           <button
             type="button"
             className="ghost"
-            onClick={() =>
-              void addBreakpointFromOverride(
+            onClick={() => {
+              addBreakpointFromOverride(
                 {
                   name:
                     [overrideForm.matchHost, overrideForm.matchPath]
@@ -276,7 +276,8 @@ export function OverrideEditorUI({
                   ? urlOrigin(selected.url)
                   : undefined,
               )
-            }
+              closeOverrideDrawer()
+            }}
           >
             {t.footAddBreakpoint}
           </button>

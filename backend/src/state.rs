@@ -313,6 +313,21 @@ pub enum DashboardMessage {
     OverridesUpdated,
     #[serde(rename = "breakpoints_updated")]
     BreakpointsUpdated,
+    #[serde(rename = "ui_action")]
+    UiAction { action: UiActionMessage },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "action")]
+pub enum UiActionMessage {
+    #[serde(rename = "focus_main_window")]
+    FocusMainWindow,
+    #[serde(rename = "open_floating_traffic_window")]
+    OpenFloatingTrafficWindow,
+    #[serde(rename = "select_request")]
+    SelectRequest { request_id: Uuid },
+    #[serde(rename = "set_url_filter")]
+    SetUrlFilter { query: String },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -469,6 +484,10 @@ impl AppState {
 
     pub fn notify_breakpoints_changed(&self) {
         let _ = self.tx.send(DashboardMessage::BreakpointsUpdated);
+    }
+
+    pub fn notify_ui_action(&self, action: UiActionMessage) {
+        let _ = self.tx.send(DashboardMessage::UiAction { action });
     }
 
     pub fn register_pending_request(&self, id: Uuid) -> oneshot::Receiver<()> {

@@ -10,6 +10,12 @@ alwaysApply: true
 
 # frontend
 
+## components
+ * basic component library is shadcn
+ * custom components is in src/components 
+
+* 持久操作使用toast给出反馈
+
 ## 技术栈
 * 包管理器: bun
 * UI: react

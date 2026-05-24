@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
 use axum::Json;
 use axum::Router;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -109,6 +109,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
             "/api/saved-requests/:id",
             delete(crate::saved_requests::delete_saved_request),
         )
+        .route("/api/ui/actions", post(ui_action))
         .route("/api/requests/:id/resume", post(resume_request))
         .route("/api/requests/:id/stream/play", post(play_stream))
         .route("/api/requests/:id/stream/pause", post(pause_stream))
@@ -230,6 +231,33 @@ async fn pause_stream(
     } else {
         StatusCode::NOT_FOUND
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "action")]
+enum UiActionBody {
+    FocusMainWindow,
+    OpenFloatingTrafficWindow,
+    SelectRequest { request_id: uuid::Uuid },
+    SetUrlFilter { query: String },
+}
+
+async fn ui_action(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UiActionBody>,
+) -> StatusCode {
+    let action = match body {
+        UiActionBody::FocusMainWindow => crate::state::UiActionMessage::FocusMainWindow,
+        UiActionBody::OpenFloatingTrafficWindow => {
+            crate::state::UiActionMessage::OpenFloatingTrafficWindow
+        }
+        UiActionBody::SelectRequest { request_id } => {
+            crate::state::UiActionMessage::SelectRequest { request_id }
+        }
+        UiActionBody::SetUrlFilter { query } => crate::state::UiActionMessage::SetUrlFilter { query },
+    };
+    state.notify_ui_action(action);
+    StatusCode::NO_CONTENT
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {

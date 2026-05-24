@@ -6,6 +6,7 @@ import {
   parseHeadersText,
 } from '../../../lib/dashboardUtils'
 import { apiPayloadFromRule, computeOverrideIdFromFormState } from '../../../lib/overrideIdentity'
+import { showSuccessToast } from '../../../lib/toast'
 import type { OverrideFormState, OverrideRule } from '../../../types'
 import { overrideEditorTexts } from '../texts'
 
@@ -268,6 +269,7 @@ export function useOverrideEditorState() {
         setOverrideEditingId(rule.id)
       }
       await refreshOverrides()
+      showSuccessToast(oreq.saveSucceeded)
     } catch (e) {
       setOverrideError(String(e))
     }

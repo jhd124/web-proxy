@@ -7,6 +7,7 @@ import {
   Pin,
   Replace,
   Signpost,
+  WifiCog,
 } from 'lucide-react'
 import { dashboardTexts } from '../texts'
 import s from './DashboardHeaderUI.module.css'
@@ -18,9 +19,11 @@ type Props = {
   proxyListenAddress: string | null
   capturePaused: boolean
   captureToggleSaving: boolean
+  wifiProxySaving: boolean
   activeOverridesCount: number
   activeBreakpointsCount: number
   onCaptureToggleClick: () => void
+  onEnableWifiProxyClick: () => void
   onBreakpointsEntryClick: () => void
   onOverridesEntryClick: () => void
   onSavedRequestsEntryClick: () => void
@@ -49,9 +52,11 @@ export function DashboardHeaderUI({
   proxyListenAddress,
   capturePaused,
   captureToggleSaving,
+  wifiProxySaving,
   activeOverridesCount,
   activeBreakpointsCount,
   onCaptureToggleClick,
+  onEnableWifiProxyClick,
   onBreakpointsEntryClick,
   onOverridesEntryClick,
   onSavedRequestsEntryClick,
@@ -115,7 +120,19 @@ export function DashboardHeaderUI({
             disabled={captureToggleSaving}
             onClick={onCaptureToggleClick}
           >
-            {capturePaused ? <CirclePlay /> : <CirclePause />}
+            {capturePaused ? <CirclePlay  /> : <CirclePause />}
+          </Button>
+        </SimpleTooltip>
+
+        <SimpleTooltip label={t.enableWifiProxyTooltip}>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={t.enableWifiProxyAriaLabel}
+            disabled={wifiProxySaving}
+            onClick={onEnableWifiProxyClick}
+          >
+            <WifiCog />
           </Button>
         </SimpleTooltip>
 

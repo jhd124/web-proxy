@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react'
 import { useEffect } from 'react'
 import { trimTrafficEntries } from '../../traffic/trafficEntriesLimit'
 import { wsUrl } from '../../../lib/dashboardUtils'
+import { focusMainWindow } from '../../../lib/focusMainWindow'
 import type { TrafficEntry, WsMessage } from '../../../types'
 
 type Ws = 'connecting' | 'open' | 'closed'
@@ -12,6 +13,8 @@ export function useAppWebSocket(p: {
   selectedIdRef: MutableRefObject<string | null>
   setSelectedId: (id: string | null) => void
   setWsStatus: (s: Ws) => void
+  setUrlFilter: (value: string) => void
+  openFloatingTrafficWindow: () => Promise<void>
   refreshOverrides: () => Promise<void>
   refreshBreakpoints: () => Promise<void>
 }) {
@@ -20,6 +23,8 @@ export function useAppWebSocket(p: {
     selectedIdRef,
     setSelectedId,
     setWsStatus,
+    setUrlFilter,
+    openFloatingTrafficWindow,
     refreshOverrides,
     refreshBreakpoints,
   } = p
@@ -73,6 +78,17 @@ export function useAppWebSocket(p: {
             void refreshOverrides()
           } else if (msg.type === 'breakpoints_updated') {
             void refreshBreakpoints()
+          } else if (msg.type === 'ui_action') {
+            const action = msg.action
+            if (action.action === 'focus_main_window') {
+              void focusMainWindow()
+            } else if (action.action === 'open_floating_traffic_window') {
+              void openFloatingTrafficWindow()
+            } else if (action.action === 'select_request') {
+              setSelectedId(action.requestId)
+            } else if (action.action === 'set_url_filter') {
+              setUrlFilter(action.query)
+            }
           }
         } catch {
           /* ignore */
@@ -85,5 +101,14 @@ export function useAppWebSocket(p: {
       alive = false
       ws?.close()
     }
-  }, [refreshBreakpoints, refreshOverrides, selectedIdRef, setEntries, setSelectedId, setWsStatus])
+  }, [
+    openFloatingTrafficWindow,
+    refreshBreakpoints,
+    refreshOverrides,
+    selectedIdRef,
+    setEntries,
+    setSelectedId,
+    setUrlFilter,
+    setWsStatus,
+  ])
 }

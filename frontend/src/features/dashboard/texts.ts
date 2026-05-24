@@ -17,6 +17,12 @@ export const dashboardTexts = {
     openSavedRequestsAriaLabel: 'Open saved requests',
     openFloatingTrafficTooltip: 'Open floating traffic window',
     openFloatingTrafficAriaLabel: 'Open floating traffic window',
+    enableWifiProxyTooltip: 'Enable WiFi HTTP/HTTPS proxy',
+    enableWifiProxyAriaLabel: 'Enable WiFi HTTP and HTTPS proxy',
+    enableWifiProxyFailed: (detail: string) =>
+      `Could not enable WiFi HTTP/HTTPS proxy: ${detail}`,
+    missingProxyAddress: 'Proxy listen address is unavailable',
+    desktopOnlyAction: 'This action is only available in desktop app',
     pauseCaptureTooltip: 'Pause traffic capture',
     pauseCaptureAriaLabel: 'Pause traffic capture',
     resumeCaptureTooltip: 'Resume traffic capture',

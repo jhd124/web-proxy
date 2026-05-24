@@ -13,9 +13,11 @@ export function DashboardUI(p: DashboardViewModel) {
         proxyListenAddress={p.proxyListenAddress}
         capturePaused={p.capturePaused}
         captureToggleSaving={p.captureToggleSaving}
+        wifiProxySaving={p.wifiProxySaving}
         activeOverridesCount={p.activeOverridesCount}
         activeBreakpointsCount={p.activeBreakpointsCount}
         onCaptureToggleClick={p.toggleCapturePaused}
+        onEnableWifiProxyClick={p.enableWifiHttpHttpsProxy}
         onBreakpointsEntryClick={p.onBreakpointsNavClick}
         onOverridesEntryClick={p.onOverridesNavClick}
         onSavedRequestsEntryClick={p.openSavedRequestsPanel}

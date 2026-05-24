@@ -84,3 +84,11 @@ export type WsMessage =
   | { type: 'traffic'; entry: TrafficEntry }
   | { type: 'overrides_updated' }
   | { type: 'breakpoints_updated' }
+  | {
+      type: 'ui_action'
+      action:
+        | { action: 'focus_main_window' }
+        | { action: 'open_floating_traffic_window' }
+        | { action: 'select_request'; requestId: string }
+        | { action: 'set_url_filter'; query: string }
+    }
