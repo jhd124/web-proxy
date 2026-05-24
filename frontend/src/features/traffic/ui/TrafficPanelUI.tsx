@@ -22,6 +22,8 @@ export function TrafficPanelUI({
   openOverrideDrawer,
   saveSelectedRequest,
   addBreakpointFromSelected,
+  openMatchedOverride,
+  openMatchedBreakpoint,
   resumeRequest,
   resumeSaving,
 }: TrafficPanelUIProps) {
@@ -77,6 +79,24 @@ export function TrafficPanelUI({
                   <div className={s.blockHead}>
                     <h2>{t.sectionRequest}</h2>
                     <div className={s.detailActions}>
+                      {selected.kind === 'http' && selected.overrideMatchId && (
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={openMatchedOverride}
+                        >
+                          {t.viewMatchedOverride}
+                        </button>
+                      )}
+                      {selected.kind === 'http' && selected.breakpointMatchId && (
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={openMatchedBreakpoint}
+                        >
+                          {t.viewMatchedBreakpoint}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="ghost"

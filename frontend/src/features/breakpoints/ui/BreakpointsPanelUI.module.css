@@ -56,6 +56,11 @@
   background: var(--panel-bg);
 }
 
+.cardHighlighted {
+  border-color: #facc15;
+  box-shadow: 0 0 0 1px #facc15 inset;
+}
+
 .cardDisabled {
   opacity: 0.72;
 }

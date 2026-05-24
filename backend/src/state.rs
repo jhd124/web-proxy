@@ -356,6 +356,8 @@ pub struct TrafficEntry {
     pub pending: bool,
     pub breakpoint_name: Option<String>,
     #[serde(default)]
+    pub override_match_id: Option<String>,
+    pub breakpoint_match_id: Option<Uuid>,
     pub stream_controllable: bool,
     pub stream_playing: Option<bool>,
 }
@@ -466,6 +468,12 @@ impl AppState {
             if let Some(name) = update.breakpoint_name {
                 e.breakpoint_name = Some(name);
             }
+            if let Some(override_match_id) = update.override_match_id {
+                e.override_match_id = Some(override_match_id);
+            }
+            if let Some(breakpoint_match_id) = update.breakpoint_match_id {
+                e.breakpoint_match_id = Some(breakpoint_match_id);
+            }
             if let Some(c) = update.stream_controllable {
                 e.stream_controllable = c;
             }
@@ -539,6 +547,8 @@ impl AppState {
                     error: None,
                     pending: None,
                     breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                     stream_controllable: None,
                     stream_playing: Some(playing),
                 },
@@ -591,6 +601,8 @@ pub struct TrafficUpdate {
     pub error: Option<String>,
     pub pending: Option<bool>,
     pub breakpoint_name: Option<String>,
+    pub override_match_id: Option<String>,
+    pub breakpoint_match_id: Option<Uuid>,
     pub stream_controllable: Option<bool>,
     pub stream_playing: Option<bool>,
 }

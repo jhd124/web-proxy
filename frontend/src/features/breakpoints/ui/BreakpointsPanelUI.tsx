@@ -1,6 +1,7 @@
 import { breakpointTexts } from '../texts'
 import type { BreakpointsPanelUIProps } from '../types'
 import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
+import { useEffect } from 'react'
 import o from './BreakpointsPanelUI.overlay.module.css'
 import s from './BreakpointsPanelUI.module.css'
 
@@ -13,9 +14,19 @@ export function BreakpointsPanelUI({
   removeBreakpoint,
   setBreakpointEnabled,
   breakpointToggleSaving,
+  highlightedBreakpointId,
 }: BreakpointsPanelUIProps) {
   const t = breakpointTexts
   const sh = t.shell
+
+  useEffect(() => {
+    if (!highlightedBreakpointId) return
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-breakpoint-id="${highlightedBreakpointId}"]`,
+    )
+    targetElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightedBreakpointId])
+
   return (
     <div
       className={o.fsBackdrop}
@@ -101,7 +112,10 @@ export function BreakpointsPanelUI({
                 {breakpointEntries.map((rule) => (
                   <li
                     key={rule.id}
-                    className={`${s.card} ${rule.enabled ? '' : s.cardDisabled}`}
+                    className={`${s.card} ${rule.enabled ? '' : s.cardDisabled} ${
+                      highlightedBreakpointId === rule.id ? s.cardHighlighted : ''
+                    }`}
+                    data-breakpoint-id={rule.id}
                   >
                     <div className={s.head}>
                       <strong>

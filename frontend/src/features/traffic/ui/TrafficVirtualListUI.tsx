@@ -108,6 +108,15 @@ export function TrafficVirtualListUI({
           if (!entry) return null
 
           const summary = getTrafficSummary(entry)
+          const hasOverrideMatch = Boolean(entry.overrideMatchId)
+          const hasBreakpointMatch = Boolean(entry.breakpointMatchId)
+          const matchState = hasOverrideMatch
+            ? hasBreakpointMatch
+              ? 'both'
+              : 'override'
+            : hasBreakpointMatch
+              ? 'breakpoint'
+              : null
 
           return (
             <li
@@ -132,6 +141,19 @@ export function TrafficVirtualListUI({
                     : undefined
                 }
               >
+                {matchState && (
+                  <span
+                    className={`${s.matchDot} ${
+                      matchState === 'both'
+                        ? s.matchDotBoth
+                        : matchState === 'breakpoint'
+                          ? s.matchDotBreakpoint
+                          : s.matchDotOverride
+                    }`}
+                    aria-label={matchState}
+                    title={matchState}
+                  />
+                )}
                 <span className={s.scheme}>{getTrafficSchemeLabel(entry)}</span>
                 <span className={s.method}>{entry.method}</span>
                 <span className={s.url} title={summary}>
