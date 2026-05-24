@@ -27,6 +27,8 @@ struct Health {
     pub upstream_http3_enabled: bool,
     /// IPv4 used for outbound traffic (not the proxy bind address). Pair with `proxy_port` for client configuration.
     pub proxy_listen_ipv4: Option<String>,
+    /// 为 true 时暂停新增抓包记录。
+    pub capture_paused: bool,
 }
 
 /// Best-effort primary IPv4 on the default route (UDP connect does not send packets).
@@ -63,6 +65,8 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/health", get(health))
         .route("/api/requests", get(list_requests))
         .route("/api/requests", delete(clear_requests))
+        .route("/api/capture/pause", post(pause_capture))
+        .route("/api/capture/resume", post(resume_capture))
         .route("/api/mitm/ca.pem", get(mitm_ca))
         .route("/api/mitm/auto-bypass", post(clear_mitm_auto_bypass))
         .route("/api/format-body", post(crate::body_format::format_body))
@@ -139,6 +143,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
             .map(|p| p.to_string_lossy().into_owned()),
         upstream_http3_enabled: state.upstream_http3_enabled,
         proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
+        capture_paused: state.is_capture_paused(),
     })
 }
 
@@ -179,6 +184,16 @@ async fn clear_requests(State(state): State<Arc<AppState>>) -> StatusCode {
     state.resume_all_pending_requests();
     state.clear_all_stream_controllers();
     state.traffic.write().clear();
+    StatusCode::NO_CONTENT
+}
+
+async fn pause_capture(State(state): State<Arc<AppState>>) -> StatusCode {
+    state.set_capture_paused(true);
+    StatusCode::NO_CONTENT
+}
+
+async fn resume_capture(State(state): State<Arc<AppState>>) -> StatusCode {
+    state.set_capture_paused(false);
     StatusCode::NO_CONTENT
 }
 

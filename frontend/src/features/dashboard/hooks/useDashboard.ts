@@ -64,6 +64,8 @@ export function useDashboard() {
   const [proxyListenAddress, setProxyListenAddress] = useState<string | null>(
     null,
   )
+  const [capturePaused, setCapturePaused] = useState(false)
+  const [captureToggleSaving, setCaptureToggleSaving] = useState(false)
 
   const traffic = useTrafficState()
   useMainWindowTrafficSelect(traffic.setSelectedId)
@@ -142,6 +144,7 @@ export function useDashboard() {
           mitmCaPemPath?: string | null
           proxyPort?: number
           proxyListenIpv4?: string | null
+          capturePaused?: boolean
         }
         setMitmEnabled(Boolean(h.mitmEnabled))
         setMitmCaPemPath(
@@ -163,12 +166,35 @@ export function useDashboard() {
         ) {
           setProxyListenAddress(`${ipv4}:${h.proxyPort}`)
         }
+        setCapturePaused(Boolean(h.capturePaused))
       } catch {
         /* ignore */
       }
     }
     void loadHealth()
   }, [])
+
+  const toggleCapturePaused = useCallback(async () => {
+    const targetPaused = !capturePaused
+    setCaptureToggleSaving(true)
+    try {
+      const endpoint = targetPaused ? '/api/capture/pause' : '/api/capture/resume'
+      const r = await fetch(endpoint, { method: 'POST' })
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}`)
+      }
+      setCapturePaused(targetPaused)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      window.alert(
+        targetPaused
+          ? dashboardTexts.header.pauseCaptureFailed(detail)
+          : dashboardTexts.header.resumeCaptureFailed(detail),
+      )
+    } finally {
+      setCaptureToggleSaving(false)
+    }
+  }, [capturePaused])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
 
@@ -309,6 +335,9 @@ export function useDashboard() {
     mitmEnabled,
     mitmCaPemPath,
     proxyListenAddress,
+    capturePaused,
+    captureToggleSaving,
+    toggleCapturePaused,
     breakpointsOpen,
     savedRequestsOpen,
     closeBreakpointsPanel,

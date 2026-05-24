@@ -17,6 +17,14 @@ export const dashboardTexts = {
     openSavedRequestsAriaLabel: 'Open saved requests',
     openFloatingTrafficTooltip: 'Open floating traffic window',
     openFloatingTrafficAriaLabel: 'Open floating traffic window',
+    pauseCaptureTooltip: 'Pause traffic capture',
+    pauseCaptureAriaLabel: 'Pause traffic capture',
+    resumeCaptureTooltip: 'Resume traffic capture',
+    resumeCaptureAriaLabel: 'Resume traffic capture',
+    pauseCaptureFailed: (detail: string) =>
+      `Could not pause traffic capture: ${detail}`,
+    resumeCaptureFailed: (detail: string) =>
+      `Could not resume traffic capture: ${detail}`,
     floatingTrafficTitle: 'Proxy Traffic',
     openFloatingTrafficFailed: (detail: string) =>
       `Could not open floating traffic window: ${detail}`,

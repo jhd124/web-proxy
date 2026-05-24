@@ -11,8 +11,11 @@ export function DashboardUI(p: DashboardViewModel) {
     <div className={root.app}>
       <DashboardHeaderUI
         proxyListenAddress={p.proxyListenAddress}
+        capturePaused={p.capturePaused}
+        captureToggleSaving={p.captureToggleSaving}
         activeOverridesCount={p.activeOverridesCount}
         activeBreakpointsCount={p.activeBreakpointsCount}
+        onCaptureToggleClick={p.toggleCapturePaused}
         onBreakpointsEntryClick={p.onBreakpointsNavClick}
         onOverridesEntryClick={p.onOverridesNavClick}
         onSavedRequestsEntryClick={p.openSavedRequestsPanel}

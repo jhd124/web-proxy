@@ -4,6 +4,7 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::{broadcast, oneshot, watch};
 use uuid::Uuid;
@@ -376,6 +377,8 @@ pub struct AppState {
     pub mitm: Option<Arc<crate::mitm::Mitm>>,
     /// Absolute path to `ca.pem` on disk when MITM is enabled (default `…/mitm-ca-rsa/ca.pem`; desktop installers).
     pub mitm_ca_pem_path: Option<PathBuf>,
+    /// 是否由 dashboard 控制暂停抓包。
+    pub capture_paused: AtomicBool,
 }
 
 impl AppState {
@@ -406,10 +409,14 @@ impl AppState {
             max_traffic,
             mitm,
             mitm_ca_pem_path,
+            capture_paused: AtomicBool::new(false),
         }
     }
 
     pub fn push_traffic(&self, entry: TrafficEntry) {
+        if self.capture_paused.load(Ordering::Relaxed) {
+            return;
+        }
         let mut log = self.traffic.write();
         if log.len() >= self.max_traffic {
             let drop = log.len() - self.max_traffic + 1;
@@ -546,6 +553,14 @@ impl AppState {
     /// 清空因 TLS 失败而自动走隧道的域名集合（例如误 bypass 后或希望重新尝试 MITM）。
     pub fn clear_auto_mitm_bypass_hosts(&self) {
         self.auto_mitm_bypass_hosts.write().clear();
+    }
+
+    pub fn set_capture_paused(&self, paused: bool) {
+        self.capture_paused.store(paused, Ordering::Relaxed);
+    }
+
+    pub fn is_capture_paused(&self) -> bool {
+        self.capture_paused.load(Ordering::Relaxed)
     }
 }
 

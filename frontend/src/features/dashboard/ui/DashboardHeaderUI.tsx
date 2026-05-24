@@ -1,5 +1,13 @@
 import { useCallback, useState } from 'react'
-import { Bookmark, KeyRound, Pin, Replace, Signpost } from 'lucide-react'
+import {
+  Bookmark,
+  CirclePause,
+  CirclePlay,
+  KeyRound,
+  Pin,
+  Replace,
+  Signpost,
+} from 'lucide-react'
 import { dashboardTexts } from '../texts'
 import s from './DashboardHeaderUI.module.css'
 import { Button } from '@/components/ui/button'
@@ -8,8 +16,11 @@ import { downloadFromUrl } from '@/lib/download'
 
 type Props = {
   proxyListenAddress: string | null
+  capturePaused: boolean
+  captureToggleSaving: boolean
   activeOverridesCount: number
   activeBreakpointsCount: number
+  onCaptureToggleClick: () => void
   onBreakpointsEntryClick: () => void
   onOverridesEntryClick: () => void
   onSavedRequestsEntryClick: () => void
@@ -36,8 +47,11 @@ function HeaderEntryTooltipLabel({
 
 export function DashboardHeaderUI({
   proxyListenAddress,
+  capturePaused,
+  captureToggleSaving,
   activeOverridesCount,
   activeBreakpointsCount,
+  onCaptureToggleClick,
   onBreakpointsEntryClick,
   onOverridesEntryClick,
   onSavedRequestsEntryClick,
@@ -84,6 +98,24 @@ export function DashboardHeaderUI({
             onClick={() => void downloadMitmCa()}
           >
             <KeyRound />
+          </Button>
+        </SimpleTooltip>
+
+        <SimpleTooltip
+          label={
+            capturePaused ? t.resumeCaptureTooltip : t.pauseCaptureTooltip
+          }
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={
+              capturePaused ? t.resumeCaptureAriaLabel : t.pauseCaptureAriaLabel
+            }
+            disabled={captureToggleSaving}
+            onClick={onCaptureToggleClick}
+          >
+            {capturePaused ? <CirclePlay /> : <CirclePause />}
           </Button>
         </SimpleTooltip>
 
