@@ -1,6 +1,7 @@
 import { breakpointTexts } from '../texts'
 import type { BreakpointsPanelUIProps } from '../types'
-import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
+import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
+import { showToast } from '../../../lib/toast'
 import { useEffect } from 'react'
 import o from './BreakpointsPanelUI.overlay.module.css'
 import s from './BreakpointsPanelUI.module.css'
@@ -143,13 +144,17 @@ export function BreakpointsPanelUI({
                           type="button"
                           className="ghost danger"
                           onClick={async () => {
-                            const isConfirmed = await confirmByEnv(t.deleteConfirm)
-                            if (!isConfirmed) {
-                              return
+                            try {
+                              await confirm({
+                                title: t.delete,
+                                description: t.deleteConfirm,
+                                confirmLabel: t.delete,
+                              })
+                              await removeBreakpoint(rule.id)
+                            } catch (e) {
+                              if (e instanceof ConfirmCancelledError) return
+                              showToast(String(e), 'error')
                             }
-                            void removeBreakpoint(rule.id).catch((e) => {
-                              void alertByEnv(String(e))
-                            })
                           }}
                         >
                           {t.delete}

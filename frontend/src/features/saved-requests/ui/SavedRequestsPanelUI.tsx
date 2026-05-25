@@ -1,5 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
+import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
+import { showToast } from '../../../lib/toast'
 import { savedRequestsTexts as t } from '../texts'
 import type { SavedRequestsPanelUIProps } from '../types'
 import s from './SavedRequestsPanelUI.module.css'
@@ -66,11 +67,17 @@ export function SavedRequestsPanelUI({
                 className="ghost danger"
                 disabled={savedRequests.length === 0}
                 onClick={async () => {
-                  const isConfirmed = await confirmByEnv(t.clearAllConfirm)
-                  if (!isConfirmed) return
-                  void clearSavedRequests().catch((e) => {
-                    void alertByEnv(String(e))
-                  })
+                  try {
+                    await confirm({
+                      title: t.clearAll,
+                      description: t.clearAllConfirm,
+                      confirmLabel: t.clearAll,
+                    })
+                    await clearSavedRequests()
+                  } catch (e) {
+                    if (e instanceof ConfirmCancelledError) return
+                    showToast(String(e), 'error')
+                  }
                 }}
               >
                 {t.clearAll}
@@ -132,13 +139,17 @@ export function SavedRequestsPanelUI({
                       type="button"
                       className="ghost danger"
                       onClick={async () => {
-                        const isConfirmed = await confirmByEnv(t.deleteConfirm)
-                        if (!isConfirmed) return
-                        void removeSavedRequest(selectedSavedRequest.id).catch(
-                          (e) => {
-                            void alertByEnv(String(e))
-                          },
-                        )
+                        try {
+                          await confirm({
+                            title: t.delete,
+                            description: t.deleteConfirm,
+                            confirmLabel: t.delete,
+                          })
+                          await removeSavedRequest(selectedSavedRequest.id)
+                        } catch (e) {
+                          if (e instanceof ConfirmCancelledError) return
+                          showToast(String(e), 'error')
+                        }
                       }}
                     >
                       {t.delete}

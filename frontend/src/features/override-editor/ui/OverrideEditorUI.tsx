@@ -5,8 +5,9 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import { alertByEnv, confirmByEnv } from '../../../lib/appDialog'
 import { isDefaultOverrideForm, urlOrigin } from '../../../lib/dashboardUtils'
+import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
+import { showToast } from '../../../lib/toast'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
 import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
@@ -301,17 +302,18 @@ export function OverrideEditorUI({
                 type="button"
                 className="ghost danger"
                 onClick={async () => {
-                  const isConfirmed = await confirmByEnv(tf.deleteRuleConfirm)
-                  if (!isConfirmed) {
-                    return
+                  try {
+                    await confirm({
+                      title: tf.deleteRule,
+                      description: tf.deleteRuleConfirm,
+                      confirmLabel: tf.deleteRule,
+                    })
+                    await deleteOverrideRule(editingRule.id)
+                    startNewOverride()
+                  } catch (e) {
+                    if (e instanceof ConfirmCancelledError) return
+                    showToast(String(e), 'error')
                   }
-                  void deleteOverrideRule(editingRule.id)
-                    .then(() => {
-                      startNewOverride()
-                    })
-                    .catch((e) => {
-                      void alertByEnv(String(e))
-                    })
                 }}
               >
                 {tf.deleteRule}
