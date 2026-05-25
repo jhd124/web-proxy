@@ -14,6 +14,8 @@ export type TrafficPanelUIProps = {
   openOverrideDrawer: () => void
   saveSelectedRequest: () => Promise<void>
   addBreakpointFromSelected: () => void
+  openMatchedOverride: () => void
+  openMatchedBreakpoint: () => void
   resumeRequest: (id: string) => void
   resumeSaving: Record<string, boolean>
 }

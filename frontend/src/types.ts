@@ -21,6 +21,8 @@ export interface TrafficEntry {
   error?: string | null
   pending: boolean
   breakpointName?: string | null
+  overrideMatchId?: string | null
+  breakpointMatchId?: string | null
   streamControllable: boolean
   streamPlaying?: boolean | null
 }

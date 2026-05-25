@@ -38,6 +38,8 @@ export function DashboardUI(p: DashboardViewModel) {
         openOverrideDrawer={p.openOverrideDrawer}
         saveSelectedRequest={p.saveSelectedRequest}
         addBreakpointFromSelected={p.addBreakpointFromSelected}
+        openMatchedOverride={p.openMatchedOverride}
+        openMatchedBreakpoint={p.openMatchedBreakpoint}
         resumeRequest={p.resumeRequest}
         resumeSaving={p.resumeSaving}
       />
@@ -63,6 +65,7 @@ export function DashboardUI(p: DashboardViewModel) {
           removeBreakpoint={p.removeBreakpoint}
           setBreakpointEnabled={p.setBreakpointEnabled}
           breakpointToggleSaving={p.breakpointToggleSaving}
+          highlightedBreakpointId={p.highlightedBreakpointId}
         />
       )}
 

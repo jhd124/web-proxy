@@ -17,6 +17,8 @@ export const trafficTexts = {
   saveRequest: 'Save request',
   requestSaved: 'Saved',
   addBreakpoint: 'Add breakpoint',
+  viewMatchedOverride: 'View matched override',
+  viewMatchedBreakpoint: 'View matched breakpoint',
   resuming: 'Resuming…',
   resume: 'Resume',
   overrideResponse: 'Override response',

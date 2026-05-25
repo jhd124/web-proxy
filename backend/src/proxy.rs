@@ -391,6 +391,8 @@ fn mitm_handshake_failure_entry(
         error: Some(error),
         pending: false,
         breakpoint_name: None,
+        override_match_id: None,
+        breakpoint_match_id: None,
         stream_controllable: false,
         stream_playing: None,
     }
@@ -430,6 +432,8 @@ fn mitm_raw_tunnel_entry(
         error: None,
         pending: false,
         breakpoint_name: None,
+        override_match_id: None,
+        breakpoint_match_id: None,
         stream_controllable: false,
         stream_playing: None,
     }
@@ -686,6 +690,8 @@ async fn handle_connect(
         error: None,
         pending: false,
         breakpoint_name: None,
+        override_match_id: None,
+        breakpoint_match_id: None,
         stream_controllable: false,
         stream_playing: None,
     };
@@ -705,6 +711,8 @@ async fn handle_connect(
                     error: Some(format!("connect {}: {}", addr, e)),
                     pending: None,
                     breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                     stream_controllable: None,
                     stream_playing: None,
                 },
@@ -738,6 +746,8 @@ async fn handle_connect(
             error: None,
             pending: None,
             breakpoint_name: None,
+            override_match_id: None,
+            breakpoint_match_id: None,
             stream_controllable: None,
             stream_playing: None,
         },
@@ -1008,6 +1018,8 @@ async fn respond_with_rule(
                 error: None,
                 pending: None,
                 breakpoint_name: None,
+                override_match_id: None,
+                breakpoint_match_id: None,
                 stream_controllable: None,
                 stream_playing: None,
             },
@@ -1041,6 +1053,8 @@ async fn respond_with_rule(
                     error: None,
                     pending: None,
                     breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                     stream_controllable: Some(false),
                     stream_playing: Some(false),
                 },
@@ -1072,6 +1086,8 @@ async fn respond_with_rule(
             error: None,
             pending: None,
             breakpoint_name: None,
+            override_match_id: None,
+            breakpoint_match_id: None,
             stream_controllable: None,
             stream_playing: None,
         },
@@ -1159,6 +1175,7 @@ async fn forward_proxied_http(
         request_headers,
         collected.as_ref(),
     );
+    let matched_breakpoint = find_breakpoint(&state, &origin, &path_with_query);
     let mapped_remote_url = matched_override
         .as_ref()
         .and_then(|rule| build_mapped_remote_url(rule, &path_with_query));
@@ -1187,13 +1204,15 @@ async fn forward_proxied_http(
         error: None,
         pending: false,
         breakpoint_name: None,
+        override_match_id: matched_override.as_ref().map(|rule| rule.id.clone()),
+        breakpoint_match_id: matched_breakpoint.as_ref().map(|rule| rule.id),
         stream_controllable: false,
         stream_playing: None,
     };
     state.push_traffic(entry);
 
     let mut stream_ctrl = None;
-    if let Some(rule) = find_breakpoint(&state, &origin, &path_with_query) {
+    if let Some(rule) = matched_breakpoint {
         let has_controlled_stream = matched_override
             .as_ref()
             .filter(|r| !has_map_remote_rule(r))
@@ -1212,6 +1231,8 @@ async fn forward_proxied_http(
                 error: None,
                 pending: Some(true),
                 breakpoint_name: Some(rule.name),
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                 stream_controllable: Some(has_controlled_stream),
                 stream_playing: Some(false),
             },
@@ -1229,6 +1250,8 @@ async fn forward_proxied_http(
                 error: None,
                 pending: Some(false),
                 breakpoint_name: None,
+                override_match_id: None,
+                breakpoint_match_id: None,
                 stream_controllable: None,
                 stream_playing: None,
             },
@@ -1282,6 +1305,8 @@ async fn forward_proxied_http(
                     error: Some(e.to_string()),
                     pending: None,
                     breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                     stream_controllable: None,
                     stream_playing: None,
                 },
@@ -1313,6 +1338,8 @@ async fn forward_proxied_http(
                 error: None,
                 pending: None,
                 breakpoint_name: None,
+                override_match_id: None,
+                breakpoint_match_id: None,
                 stream_controllable: None,
                 stream_playing: None,
             },
@@ -1357,6 +1384,8 @@ async fn forward_proxied_http(
                         error: None,
                         pending: None,
                         breakpoint_name: None,
+                        override_match_id: None,
+                        breakpoint_match_id: None,
                         stream_controllable: None,
                         stream_playing: None,
                     },
@@ -1380,6 +1409,8 @@ async fn forward_proxied_http(
                             error: None,
                             pending: None,
                             breakpoint_name: None,
+                            override_match_id: None,
+                            breakpoint_match_id: None,
                             stream_controllable: None,
                             stream_playing: None,
                         },
@@ -1417,6 +1448,8 @@ async fn forward_proxied_http(
                     error: Some(e.to_string()),
                     pending: None,
                     breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
                     stream_controllable: None,
                     stream_playing: None,
                 },
@@ -1439,6 +1472,8 @@ async fn forward_proxied_http(
             error: None,
             pending: None,
             breakpoint_name: None,
+            override_match_id: None,
+            breakpoint_match_id: None,
             stream_controllable: None,
             stream_playing: None,
         },

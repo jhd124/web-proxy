@@ -22,8 +22,14 @@ const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
 
 export function useDashboard() {
   const [breakpointsOpen, setBreakpointsOpen] = useState(false)
+  const [highlightedBreakpointId, setHighlightedBreakpointId] = useState<string | null>(
+    null,
+  )
   const openBreakpointsPanel = useCallback(() => setBreakpointsOpen(true), [])
-  const closeBreakpointsPanel = useCallback(() => setBreakpointsOpen(false), [])
+  const closeBreakpointsPanel = useCallback(() => {
+    setBreakpointsOpen(false)
+    setHighlightedBreakpointId(null)
+  }, [])
   const [savedRequestsOpen, setSavedRequestsOpen] = useState(false)
   const openSavedRequestsPanel = useCallback(() => setSavedRequestsOpen(true), [])
   const closeSavedRequestsPanel = useCallback(
@@ -83,6 +89,7 @@ export function useDashboard() {
   const ovr = useOverrideEditorState()
   const {
     overrides,
+    openOverrideEditorForKey,
     setOverrideError,
     setOverrideEditingId,
     setOverrideForm,
@@ -245,6 +252,9 @@ export function useDashboard() {
 
   const selectedMatchingOverride = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
+    if (selected.overrideMatchId) {
+      return overrides.find((rule) => rule.id === selected.overrideMatchId) ?? null
+    }
     return (
       overrides.find(
         (o) => o.enabled && trafficEntryMatchesOverride(selected, o),
@@ -254,11 +264,51 @@ export function useDashboard() {
 
   const selectedMatchingBreakpoint = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
+    if (selected.breakpointMatchId) {
+      return (
+        breakpoints.find((rule) => rule.id === selected.breakpointMatchId) ?? null
+      )
+    }
     return (
       breakpoints.find((rule) => rule.enabled && breakpointMatches(rule, selected)) ??
       null
     )
   }, [breakpoints, selected])
+
+  const openMatchedOverride = useCallback(() => {
+    if (!selected || selected.kind !== 'http') return
+    if (!selected.overrideMatchId) return
+    const matchedOverride = overrides.find(
+      (rule) => rule.id === selected.overrideMatchId,
+    )
+    if (!matchedOverride) return
+    setOverrideError(null)
+    setOverridesPanel({ state: 'edit', source: 'traffic' })
+    openOverrideEditorForKey(matchedOverride)
+  }, [
+    openOverrideEditorForKey,
+    overrides,
+    selected,
+    setOverrideError,
+    setOverridesPanel,
+  ])
+
+  const openMatchedBreakpoint = useCallback(() => {
+    if (!selected || selected.kind !== 'http') return
+    if (!selected.breakpointMatchId) return
+    const matchedBreakpoint = breakpoints.find(
+      (rule) => rule.id === selected.breakpointMatchId,
+    )
+    if (matchedBreakpoint) {
+      setBreakpointForm({
+        name: matchedBreakpoint.name,
+        matchOrigin: matchedBreakpoint.matchOrigin ?? '',
+        matchPathRegex: matchedBreakpoint.matchPathRegex ?? '',
+      })
+    }
+    setHighlightedBreakpointId(selected.breakpointMatchId)
+    openBreakpointsPanel()
+  }, [breakpoints, openBreakpointsPanel, selected, setBreakpointForm])
 
   const activeOverridesCount = useMemo(
     () => overrides.filter((rule) => rule.enabled).length,
@@ -423,9 +473,15 @@ export function useDashboard() {
     removeBreakpoint: brk.removeBreakpoint,
     setBreakpointEnabled: brk.setBreakpointEnabled,
     breakpointToggleSaving: brk.breakpointToggleSaving,
-    onBreakpointsNavClick: openBreakpointsPanel,
+    onBreakpointsNavClick: () => {
+      setHighlightedBreakpointId(null)
+      openBreakpointsPanel()
+    },
+    highlightedBreakpointId,
     activeOverridesCount,
     activeBreakpointsCount,
+    openMatchedOverride,
+    openMatchedBreakpoint,
     savedRequests,
     selectedSavedRequestId,
     setSelectedSavedRequestId,

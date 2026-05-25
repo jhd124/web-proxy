@@ -18,4 +18,5 @@ export type BreakpointsPanelUIProps = {
   removeBreakpoint: (id: string) => Promise<void>
   setBreakpointEnabled: (rule: BreakpointRule, enabled: boolean) => void
   breakpointToggleSaving: Record<string, boolean>
+  highlightedBreakpointId?: string | null
 }
