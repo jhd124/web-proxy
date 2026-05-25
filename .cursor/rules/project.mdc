@@ -1,6 +1,9 @@
 ---
 alwaysApply: true
 ---
+# project
+
+* The backend should take more responsiblities, and the fontend should be as light-wight as posible
 
 # backend
 * Rust crate: `backend/`；仓库根 workspace 含 `backend` 与 `desktop/src`；在根目录执行 `cargo build -p proxy-app` 等即可。
