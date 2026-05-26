@@ -9,9 +9,9 @@ export const trafficTexts = {
     'MITM: the client did not complete TLS to the proxy-issued certificate (pinning, unknown CA, or aborted connection).',
   mitmBypassedNote:
     'MITM was skipped for this host after a previous handshake failure. The CONNECT tunnel is shown, but encrypted paths and bodies are not visible.',
-  tagPending: 'pending',
-  tagError: 'error',
-  tagBypassed: 'bypassed',
+  tagPending: 'PEND',
+  tagError: 'ERR',
+  tagBypassed: 'BYPS',
   sectionRequest: 'Request',
   sectionResponse: 'Response',
   saveRequest: 'Save request',

@@ -7,6 +7,8 @@
   --background-disabled: var(--gray-200);
   --background-hover: var(--gray-100);
   --background-active: var(--gray-200);
+  --background-list-item-dark: var(--gray-700);
+  --background-list-item-light: var(--gray-600);
 
   --text-primary: var(--gray-900);
   --text-secondary: var(--gray-700);
@@ -41,6 +43,8 @@
     --background-disabled: var(--gray-800);
     --background-hover: var(--gray-700);
     --background-active: var(--gray-600);
+    --background-list-item-dark: var(--gray-800);
+    --background-list-item-light: var(--gray-900);
 
     --text-primary: var(--gray-50);
     --text-secondary: var(--gray-300);

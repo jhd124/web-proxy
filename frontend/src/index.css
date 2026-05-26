@@ -37,6 +37,8 @@ body {
   --color-background-disabled: var(--background-disabled);
   --color-background-hover: var(--background-hover);
   --color-background-active: var(--background-active);
+  --color-list-item-dark: var();
+  --color-list-item-light: var();
 
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
@@ -99,5 +101,95 @@ body {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .pill {
+    @apply rounded-full border border-border px-[0.55rem] py-[0.2rem] text-xs uppercase tracking-[0.06em];
+  }
+
+  .pill.ok {
+    @apply border-[var(--text-success)] text-[var(--text-success)];
+  }
+
+  .pill.warn {
+    @apply border-[var(--text-warning)] text-[var(--text-warning)];
+  }
+
+  .pill.bad {
+    @apply border-[var(--text-error)] text-[var(--text-error)];
+  }
+
+  .pill.subtle {
+    @apply border-border normal-case tracking-normal text-text-muted;
+  }
+
+  .pre {
+    @apply mt-2 overflow-auto rounded-md border border-border bg-popover p-3 text-[0.78rem] leading-[1.45] whitespace-pre-wrap break-words;
+  }
+
+  .pre.pre-body {
+    max-height: min(92vh, 48rem);
+    overflow: auto;
+  }
+
+  .ghost {
+    @apply cursor-pointer rounded-sm border border-border bg-transparent px-[0.65rem] py-[0.35rem] text-[0.8rem] text-foreground;
+    appearance: none;
+  }
+
+  .ghost:hover {
+    @apply border-text-muted;
+  }
+
+  .ghost.danger {
+    @apply border-text-error text-text-error;
+  }
+
+  .primary {
+    @apply cursor-pointer rounded-md border-0 bg-primary px-4 py-[0.55rem] font-semibold text-primary-foreground;
+    appearance: none;
+  }
+
+  .primary:hover {
+    filter: brightness(1.05);
+  }
+
+  .inline-primary {
+    grid-column: auto;
+    justify-self: auto;
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    @apply absolute h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap;
+    clip: rect(0, 0, 0, 0);
+    margin: -1px;
+  }
+
+  .mono {
+    @apply font-mono;
+  }
+
+  .small {
+    @apply text-[0.85rem];
+  }
+
+  .tiny {
+    @apply text-[0.72rem];
+  }
+
+  .muted {
+    @apply text-text-muted;
+  }
+
+  .err {
+    @apply text-text-error;
+  }
+
+  .warn-text {
+    @apply text-text-warning;
   }
 }

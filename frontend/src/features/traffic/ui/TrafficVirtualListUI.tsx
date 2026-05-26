@@ -3,7 +3,6 @@ import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import {
-  getTrafficSchemeLabel,
   getTrafficSummary,
 } from '../trafficDisplay'
 import s from './TrafficVirtualListUI.module.css'
@@ -154,8 +153,6 @@ export function TrafficVirtualListUI({
                     title={matchState}
                   />
                 )}
-                <span className={s.scheme}>{getTrafficSchemeLabel(entry)}</span>
-                <span className={s.method}>{entry.method}</span>
                 <span className={s.url} title={summary}>
                   {summary}
                 </span>

@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import './App.css'
 import { ConfirmModalHost } from './components/ui/confirm-modal'
 import { Toaster } from './components/ui/sonner'
 import { DashboardPortal } from './features/dashboard/portal'
