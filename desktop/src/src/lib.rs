@@ -3,6 +3,7 @@ mod system_proxy;
 
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -18,6 +19,9 @@ use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
 const FLOATING_TRAFFIC_WINDOW_LABEL: &str = "floating-traffic";
+const SYSTEM_PROXY_REAPPLY_INTERVAL_MS: u64 = 2_000;
+static SYSTEM_PROXY_REAPPLY_WATCHER_STARTED: AtomicBool = AtomicBool::new(false);
+static SYSTEM_PROXY_REAPPLY_PROXY_PORT: AtomicU16 = AtomicU16::new(0);
 
 /// 与 `desktop/src/tauri.conf.json` 的 `build.devUrl` 默认端口一致。
 const DEFAULT_TAURI_DEV_VITE_PORT: u16 = 5173;
@@ -93,6 +97,38 @@ fn dev_workspace_proxy_ports_path() -> Option<PathBuf> {
         .map(|repo_root| repo_root.join("frontend/.proxy-dev-ports.json"))
 }
 
+fn set_system_proxy_reapply_port(proxy_port: u16) {
+    SYSTEM_PROXY_REAPPLY_PROXY_PORT.store(proxy_port, Ordering::SeqCst);
+}
+
+fn spawn_system_proxy_reapply_watcher(app: &AppHandle) {
+    if SYSTEM_PROXY_REAPPLY_WATCHER_STARTED
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
+    }
+    let handle = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(SYSTEM_PROXY_REAPPLY_INTERVAL_MS));
+        let proxy_port = SYSTEM_PROXY_REAPPLY_PROXY_PORT.load(Ordering::SeqCst);
+        if proxy_port == 0 {
+            continue;
+        }
+        let Some(st) = handle.try_state::<system_proxy::SystemProxyRestoreState>() else {
+            continue;
+        };
+        let mut guard = match st.0.lock() {
+            Ok(g) => g,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        let Some(saved) = guard.as_mut() else {
+            continue;
+        };
+        let _ = system_proxy::reapply_local_proxy(proxy_port, saved);
+    });
+}
+
 #[tauri::command]
 async fn focus_main_window(app: AppHandle, request_id: Option<String>) -> Result<(), String> {
     let main = app
@@ -158,11 +194,14 @@ async fn enable_system_http_https_proxy(app: AppHandle, proxy_port: u16) -> Resu
             *guard = Some(saved);
         }
     }
+    set_system_proxy_reapply_port(proxy_port);
+    spawn_system_proxy_reapply_watcher(&app);
     Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    system_proxy::install_panic_restore_hook();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
@@ -195,6 +234,10 @@ pub fn run() {
                                     {
                                         if let Ok(mut guard) = st.0.lock() {
                                             *guard = system_proxy::apply_local_proxy(proxy_port);
+                                            if guard.is_some() {
+                                                set_system_proxy_reapply_port(proxy_port);
+                                                spawn_system_proxy_reapply_watcher(&handle);
+                                            }
                                         }
                                     }
                                     return;
@@ -254,6 +297,10 @@ pub fn run() {
                         if let Some(st) = app.try_state::<system_proxy::SystemProxyRestoreState>() {
                             if let Ok(mut guard) = st.0.lock() {
                                 *guard = system_proxy::apply_local_proxy(proxy_port);
+                                if guard.is_some() {
+                                    set_system_proxy_reapply_port(proxy_port);
+                                    spawn_system_proxy_reapply_watcher(app.handle());
+                                }
                             }
                         }
                         return Ok(());

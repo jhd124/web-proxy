@@ -134,7 +134,10 @@ fn ensure_overrides_schema(conn: &Connection) -> rusqlite::Result<()> {
         conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_url TEXT", [])?;
     }
     if !has("map_remote_protocol") {
-        conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_protocol TEXT", [])?;
+        conn.execute(
+            "ALTER TABLE overrides ADD COLUMN map_remote_protocol TEXT",
+            [],
+        )?;
     }
     if !has("map_remote_host") {
         conn.execute("ALTER TABLE overrides ADD COLUMN map_remote_host TEXT", [])?;

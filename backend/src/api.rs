@@ -254,7 +254,9 @@ async fn ui_action(
         UiActionBody::SelectRequest { request_id } => {
             crate::state::UiActionMessage::SelectRequest { request_id }
         }
-        UiActionBody::SetUrlFilter { query } => crate::state::UiActionMessage::SetUrlFilter { query },
+        UiActionBody::SetUrlFilter { query } => {
+            crate::state::UiActionMessage::SetUrlFilter { query }
+        }
     };
     state.notify_ui_action(action);
     StatusCode::NO_CONTENT

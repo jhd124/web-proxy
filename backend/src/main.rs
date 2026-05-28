@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
     let max_traffic: usize = std::env::var("MAX_TRAFFIC")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(20_000);
+        .unwrap_or(10_000);
     let upstream_http3_enabled = std::env::var("UPSTREAM_HTTP3")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);

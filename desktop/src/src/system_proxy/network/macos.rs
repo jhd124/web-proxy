@@ -6,16 +6,84 @@ use super::{SavedSystemProxies, ServiceProxySnapshot, APPLY_LOCK};
 
 pub fn apply_macos(proxy_port: u16) -> Option<SavedSystemProxies> {
     let _guard = APPLY_LOCK.lock().ok()?;
-    let service = primary_network_service_name()?;
-    let snap = read_service_proxy_snapshot(&service)?;
-    if !set_localhost_proxy_on_service(&service, proxy_port, &snap) {
-        log::warn!("system_proxy: failed to enable proxy on {service}");
+    let services = enabled_network_services();
+    if services.is_empty() {
+        log::warn!("system_proxy: no enabled network service found");
         return None;
     }
-    log::info!("system_proxy: HTTP/HTTPS proxy enabled on \"{service}\" -> 127.0.0.1:{proxy_port}");
-    Some(SavedSystemProxies {
-        snapshots: vec![snap],
-    })
+    let mut snapshots = Vec::new();
+    for service in &services {
+        let snap = match read_service_proxy_snapshot(service) {
+            Some(s) => s,
+            None => {
+                for rollback in &snapshots {
+                    restore_service_snapshot(rollback);
+                }
+                log::warn!("system_proxy: failed to read proxy snapshot on {service}");
+                return None;
+            }
+        };
+        if !set_localhost_proxy_on_service(service, proxy_port, &snap) {
+            for rollback in &snapshots {
+                restore_service_snapshot(rollback);
+            }
+            log::warn!("system_proxy: failed to enable proxy on {service}");
+            return None;
+        }
+        snapshots.push(snap);
+    }
+    log::info!(
+        "system_proxy: HTTP/HTTPS proxy enabled on {} services -> 127.0.0.1:{proxy_port}",
+        snapshots.len()
+    );
+    Some(SavedSystemProxies { snapshots })
+}
+
+/// 网络变化（例如 VPN 上下线）后，对当前启用服务重新应用代理；
+/// 新出现的服务会被增量写入 `saved`，确保退出时仍可恢复到初始状态。
+pub fn reapply_macos_with_saved(proxy_port: u16, saved: &mut SavedSystemProxies) -> bool {
+    let _guard = match APPLY_LOCK.lock() {
+        Ok(g) => g,
+        Err(_) => return false,
+    };
+    let services = enabled_network_services();
+    if services.is_empty() {
+        return false;
+    }
+    let mut applied = 0usize;
+    for service in services {
+        let Some(current) = read_service_proxy_snapshot(&service) else {
+            log::warn!("system_proxy: skip reapply, cannot read current proxy state on {service}");
+            continue;
+        };
+        if snapshot_points_to_localhost(&current, proxy_port) {
+            continue;
+        }
+        let baseline = if let Some(existing) = saved
+            .snapshots
+            .iter()
+            .find(|s| s.service_name == service)
+            .cloned()
+        {
+            existing
+        } else {
+            saved.snapshots.push(current.clone());
+            current
+        };
+        if !set_localhost_proxy_on_service(&service, proxy_port, &baseline) {
+            log::warn!("system_proxy: skip reapply, cannot set proxy on {service}");
+            continue;
+        }
+        applied += 1;
+    }
+    if applied > 0 {
+        log::info!(
+            "system_proxy: reapplied HTTP/HTTPS proxy on {} services",
+            applied
+        );
+        return true;
+    }
+    false
 }
 
 pub fn restore_macos(saved: &SavedSystemProxies) {
@@ -36,77 +104,16 @@ fn run_networksetup(args: &[&str]) -> Option<String> {
     String::from_utf8(output.stdout).ok()
 }
 
-fn default_route_interface() -> Option<String> {
-    let output = Command::new("route")
-        .args(["-n", "get", "default"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    for line in stdout.lines() {
-        let line = line.trim();
-        if let Some(rest) = line.strip_prefix("interface:") {
-            let iface = rest.trim();
-            if !iface.is_empty() {
-                return Some(iface.to_string());
-            }
-        }
-    }
-    None
-}
-
-fn service_name_for_device(device: &str) -> Option<String> {
-    let text = run_networksetup(&["-listallhardwareports"])?;
-    let mut pending_port_name: Option<String> = None;
-    for raw_line in text.lines() {
-        let line = raw_line.trim();
-        if let Some(name) = line.strip_prefix("Hardware Port:") {
-            pending_port_name = Some(name.trim().to_string());
-            continue;
-        }
-        if let Some(dev) = line.strip_prefix("Device:") {
-            let dev = dev.trim();
-            if dev == device {
-                return pending_port_name.take();
-            }
-            pending_port_name = None;
-        }
-    }
-    None
-}
-
-fn first_enabled_network_service() -> Option<String> {
-    let text = Command::new("networksetup")
-        .arg("-listallnetworkservices")
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())?;
-    let mut lines = text.lines();
-    let _ = lines.next();
-    for line in lines {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('*') {
-            continue;
-        }
-        return Some(line.to_string());
-    }
-    None
-}
-
-/// 优先默认路由网卡对应服务；utun/ipsec 回退到第一个已启用服务。
-fn primary_network_service_name() -> Option<String> {
-    if let Some(iface) = default_route_interface() {
-        if iface.starts_with("utun") || iface.starts_with("ipsec") {
-            return first_enabled_network_service();
-        }
-        if let Some(name) = service_name_for_device(&iface) {
-            return Some(name);
-        }
-    }
-    first_enabled_network_service()
+fn enabled_network_services() -> Vec<String> {
+    let Some(text) = run_networksetup(&["-listallnetworkservices"]) else {
+        return Vec::new();
+    };
+    text.lines()
+        .skip(1)
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('*'))
+        .map(ToString::to_string)
+        .collect()
 }
 
 fn parse_proxy_block(text: &str) -> Option<(bool, String, u16)> {
@@ -124,6 +131,14 @@ fn parse_proxy_block(text: &str) -> Option<(bool, String, u16)> {
         }
     }
     Some((enabled, server, port))
+}
+
+fn snapshot_points_to_localhost(snap: &ServiceProxySnapshot, proxy_port: u16) -> bool {
+    let http_ok =
+        snap.http_enabled && snap.http_server == "127.0.0.1" && snap.http_port == proxy_port;
+    let https_ok =
+        snap.https_enabled && snap.https_server == "127.0.0.1" && snap.https_port == proxy_port;
+    http_ok && https_ok
 }
 
 fn read_service_proxy_snapshot(service: &str) -> Option<ServiceProxySnapshot> {

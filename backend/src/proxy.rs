@@ -537,7 +537,10 @@ fn has_map_remote_rule(rule: &crate::state::OverrideRule) -> bool {
     has_protocol && has_host
 }
 
-fn build_mapped_remote_url(rule: &crate::state::OverrideRule, path_with_query: &str) -> Option<String> {
+fn build_mapped_remote_url(
+    rule: &crate::state::OverrideRule,
+    path_with_query: &str,
+) -> Option<String> {
     if !has_map_remote_rule(rule) {
         return None;
     }
@@ -1231,8 +1234,8 @@ async fn forward_proxied_http(
                 error: None,
                 pending: Some(true),
                 breakpoint_name: Some(rule.name),
-                    override_match_id: None,
-                    breakpoint_match_id: None,
+                override_match_id: None,
+                breakpoint_match_id: None,
                 stream_controllable: Some(has_controlled_stream),
                 stream_playing: Some(false),
             },

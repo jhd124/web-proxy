@@ -1,4 +1,4 @@
-//! 按当前默认路由对应的网络服务读写系统 HTTP/HTTPS 代理（macOS：`networksetup`）。
+//! 按启用网络服务读写系统 HTTP/HTTPS 代理（macOS：`networksetup`）。
 
 use std::sync::Mutex;
 
@@ -31,6 +31,20 @@ pub fn apply_localhost_http_https_proxy(proxy_port: u16) -> Option<SavedSystemPr
     {
         let _ = proxy_port;
         None
+    }
+}
+
+/// 网络变化后重应用本机代理，并增量补全恢复快照。
+pub fn reapply_localhost_http_https_proxy(proxy_port: u16, saved: &mut SavedSystemProxies) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        return macos::reapply_macos_with_saved(proxy_port, saved);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = proxy_port;
+        let _ = saved;
+        false
     }
 }
 
