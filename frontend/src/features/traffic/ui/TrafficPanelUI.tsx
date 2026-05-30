@@ -1,4 +1,7 @@
 import { Input } from '@/components/ui/input'
+import { copyTextToClipboard } from '@/lib/clipboard'
+import { buildCurlCommand } from '@/lib/curl'
+import { showSuccessToast, showToast } from '@/lib/toast'
 import { trafficTexts as t } from '../texts'
 import { getTrafficConnectDetailNote } from '../trafficDisplay'
 import { TrafficVirtualListUI } from './TrafficVirtualListUI'
@@ -27,6 +30,19 @@ export function TrafficPanelUI({
   resumeRequest,
   resumeSaving,
 }: TrafficPanelUIProps) {
+  const handleCopyCurl = () => {
+    if (!selected) return
+    const curl = buildCurlCommand(selected)
+    void copyTextToClipboard(curl)
+      .then(() => {
+        showSuccessToast(t.copyCurlSuccess)
+      })
+      .catch((error) => {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(t.copyCurlFailed(detail), 'error')
+      })
+  }
+
   return (
       <ResizablePanelGroup>
         <ResizablePanel
@@ -103,6 +119,13 @@ export function TrafficPanelUI({
                         onClick={() => void saveSelectedRequest()}
                       >
                         {selectedIsSaved ? t.requestSaved : t.saveRequest}
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={handleCopyCurl}
+                      >
+                        {t.copyCurl}
                       </button>
                     </div>
                   </div>

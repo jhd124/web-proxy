@@ -50,6 +50,11 @@
   padding: 0.55rem 0.75rem;
 }
 
-.footer button {
-  width: 100%;
+.footerActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.footerActions button {
+  flex: 1;
 }

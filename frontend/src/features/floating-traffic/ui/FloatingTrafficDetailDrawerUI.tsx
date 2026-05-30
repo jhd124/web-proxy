@@ -1,5 +1,8 @@
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { copyTextToClipboard } from '@/lib/clipboard'
 import { focusMainWindow } from '@/lib/focusMainWindow'
+import { buildCurlCommand } from '@/lib/curl'
+import { showSuccessToast, showToast } from '@/lib/toast'
 import type { TrafficEntry } from '../../../types'
 import { floatingTrafficTexts as t } from '../texts'
 import s from './FloatingTrafficDetailDrawerUI.module.css'
@@ -19,6 +22,17 @@ export function FloatingTrafficDetailDrawerUI({
         t.openMainFailed(error instanceof Error ? error.message : String(error)),
       )
     })
+  }
+  const handleCopyCurl = () => {
+    const curl = buildCurlCommand(entry)
+    void copyTextToClipboard(curl)
+      .then(() => {
+        showSuccessToast(t.copyCurlSuccess)
+      })
+      .catch((error) => {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(t.copyCurlFailed(detail), 'error')
+      })
   }
 
   return (
@@ -77,9 +91,14 @@ export function FloatingTrafficDetailDrawerUI({
         </ScrollArea>
 
         <footer className={s.footer}>
-          <button type="button" className="primary" onClick={handleOpenMain}>
-            {t.openMainWindow}
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" className="ghost flex-1" onClick={handleCopyCurl}>
+              {t.copyCurl}
+            </button>
+            <button type="button" className="primary flex-1" onClick={handleOpenMain}>
+              {t.openMainWindow}
+            </button>
+          </div>
         </footer>
       </div>
     </DetailDrawerBackdrop>

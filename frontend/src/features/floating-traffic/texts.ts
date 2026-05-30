@@ -13,6 +13,9 @@ export const floatingTrafficTexts = {
   detailResponse: 'Response',
   detailNoResponse: 'No response yet',
   detailNoBody: 'No response body',
+  copyCurl: 'Copy cURL',
+  copyCurlSuccess: 'Copied cURL',
+  copyCurlFailed: (detail: string) => `Could not copy cURL: ${detail}`,
   openMainWindow: 'Open main window',
   openMainFailed: (detail: string) => `Could not open main window: ${detail}`,
 } as const
