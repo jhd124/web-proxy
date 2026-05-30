@@ -19,6 +19,12 @@
   animation: drawerFade 0.12s ease-out;
 }
 
+.sidebarBackdrop {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
 .fs {
   display: flex;
   flex-direction: column;
@@ -29,6 +35,17 @@
   background: var(--bg);
   border: 1px solid var(--border);
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
+}
+
+.sidebarFs {
+  box-shadow: none;
+  border: none;
+  border-left: 1px solid var(--border);
+}
+
+.embeddedFs {
+  box-shadow: none;
+  border: none;
 }
 
 .fsHead {

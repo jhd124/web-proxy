@@ -36,6 +36,7 @@ function clamp(n: number, a: number, b: number) {
 
 export function OverrideEditorUI({
   closeOverrideDrawer,
+  variant = 'dialog',
   saveOverride,
   overrideError,
   requestPanelFocusKey,
@@ -60,6 +61,8 @@ export function OverrideEditorUI({
   pauseControlledStream,
   computedOverrideId,
 }: OverrideEditorUIProps) {
+  const isInline = variant !== 'dialog'
+  const inlineClassName = variant === 'sidebar' ? s.sidebarFs : s.embeddedFs
   const requestPanelRef = usePanelRef()
   const [requestCollapsed, setRequestCollapsed] = useState(false)
   const [fabPos, setFabPos] = useState<FabPos>({ x: 0, y: 0 })
@@ -87,14 +90,14 @@ export function OverrideEditorUI({
 
   return (
     <div
-      className={s.fsBackdrop}
+      className={isInline ? s.sidebarBackdrop : s.fsBackdrop}
       role="presentation"
-      onClick={closeOverrideDrawer}
+      onClick={isInline ? undefined : closeOverrideDrawer}
     >
       <div
-        className={s.fs}
-        role="dialog"
-        aria-modal="true"
+        className={`${s.fs} ${isInline ? inlineClassName : ''}`}
+        role={isInline ? undefined : 'dialog'}
+        aria-modal={isInline ? undefined : 'true'}
         aria-labelledby="override-fs-title"
         onClick={(e) => e.stopPropagation()}
       >
@@ -102,14 +105,16 @@ export function OverrideEditorUI({
           <div>
             <h2 id="override-fs-title">{t.title}</h2>
           </div>
-          <button
-            type="button"
-            className={`ghost ${s.drawerClose}`}
-            onClick={closeOverrideDrawer}
-            aria-label={t.closeAria}
-          >
-            ×
-          </button>
+          {!isInline && (
+            <button
+              type="button"
+              className={`ghost ${s.drawerClose}`}
+              onClick={closeOverrideDrawer}
+              aria-label={t.closeAria}
+            >
+              ×
+            </button>
+          )}
         </div>
         {overrideError && (
           <p className={`small err ${s.fsErr}`}>{overrideError}</p>
@@ -320,9 +325,11 @@ export function OverrideEditorUI({
               </button>
             </>
           )}
-          <button type="button" className="ghost" onClick={closeOverrideDrawer}>
-            {t.footCancel}
-          </button>
+          {!isInline && (
+            <button type="button" className="ghost" onClick={closeOverrideDrawer}>
+              {t.footCancel}
+            </button>
+          )}
           <button type="button" className="primary" onClick={saveOverride}>
             {overrideEditingId ? t.saveChanges : t.saveOverride}
           </button>

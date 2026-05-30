@@ -8,6 +8,7 @@ import s from './BreakpointsPanelUI.module.css'
 
 export function BreakpointsPanelUI({
   closeBreakpointsPanel,
+  variant = 'dialog',
   breakpointForm,
   setBreakpointForm,
   breakpointEntries,
@@ -17,6 +18,8 @@ export function BreakpointsPanelUI({
   breakpointToggleSaving,
   highlightedBreakpointId,
 }: BreakpointsPanelUIProps) {
+  const isInline = variant !== 'dialog'
+  const inlineClassName = variant === 'sidebar' ? o.sidebarFs : o.embeddedFs
   const t = breakpointTexts
   const sh = t.shell
 
@@ -30,14 +33,14 @@ export function BreakpointsPanelUI({
 
   return (
     <div
-      className={o.fsBackdrop}
+      className={isInline ? o.sidebarBackdrop : o.fsBackdrop}
       role="presentation"
-      onClick={closeBreakpointsPanel}
+      onClick={isInline ? undefined : closeBreakpointsPanel}
     >
       <div
-        className={o.fs}
-        role="dialog"
-        aria-modal="true"
+        className={`${o.fs} ${isInline ? inlineClassName : ''}`}
+        role={isInline ? undefined : 'dialog'}
+        aria-modal={isInline ? undefined : 'true'}
         aria-labelledby="breakpoint-fs-title"
         onClick={(e) => e.stopPropagation()}
       >
@@ -48,14 +51,16 @@ export function BreakpointsPanelUI({
               {sh.subtitle}
             </p>
           </div>
-          <button
-            type="button"
-            className={`ghost ${o.drawerClose}`}
-            onClick={closeBreakpointsPanel}
-            aria-label={sh.closeAria}
-          >
-            ×
-          </button>
+          {!isInline && (
+            <button
+              type="button"
+              className={`ghost ${o.drawerClose}`}
+              onClick={closeBreakpointsPanel}
+              aria-label={sh.closeAria}
+            >
+              ×
+            </button>
+          )}
         </div>
         <div className={o.fsBody}>
           <div className={s.root}>

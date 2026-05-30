@@ -11,6 +11,7 @@ export type SetBreakpointForm = Dispatch<SetStateAction<BreakpointForm>>
 
 export type BreakpointsPanelUIProps = {
   closeBreakpointsPanel: () => void
+  variant?: 'dialog' | 'sidebar' | 'embedded'
   breakpointForm: BreakpointForm
   setBreakpointForm: SetBreakpointForm
   breakpointEntries: BreakpointRule[]

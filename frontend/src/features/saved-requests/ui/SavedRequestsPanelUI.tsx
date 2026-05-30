@@ -20,9 +20,12 @@ export function SavedRequestsPanelUI({
   selectedSavedRequestId,
   setSelectedSavedRequestId,
   closeSavedRequestsPanel,
+  variant = 'dialog',
   removeSavedRequest,
   clearSavedRequests,
 }: SavedRequestsPanelUIProps) {
+  const isInline = variant !== 'dialog'
+  const inlineClassName = variant === 'sidebar' ? s.sidebarFs : s.embeddedFs
   const selectedSavedRequest =
     savedRequests.find((request) => request.id === selectedSavedRequestId) ??
     savedRequests[0] ??
@@ -31,14 +34,14 @@ export function SavedRequestsPanelUI({
 
   return (
     <div
-      className={s.fsBackdrop}
+      className={isInline ? s.sidebarBackdrop : s.fsBackdrop}
       role="presentation"
-      onClick={closeSavedRequestsPanel}
+      onClick={isInline ? undefined : closeSavedRequestsPanel}
     >
       <div
-        className={s.fs}
-        role="dialog"
-        aria-modal="true"
+        className={`${s.fs} ${isInline ? inlineClassName : ''}`}
+        role={isInline ? undefined : 'dialog'}
+        aria-modal={isInline ? undefined : 'true'}
         aria-labelledby="saved-requests-title"
         onClick={(e) => e.stopPropagation()}
       >
@@ -49,14 +52,16 @@ export function SavedRequestsPanelUI({
               {t.shell.subtitle}
             </p>
           </div>
-          <button
-            type="button"
-            className={`ghost ${s.drawerClose}`}
-            onClick={closeSavedRequestsPanel}
-            aria-label={t.shell.closeAria}
-          >
-            ×
-          </button>
+          {!isInline && (
+            <button
+              type="button"
+              className={`ghost ${s.drawerClose}`}
+              onClick={closeSavedRequestsPanel}
+              aria-label={t.shell.closeAria}
+            >
+              ×
+            </button>
+          )}
         </div>
 
         <div className={s.fsBody}>

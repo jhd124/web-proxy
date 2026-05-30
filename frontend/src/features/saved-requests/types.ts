@@ -5,6 +5,7 @@ export type SavedRequestsPanelUIProps = {
   selectedSavedRequestId: string | null
   setSelectedSavedRequestId: (id: string) => void
   closeSavedRequestsPanel: () => void
+  variant?: 'dialog' | 'sidebar' | 'embedded'
   removeSavedRequest: (id: string) => Promise<void>
   clearSavedRequests: () => Promise<void>
 }

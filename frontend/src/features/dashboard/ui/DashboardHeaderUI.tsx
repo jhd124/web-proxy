@@ -1,12 +1,9 @@
 import { useCallback, useState } from 'react'
 import {
-  Bookmark,
   CirclePause,
   CirclePlay,
   KeyRound,
   Pin,
-  Replace,
-  Signpost,
   WifiCog,
 } from 'lucide-react'
 import { dashboardTexts } from '../texts'
@@ -20,32 +17,9 @@ type Props = {
   capturePaused: boolean
   captureToggleSaving: boolean
   wifiProxySaving: boolean
-  activeOverridesCount: number
-  activeBreakpointsCount: number
   onCaptureToggleClick: () => void
   onEnableWifiProxyClick: () => void
-  onBreakpointsEntryClick: () => void
-  onOverridesEntryClick: () => void
-  onSavedRequestsEntryClick: () => void
   onFloatingTrafficEntryClick: () => void
-}
-
-function HeaderEntryTooltipLabel({
-  primary,
-  warning,
-}: {
-  primary: string
-  warning?: string
-}) {
-  if (!warning) {
-    return primary
-  }
-  return (
-    <span className={s.tooltipStack}>
-      <span>{primary}</span>
-      <span className={s.tooltipWarn}>{warning}</span>
-    </span>
-  )
 }
 
 export function DashboardHeaderUI({
@@ -53,20 +27,13 @@ export function DashboardHeaderUI({
   capturePaused,
   captureToggleSaving,
   wifiProxySaving,
-  activeOverridesCount,
-  activeBreakpointsCount,
   onCaptureToggleClick,
   onEnableWifiProxyClick,
-  onBreakpointsEntryClick,
-  onOverridesEntryClick,
-  onSavedRequestsEntryClick,
   onFloatingTrafficEntryClick,
 }: Props) {
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
   const [downloading, setDownloading] = useState(false)
-  const hasActiveOverrides = activeOverridesCount > 0
-  const hasActiveBreakpoints = activeBreakpointsCount > 0
 
   const downloadMitmCa = useCallback(async () => {
     setDownloading(true)
@@ -136,48 +103,6 @@ export function DashboardHeaderUI({
           </Button>
         </SimpleTooltip>
 
-        <SimpleTooltip
-          label={
-            <HeaderEntryTooltipLabel
-              primary={t.openOverridesTooltip}
-              warning={
-                hasActiveOverrides
-                  ? t.activeOverridesWarning(activeOverridesCount)
-                  : undefined
-              }
-            />
-          }
-        >
-          <span className={s.entryBadgeWrap}>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={
-                hasActiveOverrides
-                  ? `${t.openOverridesAriaLabel}. ${t.activeOverridesWarning(activeOverridesCount)}`
-                  : t.openOverridesAriaLabel
-              }
-              onClick={onOverridesEntryClick}
-            >
-              <Replace />
-            </Button>
-            {hasActiveOverrides && (
-              <span className={s.badgeDot} aria-hidden />
-            )}
-          </span>
-        </SimpleTooltip>
-
-        <SimpleTooltip label={t.openSavedRequestsTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.openSavedRequestsAriaLabel}
-            onClick={onSavedRequestsEntryClick}
-          >
-            <Bookmark />
-          </Button>
-        </SimpleTooltip>
-
         <SimpleTooltip label={t.openFloatingTrafficTooltip}>
           <Button
             type="button"
@@ -187,37 +112,6 @@ export function DashboardHeaderUI({
           >
             <Pin />
           </Button>
-        </SimpleTooltip>
-
-        <SimpleTooltip
-          label={
-            <HeaderEntryTooltipLabel
-              primary={t.openBreakpointsTooltip}
-              warning={
-                hasActiveBreakpoints
-                  ? t.activeBreakpointsWarning(activeBreakpointsCount)
-                  : undefined
-              }
-            />
-          }
-        >
-          <span className={s.entryBadgeWrap}>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={
-                hasActiveBreakpoints
-                  ? `${t.openBreakpointsAriaLabel}. ${t.activeBreakpointsWarning(activeBreakpointsCount)}`
-                  : t.openBreakpointsAriaLabel
-              }
-              onClick={onBreakpointsEntryClick}
-            >
-              <Signpost />
-            </Button>
-            {hasActiveBreakpoints && (
-              <span className={s.badgeDot} aria-hidden />
-            )}
-          </span>
         </SimpleTooltip>
       </div>
     </header>

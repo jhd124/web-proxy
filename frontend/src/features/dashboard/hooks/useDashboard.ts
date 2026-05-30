@@ -19,23 +19,62 @@ import { useAppWebSocket } from './useAppWebSocket'
 
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
+const TAB_QUERY_KEY = 'tab'
+
+export type DashboardTab = 'traffic' | 'override' | 'breakpoints' | 'saved'
+
+function readDashboardTabFromUrl(): DashboardTab {
+  const rawTab = new URLSearchParams(window.location.search).get(TAB_QUERY_KEY)
+  if (
+    rawTab === 'traffic' ||
+    rawTab === 'override' ||
+    rawTab === 'breakpoints' ||
+    rawTab === 'saved'
+  ) {
+    return rawTab
+  }
+  return 'traffic'
+}
 
 export function useDashboard() {
-  const [breakpointsOpen, setBreakpointsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() =>
+    readDashboardTabFromUrl(),
+  )
   const [highlightedBreakpointId, setHighlightedBreakpointId] = useState<string | null>(
     null,
   )
-  const openBreakpointsPanel = useCallback(() => setBreakpointsOpen(true), [])
-  const closeBreakpointsPanel = useCallback(() => {
-    setBreakpointsOpen(false)
-    setHighlightedBreakpointId(null)
+  const navigateToTab = useCallback((nextTab: DashboardTab) => {
+    const params = new URLSearchParams(window.location.search)
+    if (nextTab === 'traffic') {
+      params.delete(TAB_QUERY_KEY)
+    } else {
+      params.set(TAB_QUERY_KEY, nextTab)
+    }
+    const queryString = params.toString()
+    const nextUrl = queryString.length > 0 ? `/?${queryString}` : '/'
+    window.history.pushState({}, '', nextUrl)
+    setActiveTab(nextTab)
   }, [])
-  const [savedRequestsOpen, setSavedRequestsOpen] = useState(false)
-  const openSavedRequestsPanel = useCallback(() => setSavedRequestsOpen(true), [])
-  const closeSavedRequestsPanel = useCallback(
-    () => setSavedRequestsOpen(false),
-    [],
-  )
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveTab(readDashboardTabFromUrl())
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+  const openBreakpointsPanel = useCallback(() => {
+    navigateToTab('breakpoints')
+  }, [navigateToTab])
+  const closeBreakpointsPanel = useCallback(() => {
+    setHighlightedBreakpointId(null)
+    navigateToTab('traffic')
+  }, [navigateToTab])
+  const openSavedRequestsPanel = useCallback(() => {
+    navigateToTab('saved')
+  }, [navigateToTab])
+  const closeSavedRequestsPanel = useCallback(() => {
+    navigateToTab('traffic')
+  }, [navigateToTab])
   const openFloatingTrafficWindow = useCallback(async () => {
     const floatingUrl = new URL(
       FLOATING_TRAFFIC_VIEW_PATH,
@@ -123,26 +162,6 @@ export function useDashboard() {
       void refreshBreakpoints()
     })
   }, [refreshBreakpoints, refreshOverrides])
-
-  useEffect(() => {
-    if (!breakpointsOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      closeBreakpointsPanel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [breakpointsOpen, closeBreakpointsPanel])
-
-  useEffect(() => {
-    if (!savedRequestsOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      closeSavedRequestsPanel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [closeSavedRequestsPanel, savedRequestsOpen])
 
   useEffect(() => {
     const loadHealth = async () => {
@@ -285,7 +304,9 @@ export function useDashboard() {
     setOverrideError(null)
     setOverridesPanel({ state: 'edit', source: 'traffic' })
     openOverrideEditorForKey(matchedOverride)
+    navigateToTab('override')
   }, [
+    navigateToTab,
     openOverrideEditorForKey,
     overrides,
     selected,
@@ -399,7 +420,9 @@ export function useDashboard() {
     })
     bumpRequestPanel()
     setOverridesPanel({ state: 'edit', source: 'traffic' })
+    navigateToTab('override')
   }, [
+    navigateToTab,
     selected,
     bumpRequestPanel,
     setOverrideEditingId,
@@ -408,7 +431,17 @@ export function useDashboard() {
     setOverridesPanel,
   ])
 
+  const onOverridesNavClick = useCallback(() => {
+    ovr.onOverridesNavClick()
+    navigateToTab('override')
+  }, [navigateToTab, ovr])
+
+  const breakpointsOpen = activeTab === 'breakpoints'
+  const savedRequestsOpen = activeTab === 'saved'
+
   return {
+    activeTab,
+    navigateToTab,
     wsStatus,
     urlFilterTrimmed,
     filteredCount: filteredEntries.length,
@@ -427,7 +460,7 @@ export function useDashboard() {
     openSavedRequestsPanel,
     openFloatingTrafficWindow,
     closeSavedRequestsPanel,
-    onOverridesNavClick: ovr.onOverridesNavClick,
+    onOverridesNavClick,
     urlFilter: traffic.urlFilter,
     setUrlFilter: traffic.setUrlFilter,
     testError: traffic.testError,
