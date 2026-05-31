@@ -16,8 +16,11 @@ export function DashboardUI(p: DashboardViewModel) {
         <SidebarInset className={root.main}>
           <div className={root.mainBody}>
             {p.activeTab === 'traffic' && (
-              <>
+              <div className={root.trafficPage}>
                 <DashboardHeaderUI
+                  urlFilter={p.urlFilter}
+                  setUrlFilter={p.setUrlFilter}
+                  clearTraffic={p.clearTraffic}
                   proxyListenAddress={p.proxyListenAddress}
                   capturePaused={p.capturePaused}
                   captureToggleSaving={p.captureToggleSaving}
@@ -26,80 +29,85 @@ export function DashboardUI(p: DashboardViewModel) {
                   onEnableWifiProxyClick={p.enableWifiHttpHttpsProxy}
                   onFloatingTrafficEntryClick={p.openFloatingTrafficWindow}
                 />
-                <TrafficPanelPortal
-                  urlFilter={p.urlFilter}
-                  setUrlFilter={p.setUrlFilter}
-                  testError={p.testError}
-                  clearTraffic={p.clearTraffic}
-                  filteredEntries={p.filteredEntries}
-                  selectedId={p.selectedId}
-                  setSelectedId={p.setSelectedId}
-                  selected={p.selected}
-                  selectedIsEventStream={p.selectedIsEventStream}
-                  selectedIsSaved={p.selectedIsSaved}
-                  openOverrideDrawer={p.openOverrideDrawer}
-                  saveSelectedRequest={p.saveSelectedRequest}
-                  addBreakpointFromSelected={p.addBreakpointFromSelected}
-                  openMatchedOverride={p.openMatchedOverride}
-                  openMatchedBreakpoint={p.openMatchedBreakpoint}
-                  resumeRequest={p.resumeRequest}
-                  resumeSaving={p.resumeSaving}
-                />
-              </>
+                <div className={root.tabPanel}>
+                  <TrafficPanelPortal
+                    testError={p.testError}
+                    filteredEntries={p.filteredEntries}
+                    selectedId={p.selectedId}
+                    setSelectedId={p.setSelectedId}
+                    selected={p.selected}
+                    selectedIsEventStream={p.selectedIsEventStream}
+                    selectedIsSaved={p.selectedIsSaved}
+                    openOverrideDrawer={p.openOverrideDrawer}
+                    saveSelectedRequest={p.saveSelectedRequest}
+                    addBreakpointFromSelected={p.addBreakpointFromSelected}
+                    openMatchedOverride={p.openMatchedOverride}
+                    openMatchedBreakpoint={p.openMatchedBreakpoint}
+                    resumeRequest={p.resumeRequest}
+                    resumeSaving={p.resumeSaving}
+                  />
+                </div>
+              </div>
             )}
             {p.activeTab === 'override' && (
-              <OverrideEditorPortal
-                variant="embedded"
-                closeOverrideDrawer={p.closeOverrideDrawer}
-                saveOverride={p.saveOverride}
-                overrideError={p.overrideError}
-                requestPanelFocusKey={p.requestPanelFocusKey}
-                overrideFileInputRef={p.overrideFileInputRef}
-                overrideForm={p.overrideForm}
-                setOverrideForm={p.setOverrideForm}
-                overrideEntries={p.overrideEntries}
-                startNewOverride={p.startNewOverride}
-                openOverrideEditorForKey={p.openOverrideEditorForKey}
-                overrideToggleSaving={p.overrideToggleSaving}
-                setOverrideEnabled={p.setOverrideEnabled}
-                deleteOverrideRule={p.deleteOverrideRule}
-                selected={p.selected}
-                selectedMatchingOverride={p.selectedMatchingOverride}
-                overrideEditingId={p.overrideEditingId}
-                selectedCanControlStream={p.selectedCanControlStream}
-                resumeRequest={p.resumeRequest}
-                resumeSaving={p.resumeSaving}
-                addBreakpointFromOverride={p.addBreakpointFromOverride}
-                streamActionSaving={p.streamActionSaving}
-                playControlledStream={p.playControlledStream}
-                pauseControlledStream={p.pauseControlledStream}
-                computedOverrideId={p.computedOverrideId}
-              />
+              <div className={root.tabPanel}>
+                <OverrideEditorPortal
+                  variant="embedded"
+                  closeOverrideDrawer={p.closeOverrideDrawer}
+                  saveOverride={p.saveOverride}
+                  overrideError={p.overrideError}
+                  requestPanelFocusKey={p.requestPanelFocusKey}
+                  overrideFileInputRef={p.overrideFileInputRef}
+                  overrideForm={p.overrideForm}
+                  setOverrideForm={p.setOverrideForm}
+                  overrideEntries={p.overrideEntries}
+                  startNewOverride={p.startNewOverride}
+                  openOverrideEditorForKey={p.openOverrideEditorForKey}
+                  overrideToggleSaving={p.overrideToggleSaving}
+                  setOverrideEnabled={p.setOverrideEnabled}
+                  deleteOverrideRule={p.deleteOverrideRule}
+                  selected={p.selected}
+                  selectedMatchingOverride={p.selectedMatchingOverride}
+                  overrideEditingId={p.overrideEditingId}
+                  selectedCanControlStream={p.selectedCanControlStream}
+                  resumeRequest={p.resumeRequest}
+                  resumeSaving={p.resumeSaving}
+                  addBreakpointFromOverride={p.addBreakpointFromOverride}
+                  streamActionSaving={p.streamActionSaving}
+                  playControlledStream={p.playControlledStream}
+                  pauseControlledStream={p.pauseControlledStream}
+                  computedOverrideId={p.computedOverrideId}
+                />
+              </div>
             )}
             {p.activeTab === 'breakpoints' && (
-              <BreakpointsPanelPortal
-                variant="embedded"
-                closeBreakpointsPanel={p.closeBreakpointsPanel}
-                breakpointForm={p.breakpointForm}
-                setBreakpointForm={p.setBreakpointForm}
-                breakpointEntries={p.breakpointEntries}
-                addBreakpoint={p.addBreakpoint}
-                removeBreakpoint={p.removeBreakpoint}
-                setBreakpointEnabled={p.setBreakpointEnabled}
-                breakpointToggleSaving={p.breakpointToggleSaving}
-                highlightedBreakpointId={p.highlightedBreakpointId}
-              />
+              <div className={root.tabPanel}>
+                <BreakpointsPanelPortal
+                  variant="embedded"
+                  closeBreakpointsPanel={p.closeBreakpointsPanel}
+                  breakpointForm={p.breakpointForm}
+                  setBreakpointForm={p.setBreakpointForm}
+                  breakpointEntries={p.breakpointEntries}
+                  addBreakpoint={p.addBreakpoint}
+                  removeBreakpoint={p.removeBreakpoint}
+                  setBreakpointEnabled={p.setBreakpointEnabled}
+                  breakpointToggleSaving={p.breakpointToggleSaving}
+                  highlightedBreakpointId={p.highlightedBreakpointId}
+                />
+              </div>
             )}
             {p.activeTab === 'saved' && (
-              <SavedRequestsPanelPortal
-                variant="embedded"
-                savedRequests={p.savedRequests}
-                selectedSavedRequestId={p.selectedSavedRequestId}
-                setSelectedSavedRequestId={p.setSelectedSavedRequestId}
-                closeSavedRequestsPanel={p.closeSavedRequestsPanel}
-                removeSavedRequest={p.removeSavedRequest}
-                clearSavedRequests={p.clearSavedRequests}
-              />
+              <div className={root.tabPanel}>
+                <SavedRequestsPanelPortal
+                  variant="embedded"
+                  savedRequests={p.savedRequests}
+                  selectedSavedRequestId={p.selectedSavedRequestId}
+                  setSelectedSavedRequestId={p.setSelectedSavedRequestId}
+                  closeSavedRequestsPanel={p.closeSavedRequestsPanel}
+                  removeSavedRequest={p.removeSavedRequest}
+                  clearSavedRequests={p.clearSavedRequests}
+                />
+              </div>
             )}
           </div>
         </SidebarInset>

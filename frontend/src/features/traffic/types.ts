@@ -1,13 +1,10 @@
 import type { TrafficEntry } from '../../types'
 
 export type TrafficPanelUIProps = {
-  urlFilter: string
-  setUrlFilter: (v: string) => void
   testError: string | null
-  clearTraffic: () => void
   filteredEntries: TrafficEntry[]
   selectedId: string | null
-  setSelectedId: (id: string) => void
+  setSelectedId: (id: string | null) => void
   selected: TrafficEntry | null
   selectedIsEventStream: boolean
   selectedIsSaved: boolean

@@ -8,22 +8,37 @@
   flex-wrap: wrap;
 }
 
-.meta {
+.left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  width: 14rem;
+}
+
+.form {
+  background-color: var(--background-card);
+}
+
+.input {
+  padding: 0;
+  padding-left: 0.5rem;
+}
+
+.right {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .pillSubtle {
   text-transform: none;
   letter-spacing: normal;
   color: var(--muted);
-  border-color: #2a3142;
   font-size: 0.75rem;
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
 }
 
 .listenAddr {

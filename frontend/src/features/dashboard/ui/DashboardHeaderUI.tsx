@@ -4,15 +4,22 @@ import {
   CirclePlay,
   KeyRound,
   Pin,
+  Trash,
   WifiCog,
 } from 'lucide-react'
 import { dashboardTexts } from '../texts'
+import { trafficTexts } from '../../traffic/texts'
 import s from './DashboardHeaderUI.module.css'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { SimpleTooltip } from '@/components/ui/tooltip'
 import { downloadFromUrl } from '@/lib/download'
+import { cn } from "@/lib/utils"
 
 type Props = {
+  urlFilter: string
+  setUrlFilter: (value: string) => void
+  clearTraffic: () => void
   proxyListenAddress: string | null
   capturePaused: boolean
   captureToggleSaving: boolean
@@ -23,6 +30,9 @@ type Props = {
 }
 
 export function DashboardHeaderUI({
+  urlFilter,
+  setUrlFilter,
+  clearTraffic,
   proxyListenAddress,
   capturePaused,
   captureToggleSaving,
@@ -48,9 +58,32 @@ export function DashboardHeaderUI({
     }
   }, [mitm.linkPath, mitm.linkDownload, t])
 
+  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    console.log('handleSubmit', e)
+    e.preventDefault()
+  }, [clearTraffic])
+
   return (
     <header className={s.top}>
-      <div className={s.meta}>
+      <div className={s.left}>
+        <form onSubmit={handleSubmit} className={cn("flex items-center gap-1", s.form)}>
+          <Input
+            type="search"
+            value={urlFilter}
+            onChange={(e) => setUrlFilter(e.target.value)}
+            placeholder={trafficTexts.filterPlaceholder}
+            autoComplete="off"
+            spellCheck={false}
+            className={cn("border-none active:border-none focus-visible:border-none", s.input)}
+          />
+          <SimpleTooltip label={trafficTexts.clear}>
+            <Button type="button" variant="ghost" onClick={clearTraffic}>
+              <Trash />
+            </Button>
+          </SimpleTooltip>
+        </form>
+      </div>
+      <div className={s.right}>
         {proxyListenAddress != null && (
           <span
             className={s.listenAddr}

@@ -14,6 +14,7 @@ export const trafficTexts = {
   tagBypassed: 'BYPS',
   sectionRequest: 'Request',
   sectionResponse: 'Response',
+  closeDetail: 'Close detail',
   saveRequest: 'Save request',
   requestSaved: 'Saved',
   copyCurl: 'Copy cURL',
