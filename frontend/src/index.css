@@ -7,6 +7,21 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --scrollbar-size: 8px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(60, 60, 67, 0.34);
+  --scrollbar-thumb-hover: rgba(60, 60, 67, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: rgba(235, 235, 245, 0.36);
+    --scrollbar-thumb-hover: rgba(235, 235, 245, 0.56);
+  }
+}
+
 html,
 body,
 #root {
@@ -23,6 +38,49 @@ body,
 
 body {
   margin: 0;
+}
+
+html.is-tauri,
+html.is-tauri body,
+html.is-tauri #root {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html.is-tauri *:hover,
+html.is-tauri *:focus-within {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+html.is-tauri *::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+html.is-tauri *::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+html.is-tauri *::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  transition: background-color 150ms ease;
+}
+
+html.is-tauri *:hover::-webkit-scrollbar-thumb,
+html.is-tauri *:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+
+html.is-tauri *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+html.is-tauri *::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 @theme inline {
