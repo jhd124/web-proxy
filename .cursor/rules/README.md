@@ -1,19 +1,21 @@
-# Bohrium Web - Cursor Rules
+# Proxy - Cursor Rules
 
-Bohrium Web 项目的前端开发规范。
+本目录用于维护仓库的 Cursor 规则（`.mdc`）。
 
-## 📚 规则列表
+## 规则清单
 
+| 文件 | 说明 | 生效范围 |
+| --- | --- | --- |
+| [`code-style.mdc`](./code-style.mdc) | 通用代码风格、命名、文件结构约束 | `alwaysApply: true` |
+| [`project.mdc`](./project.mdc) | 项目级约定（后端职责、前端技术栈、桌面端运行方式） | `alwaysApply: true` |
+| [`react.mdc`](./react.mdc) | React 组件/Hook 规范与职责分离模式 | `alwaysApply: true`，`*.ts,*.tsx` |
+| [`style.mdc`](./style.mdc) | CSS/样式编写规范 | `*.scss,*.less,*.css,*.tsx` |
+| [`backend-api-test-requirement.mdc`](./backend-api-test-requirement.mdc) | 后端接口变更必须同步新增/更新测试 | `backend/src/**/*.rs` |
+| [`agent-doc-sync.mdc`](./agent-doc-sync.mdc) | 代码变更后同步维护模块文档（`docs/agent-reference/*`） | 目录级约束（`backend/`、`frontend/`、`desktop/`、`mcp/`） |
+| [`type-safety.mdc`](./type-safety.mdc) | 类型安全与包边界规范（历史跨仓规则，当前仓库一般不直接触发） | `bohrium-domains` / `bohrium-next-app` 相关路径 |
 
-| 文件                                                                       | 描述                   | 适用范围                  |
-| ------------------------------------------------------------------------ | -------------------- | --------------------- |
-| [code-style.mdc](mdc:code-style.mdc)                                     | 代码风格和质量规范            | 所有文件                  |
-| [architecture.mdc](mdc:architecture.mdc)                                 | 架构开发规范               | *.ts, *.tsx           |
-| [typescript.mdc](mdc:typescript.mdc)                                     | TypeScript 编码规范      | *.ts, *.tsx           |
-| [react-nextjs.mdc](mdc:react-nextjs.mdc)                                 | React/Next.js 完整开发规范 | *.ts, *.tsx           |
-| [component-design.mdc](mdc:component-design.mdc)                         | 组件设计规范（SSR 优化）       | *.tsx                 |
-| [performance.mdc](mdc:performance.mdc)                                   | 性能劣化规避与检查判断          | 所有文件                  |
-| [style.mdc](mdc:style.mdc)                                               | 样式编写规范               | *.scss, *.less, *.css |
-| [ai-generated-code-annotation.mdc](mdc:ai-generated-code-annotation.mdc) | ai生成代码注释规范           | 所有文件                  |
+## 维护约定
 
-
+- 新增规则时，优先做到“一条规则只解决一个问题”。
+- 尽量在 frontmatter 写清楚 `description`、`globs`、`alwaysApply`。
+- 新增/调整规则后，记得同步更新本 README 的规则清单。

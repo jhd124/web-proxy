@@ -1,0 +1,27 @@
+---
+description: 后端接口变更必须同步补充测试
+globs: backend/src/**/*.rs
+alwaysApply: false
+---
+
+# Backend API Test Requirement
+
+当修改后端接口行为时，必须同步更新或新增对应测试，禁止只改实现不改测试。
+
+## 触发条件
+
+- 新增/删除/修改 HTTP API 路由（如 `axum` route、handler 入参/返回码/响应体）
+- 新增/删除/修改 WebSocket 事件或消息结构
+- 修改接口相关状态流转（如 pause/resume、pending、stream control）
+
+## 强制要求
+
+- 每个接口行为变更都要有至少一个对应测试断言（成功路径或失败路径）
+- 返回码、关键副作用、状态变化至少覆盖其一，关键接口应覆盖成功+失败路径
+- 优先将测试放在独立测试文件（如 `*_tests.rs`），保持业务代码与测试代码分离
+- 提交前必须运行 `cargo test -p proxy-app` 并确保通过
+
+## 示例
+
+- 新增 `POST /api/foo`：新增 `foo` 成功路径测试，至少再补一个参数非法或资源缺失路径测试
+- 修改 `resume` 逻辑：同步更新原有 `resume` 返回码或状态副作用断言

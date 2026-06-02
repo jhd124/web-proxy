@@ -331,3 +331,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "api_tests.rs"]
+mod api_tests;

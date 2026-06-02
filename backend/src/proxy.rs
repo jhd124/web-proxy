@@ -1583,42 +1583,5 @@ fn preview_bytes_limited(slice: &[u8], max: usize) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use hyper::header::{HeaderMap, HeaderValue, COOKIE, HOST};
-
-    #[test]
-    fn reqwest_headers_for_upstream_preserves_duplicate_request_headers() {
-        let mut headers = HeaderMap::new();
-        headers.append(COOKIE, HeaderValue::from_static("session=abc"));
-        headers.append(COOKIE, HeaderValue::from_static("prefs=dark"));
-
-        let upstream_headers = reqwest_headers_for_upstream(&headers);
-        let cookies = upstream_headers
-            .get_all(reqwest::header::COOKIE)
-            .iter()
-            .map(|value| value.to_str().unwrap())
-            .collect::<Vec<_>>();
-
-        assert_eq!(cookies, vec!["session=abc", "prefs=dark"]);
-    }
-
-    #[test]
-    fn reqwest_headers_for_upstream_skips_proxy_specific_headers() {
-        let mut headers = HeaderMap::new();
-        headers.insert(HOST, HeaderValue::from_static("example.com"));
-        headers.insert("proxy-connection", HeaderValue::from_static("keep-alive"));
-        headers.insert("x-request-id", HeaderValue::from_static("request-1"));
-
-        let upstream_headers = reqwest_headers_for_upstream(&headers);
-
-        assert!(upstream_headers.get(reqwest::header::HOST).is_none());
-        assert!(upstream_headers.get("proxy-connection").is_none());
-        assert_eq!(
-            upstream_headers
-                .get("x-request-id")
-                .and_then(|value| value.to_str().ok()),
-            Some("request-1")
-        );
-    }
-}
+#[path = "proxy_tests.rs"]
+mod proxy_tests;

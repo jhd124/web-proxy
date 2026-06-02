@@ -205,70 +205,8 @@ fn paths_equal(request_path: &str, rule_path: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use http::header::HeaderMap;
-
-    fn rule_with(host: &str, path: &str) -> OverrideRule {
-        OverrideRule {
-            id: "r".to_string(),
-            enabled: true,
-            match_protocol: Some("https".to_string()),
-            match_host: Some(host.to_string()),
-            match_path: Some(path.to_string()),
-            match_request_headers: Vec::new(),
-            match_query: Vec::new(),
-            match_request_body: None,
-            status: 200,
-            headers: Vec::new(),
-            body: String::new(),
-            map_remote_protocol: Some("http".to_string()),
-            map_remote_host: Some("localhost:3000".to_string()),
-            map_remote_path: Some("*".to_string()),
-            stream_interval_ms: None,
-        }
-    }
-
-    #[test]
-    fn wildcard_host_matches_subdomain() {
-        let rule = rule_with("*.example.com", "/api/*");
-        assert!(rule.matches(
-            "GET",
-            "https",
-            "api.example.com",
-            "/api/v1/users?x=1",
-            "/api/v1/users",
-            &[],
-            &HeaderMap::new(),
-            b"",
-        ));
-    }
-
-    #[test]
-    fn wildcard_path_supports_single_char() {
-        let rule = rule_with("example.com", "/v?/users");
-        assert!(rule.matches(
-            "GET",
-            "https",
-            "example.com",
-            "/v1/users",
-            "/v1/users",
-            &[],
-            &HeaderMap::new(),
-            b"",
-        ));
-        assert!(!rule.matches(
-            "GET",
-            "https",
-            "example.com",
-            "/v10/users",
-            "/v10/users",
-            &[],
-            &HeaderMap::new(),
-            b"",
-        ));
-    }
-}
+#[path = "state_tests.rs"]
+mod state_tests;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

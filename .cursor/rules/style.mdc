@@ -9,7 +9,6 @@ alwaysApply: false
 
 - 使用 CSS Modules 避免样式冲突
 - 使用 kebab-case 命名 class
-- 优先使用 SCSS/Less 的嵌套和变量功能
 - 遵循 BEM 命名规范（可选）
 - 避免使用内联样式（特殊情况除外）
 
