@@ -5,6 +5,8 @@ export interface TrafficEntry {
   at: string
   /** Client socket that connected to the proxy */
   peer: string
+  /** Best-effort application/process name from backend */
+  appName?: string | null
   method: string
   url: string
   scheme: string
@@ -86,6 +88,11 @@ export type WsMessage =
   | { type: 'traffic'; entry: TrafficEntry }
   | { type: 'overrides_updated' }
   | { type: 'breakpoints_updated' }
+  | {
+      type: 'proxy_listen_updated'
+      proxyListenIpv4?: string | null
+      proxyPort: number
+    }
   | {
       type: 'ui_action'
       action:

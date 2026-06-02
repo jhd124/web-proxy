@@ -1,6 +1,7 @@
 
 .listPanel {
   border-right: 1px solid var(--border);
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   height: 100%;

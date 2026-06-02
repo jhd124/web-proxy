@@ -8,9 +8,24 @@ import {
 } from '@/components/ui/sidebar'
 import { Bookmark, Replace, Signpost, Waves } from 'lucide-react'
 import type { DashboardViewModel } from '../hooks/useDashboard'
+import { dashboardTexts } from '../texts'
+import root from './DashboardSidebarUI.module.css'
+
+function formatActiveCount(activeCount: number): string {
+  return activeCount > 9 ? 'N' : String(activeCount)
+}
+
+function buildNavTooltip(label: string, activeCount: number): string {
+  if (activeCount <= 0) {
+    return label
+  }
+  return dashboardTexts.sidebar.navTooltipWithActive(label, activeCount)
+}
 
 export function DashboardSidebarUI(viewModel: DashboardViewModel) {
   const activeTab = viewModel.activeTab
+  const hasActiveBreakpoints = viewModel.activeBreakpointsCount > 0
+  const hasActiveOverrides = viewModel.activeOverridesCount > 0
 
   return (
     <Sidebar side="left" collapsible="icon" aria-label="Dashboard sidebar">
@@ -27,24 +42,57 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'breakpoints'}
-              onClick={viewModel.onBreakpointsNavClick}
-              tooltip="Breakpoint"
-            >
-              <Signpost />
-              <span>Breakpoint</span>
-            </SidebarMenuButton>
+            <div className={root.badgeAnchor}>
+              <SidebarMenuButton
+                isActive={activeTab === 'breakpoints'}
+                onClick={viewModel.onBreakpointsNavClick}
+                tooltip={buildNavTooltip(
+                  'Breakpoint',
+                  viewModel.activeBreakpointsCount,
+                )}
+                className={root.navButton}
+              >
+                <Signpost />
+                <span>Breakpoint</span>
+              </SidebarMenuButton>
+              {hasActiveBreakpoints && (
+                <span className={root.activeBadge} aria-label="Active breakpoints count">
+                  <span className={root.badgeCountCompact}>
+                    {formatActiveCount(viewModel.activeBreakpointsCount)}{' '}
+                  </span>
+                  <span className={root.badgeCountExpanded}>
+                    {dashboardTexts.sidebar.activeCountLabel(
+                      formatActiveCount(viewModel.activeBreakpointsCount),
+                    )}
+                  </span>
+                </span>
+              )}
+            </div>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'override'}
-              onClick={viewModel.onOverridesNavClick}
-              tooltip="Override"
-            >
-              <Replace />
-              <span>Override</span>
-            </SidebarMenuButton>
+            <div className={root.badgeAnchor}>
+              <SidebarMenuButton
+                isActive={activeTab === 'override'}
+                onClick={viewModel.onOverridesNavClick}
+                tooltip={buildNavTooltip('Override', viewModel.activeOverridesCount)}
+                className={root.navButton}
+              >
+                <Replace />
+                <span>Override</span>
+              </SidebarMenuButton>
+              {hasActiveOverrides && (
+                <span className={root.activeBadge} aria-label="Active overrides count">
+                  <span className={root.badgeCountCompact}>
+                    {formatActiveCount(viewModel.activeOverridesCount)}
+                  </span>
+                  <span className={root.badgeCountExpanded}>
+                    {dashboardTexts.sidebar.activeCountLabel(
+                      formatActiveCount(viewModel.activeOverridesCount),
+                    )}
+                  </span>
+                </span>
+              )}
+            </div>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton

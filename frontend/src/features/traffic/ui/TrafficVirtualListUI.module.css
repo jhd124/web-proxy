@@ -10,6 +10,7 @@
   padding: 0;
   position: relative;
   width: 100%;
+  --http-code-width: 32px;
 }
 
 .empty {
@@ -18,7 +19,7 @@
 }
 
 .row {
-  align-items: baseline;
+  align-items: center;
   background: var(--background-list-item-light);
   border: none;
   border-bottom: 1px solid #1e2430;
@@ -26,34 +27,18 @@
   cursor: pointer;
   display: grid;
   font-size: 0.8rem;
-  gap: 0.4rem;
-  grid-template-columns: auto auto auto minmax(0, 1fr) auto auto auto;
+  gap: 0.6rem;
+  grid-template-columns: minmax(210px, 2.5fr) minmax(var(--http-code-width), 0.5fr) minmax(68px, 0.4fr) minmax(65px, 0.5fr) minmax(140px, 0.9fr);
   left: 0;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.75rem;
   position: absolute;
   text-align: left;
   top: 0;
   width: 100%;
 }
 
-.matchDot {
-  align-self: center;
-  border-radius: 9999px;
-  display: inline-block;
-  height: 0.5rem;
-  width: 0.5rem;
-}
-
-.matchDotOverride {
-  background: #facc15;
-}
-
-.matchDotBreakpoint {
-  background: #ef4444;
-}
-
-.matchDotBoth {
-  background: #f97316;
+.code,.method,.contentType,.app {
+  text-align: center;
 }
 
 .row:hover {
@@ -62,6 +47,17 @@
 
 .rowActive {
   background: #1e2635;
+}
+
+.rowMatched::before {
+  border: 6px solid var(--badge-matched);
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  content: '';
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
 }
 
 .scheme {
@@ -85,20 +81,54 @@
   white-space: nowrap;
 }
 
-.status {
+.code,
+.method,
+.contentType,
+.app {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.tag {
-  font-size: 0.65rem;
-  text-transform: uppercase;
+.contentType,
+.app {
+  color: var(--muted);
 }
 
-.tagWarn {
-  color: #f59e0b;
+@container (max-width: 650px) {
+  .row {
+    grid-template-columns: minmax(210px, 1fr) minmax(var(--http-code-width), 0.2fr) minmax(48px, 0.2fr) 80px;
+  }
+
+  .app {
+    display: none;
+  }
 }
 
-.tagErr {
-  color: #f87171;
+@container (max-width: 500px) {
+  .row {
+    grid-template-columns: minmax(210px, 1fr) minmax(var(--http-code-width), 0.2fr) minmax(48px, 0.2fr);
+  }
+
+  .contentType,
+  .app {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) var(--http-code-width);
+  }
+
+  .method,
+  .contentType,
+  .app {
+    display: none;
+  }
 }

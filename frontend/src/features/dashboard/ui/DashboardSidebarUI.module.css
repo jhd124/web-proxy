@@ -1,0 +1,52 @@
+.navButton {
+  position: relative;
+}
+
+.badgeAnchor {
+  position: relative;
+}
+
+.activeBadge {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--badge-matched);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 5px;
+  pointer-events: none;
+}
+
+.badgeCountCompact {
+  display: none;
+}
+
+.badgeCountExpanded {
+  display: inline;
+}
+
+:global([data-collapsible='icon']) .activeBadge {
+  top: -4px;
+  right: -4px;
+  transform: none;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+}
+
+:global([data-collapsible='icon']) .badgeCountCompact {
+  display: inline;
+}
+
+:global([data-collapsible='icon']) .badgeCountExpanded {
+  display: none;
+}

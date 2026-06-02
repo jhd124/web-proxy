@@ -151,6 +151,7 @@ export function useDashboard() {
     setSelectedId: traffic.setSelectedId,
     setWsStatus,
     setUrlFilter: traffic.setUrlFilter,
+    onProxyListenAddressChange: setProxyListenAddress,
     openFloatingTrafficWindow,
     refreshOverrides,
     refreshBreakpoints,
@@ -164,10 +165,11 @@ export function useDashboard() {
   }, [refreshBreakpoints, refreshOverrides])
 
   useEffect(() => {
+    let isCancelled = false
     const loadHealth = async () => {
       try {
         const r = await fetch('/api/health')
-        if (!r.ok) return
+        if (!r.ok || isCancelled) return
         const h = (await r.json()) as {
           mitmEnabled?: boolean
           mitmCaPemPath?: string | null
@@ -175,6 +177,7 @@ export function useDashboard() {
           proxyListenIpv4?: string | null
           capturePaused?: boolean
         }
+        if (isCancelled) return
         setMitmEnabled(Boolean(h.mitmEnabled))
         setMitmCaPemPath(
           typeof h.mitmCaPemPath === 'string' && h.mitmCaPemPath.length > 0
@@ -194,6 +197,8 @@ export function useDashboard() {
           h.proxyPort <= 65535
         ) {
           setProxyListenAddress(`${ipv4}:${h.proxyPort}`)
+        } else {
+          setProxyListenAddress(null)
         }
         setCapturePaused(Boolean(h.capturePaused))
       } catch {
@@ -201,6 +206,9 @@ export function useDashboard() {
       }
     }
     void loadHealth()
+    return () => {
+      isCancelled = true
+    }
   }, [])
 
   const toggleCapturePaused = useCallback(async () => {

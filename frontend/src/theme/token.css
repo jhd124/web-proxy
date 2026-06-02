@@ -22,6 +22,9 @@
   --text-warning: var(--amber-800);
   --text-link: var(--blue-700);
 
+  --badge-matched: var(--amber-900);
+
+
   --text-weight-emphasized: 600;
   --text-weight-normal: 400;
 
@@ -57,6 +60,8 @@
     --text-success: var(--green-300);
     --text-warning: var(--amber-300);
     --text-link: var(--blue-300);
+
+    --badge-matched: var(--amber-900);
 
     --text-weight-emphasized: 600;
     --text-weight-normal: 400;

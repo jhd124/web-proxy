@@ -19,6 +19,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
+use tokio::process::Command;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
@@ -360,6 +361,7 @@ fn header_pairs(req: &Request<Incoming>) -> Vec<(String, String)> {
 
 fn mitm_handshake_failure_entry(
     peer: SocketAddr,
+    app_name: Option<String>,
     host: &str,
     port: u16,
     request_headers: &[(String, String)],
@@ -375,6 +377,7 @@ fn mitm_handshake_failure_entry(
         id: Uuid::new_v4(),
         at: chrono::Utc::now(),
         peer: peer.to_string(),
+        app_name,
         method: "CONNECT".to_string(),
         url: url.clone(),
         scheme: "https".to_string(),
@@ -402,6 +405,7 @@ fn mitm_handshake_failure_entry(
 /// 我们已经透明地把字节流转给上游，在控制台中以 `mitm_bypassed=true` 标记，便于排查。
 fn mitm_raw_tunnel_entry(
     peer: SocketAddr,
+    app_name: Option<String>,
     host: &str,
     port: u16,
     request_headers: &[(String, String)],
@@ -416,6 +420,7 @@ fn mitm_raw_tunnel_entry(
         id: Uuid::new_v4(),
         at: chrono::Utc::now(),
         peer: peer.to_string(),
+        app_name,
         method: "CONNECT".to_string(),
         url,
         scheme: "https".to_string(),
@@ -673,10 +678,12 @@ async fn handle_connect(
     };
 
     let entry_id = Uuid::new_v4();
+    let app_name = resolve_client_app_name(peer).await;
     let entry = TrafficEntry {
         id: entry_id,
         at: chrono::Utc::now(),
         peer: peer.to_string(),
+        app_name: app_name.clone(),
         method: "CONNECT".to_string(),
         url: url.clone(),
         scheme: "https".to_string(),
@@ -780,6 +787,7 @@ async fn handle_connect_mitm(
     };
 
     let request_headers = header_pairs(&req);
+    let app_name = resolve_client_app_name(peer).await;
     let state2 = state.clone();
     let host_spawn = host.clone();
     tokio::spawn(async move {
@@ -790,6 +798,7 @@ async fn handle_connect_mitm(
                 tracing::debug!("mitm upgrade: {}", e);
                 state2.push_traffic(mitm_handshake_failure_entry(
                     peer,
+                    app_name.clone(),
                     &host_spawn,
                     port,
                     &request_headers,
@@ -810,6 +819,7 @@ async fn handle_connect_mitm(
                 tracing::debug!("mitm peek {}: {}", host_spawn, e);
                 state2.push_traffic(mitm_handshake_failure_entry(
                     peer,
+                    app_name.clone(),
                     &host_spawn,
                     port,
                     &request_headers,
@@ -835,6 +845,7 @@ async fn handle_connect_mitm(
                     }
                     state2.push_traffic(mitm_raw_tunnel_entry(
                         peer,
+                        app_name.clone(),
                         &host_spawn,
                         port,
                         &request_headers,
@@ -845,6 +856,7 @@ async fn handle_connect_mitm(
                 Err(e) => {
                     state2.push_traffic(mitm_handshake_failure_entry(
                         peer,
+                        app_name.clone(),
                         &host_spawn,
                         port,
                         &request_headers,
@@ -862,6 +874,7 @@ async fn handle_connect_mitm(
                 tracing::warn!("mitm cert {}: {}", host_spawn, e);
                 state2.push_traffic(mitm_handshake_failure_entry(
                     peer,
+                    app_name.clone(),
                     &host_spawn,
                     port,
                     &request_headers,
@@ -896,6 +909,7 @@ async fn handle_connect_mitm(
                 }
                 state2.push_traffic(mitm_handshake_failure_entry(
                     peer,
+                    app_name.clone(),
                     &host_spawn,
                     port,
                     &request_headers,
@@ -1182,12 +1196,14 @@ async fn forward_proxied_http(
     let mapped_remote_url = matched_override
         .as_ref()
         .and_then(|rule| build_mapped_remote_url(rule, &path_with_query));
+    let app_name = resolve_client_app_name(peer).await;
 
     let entry_id = Uuid::new_v4();
     let entry = TrafficEntry {
         id: entry_id,
         at: chrono::Utc::now(),
         peer: peer.to_string(),
+        app_name,
         method: method.to_string(),
         url: url.clone(),
         scheme: scheme.clone(),
@@ -1500,6 +1516,36 @@ async fn forward_proxied_http(
     }
 
     Ok(res.body(Either::Left(Full::new(bytes))).unwrap())
+}
+
+#[cfg(target_os = "macos")]
+async fn resolve_client_app_name(peer: SocketAddr) -> Option<String> {
+    let endpoint = format!("{}:{}", peer.ip(), peer.port());
+    let output = Command::new("lsof")
+        .args([
+            "-nP",
+            &format!("-iTCP@{endpoint}"),
+            "-sTCP:ESTABLISHED",
+            "-Fpc",
+        ])
+        .output()
+        .await
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8(output.stdout).ok()?;
+    stdout
+        .lines()
+        .find_map(|line| line.strip_prefix('c'))
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(ToString::to_string)
+}
+
+#[cfg(not(target_os = "macos"))]
+async fn resolve_client_app_name(_peer: SocketAddr) -> Option<String> {
+    None
 }
 
 fn is_sse_response(r: &reqwest::Response) -> bool {

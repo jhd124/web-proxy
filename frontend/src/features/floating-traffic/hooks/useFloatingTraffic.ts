@@ -23,6 +23,9 @@ export function useFloatingTraffic() {
   const refreshFloatingData = useCallback(async () => {
     await Promise.resolve()
   }, [])
+  const openFloatingTrafficWindow = useCallback(async () => {
+    await Promise.resolve()
+  }, [])
 
   useAppWebSocket({
     setEntries: traffic.setEntries,
@@ -30,9 +33,7 @@ export function useFloatingTraffic() {
     setSelectedId: traffic.setSelectedId,
     setWsStatus,
     setUrlFilter: traffic.setUrlFilter,
-    openFloatingTrafficWindow: async () => {
-      await Promise.resolve()
-    },
+    openFloatingTrafficWindow,
     refreshOverrides: refreshFloatingData,
     refreshBreakpoints: refreshFloatingData,
   })

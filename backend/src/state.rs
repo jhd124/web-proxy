@@ -313,6 +313,11 @@ pub enum DashboardMessage {
     OverridesUpdated,
     #[serde(rename = "breakpoints_updated")]
     BreakpointsUpdated,
+    #[serde(rename = "proxy_listen_updated")]
+    ProxyListenUpdated {
+        proxy_listen_ipv4: Option<String>,
+        proxy_port: u16,
+    },
     #[serde(rename = "ui_action")]
     UiAction { action: UiActionMessage },
 }
@@ -337,6 +342,8 @@ pub struct TrafficEntry {
     pub at: DateTime<Utc>,
     /// Client that opened this connection to the proxy (e.g. curl, browser).
     pub peer: String,
+    /// Best-effort client application/process name (for dashboard display).
+    pub app_name: Option<String>,
     pub method: String,
     pub url: String,
     pub scheme: String,
@@ -492,6 +499,13 @@ impl AppState {
 
     pub fn notify_breakpoints_changed(&self) {
         let _ = self.tx.send(DashboardMessage::BreakpointsUpdated);
+    }
+
+    pub fn notify_proxy_listen_updated(&self, proxy_listen_ipv4: Option<String>, proxy_port: u16) {
+        let _ = self.tx.send(DashboardMessage::ProxyListenUpdated {
+            proxy_listen_ipv4,
+            proxy_port,
+        });
     }
 
     pub fn notify_ui_action(&self, action: UiActionMessage) {

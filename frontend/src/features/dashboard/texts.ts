@@ -1,5 +1,10 @@
 /** User-visible copy for the dashboard feature (key–value, single place of truth). */
 export const dashboardTexts = {
+  sidebar: {
+    activeCountLabel: (countLabel: string) => `${countLabel} active`,
+    navTooltipWithActive: (label: string, count: number) =>
+      `${label} (${count} ${count === 1 ? 'active item' : 'active items'})`,
+  },
   header: {
     downloadCaTooltip: 'Download MITM CA certificate (PEM)',
     downloadCaAriaLabel: 'Download MITM CA certificate',

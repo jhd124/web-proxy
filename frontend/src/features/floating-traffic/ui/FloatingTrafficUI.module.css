@@ -15,6 +15,7 @@
 .listPanel {
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   height: 100%;
   min-height: 0;
 }

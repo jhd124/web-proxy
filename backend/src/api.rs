@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::time::{self, Duration};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
@@ -38,6 +39,33 @@ fn local_ipv4_egress() -> Option<Ipv4Addr> {
     match socket.local_addr().ok()?.ip() {
         IpAddr::V4(v4) if !v4.is_loopback() && !v4.is_unspecified() => Some(v4),
         _ => None,
+    }
+}
+
+fn current_proxy_port() -> u16 {
+    std::env::var("PROXY_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(9090)
+}
+
+fn current_dashboard_port() -> u16 {
+    std::env::var("DASHBOARD_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(9091)
+}
+
+async fn watch_proxy_listen_ipv4(state: Arc<AppState>, proxy_port: u16) {
+    let mut ticker = time::interval(Duration::from_secs(2));
+    let mut last_ipv4 = local_ipv4_egress().map(|ip| ip.to_string());
+    loop {
+        ticker.tick().await;
+        let current_ipv4 = local_ipv4_egress().map(|ip| ip.to_string());
+        if current_ipv4 != last_ipv4 {
+            state.notify_proxy_listen_updated(current_ipv4.clone(), proxy_port);
+            last_ipv4 = current_ipv4;
+        }
     }
 }
 
@@ -118,6 +146,9 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .layer(cors)
         .with_state(state.clone());
 
+    let proxy_port = current_proxy_port();
+    tokio::spawn(watch_proxy_listen_ipv4(state.clone(), proxy_port));
+
     let listener = tokio::net::TcpListener::bind(bind).await?;
     tracing::info!("dashboard listening on http://{}", bind);
     axum::serve(listener, app).await?;
@@ -125,14 +156,8 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
 }
 
 async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
-    let proxy_port = std::env::var("PROXY_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9090);
-    let dashboard_port = std::env::var("DASHBOARD_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9091);
+    let proxy_port = current_proxy_port();
+    let dashboard_port = current_dashboard_port();
     Json(Health {
         ok: true,
         proxy_port,
@@ -273,6 +298,12 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     if let Ok(json) =
         serde_json::to_string(&crate::state::DashboardMessage::Snapshot { requests: initial })
     {
+        let _ = socket.send(Message::Text(json)).await;
+    }
+    if let Ok(json) = serde_json::to_string(&crate::state::DashboardMessage::ProxyListenUpdated {
+        proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
+        proxy_port: current_proxy_port(),
+    }) {
         let _ = socket.send(Message::Text(json)).await;
     }
 

@@ -14,6 +14,7 @@ export function useAppWebSocket(p: {
   setSelectedId: (id: string | null) => void
   setWsStatus: (s: Ws) => void
   setUrlFilter: (value: string) => void
+  onProxyListenAddressChange?: (value: string | null) => void
   openFloatingTrafficWindow: () => Promise<void>
   refreshOverrides: () => Promise<void>
   refreshBreakpoints: () => Promise<void>
@@ -24,6 +25,7 @@ export function useAppWebSocket(p: {
     setSelectedId,
     setWsStatus,
     setUrlFilter,
+    onProxyListenAddressChange,
     openFloatingTrafficWindow,
     refreshOverrides,
     refreshBreakpoints,
@@ -78,6 +80,22 @@ export function useAppWebSocket(p: {
             void refreshOverrides()
           } else if (msg.type === 'breakpoints_updated') {
             void refreshBreakpoints()
+          } else if (msg.type === 'proxy_listen_updated') {
+            const ipv4 =
+              typeof msg.proxyListenIpv4 === 'string' &&
+              /^\d{1,3}(\.\d{1,3}){3}$/.test(msg.proxyListenIpv4)
+                ? msg.proxyListenIpv4
+                : null
+            const port =
+              typeof msg.proxyPort === 'number' &&
+              Number.isFinite(msg.proxyPort) &&
+              msg.proxyPort > 0 &&
+              msg.proxyPort <= 65535
+                ? msg.proxyPort
+                : null
+            onProxyListenAddressChange?.(
+              ipv4 != null && port != null ? `${ipv4}:${port}` : null,
+            )
           } else if (msg.type === 'ui_action') {
             const action = msg.action
             if (action.action === 'focus_main_window') {
@@ -110,5 +128,6 @@ export function useAppWebSocket(p: {
     setSelectedId,
     setUrlFilter,
     setWsStatus,
+    onProxyListenAddressChange,
   ])
 }

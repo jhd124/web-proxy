@@ -2,9 +2,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
-import {
-  getTrafficSummary,
-} from '../trafficDisplay'
 import s from './TrafficVirtualListUI.module.css'
 
 const ROW_HEIGHT_PX = 40
@@ -106,16 +103,11 @@ export function TrafficVirtualListUI({
           const entry = displayEntries[virtualRow.index]
           if (!entry) return null
 
-          const summary = getTrafficSummary(entry)
-          const hasOverrideMatch = Boolean(entry.overrideMatchId)
-          const hasBreakpointMatch = Boolean(entry.breakpointMatchId)
-          const matchState = hasOverrideMatch
-            ? hasBreakpointMatch
-              ? 'both'
-              : 'override'
-            : hasBreakpointMatch
-              ? 'breakpoint'
-              : null
+          const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
+          const contentType = getEntryContentType(entry)
+          const appName = getRequesterAppName(entry)
+          const rowStatusLabel = getRowStatusLabel(entry, tags)
+          const hasMatchedRule = Boolean(entry.overrideMatchId || entry.breakpointMatchId)
 
           return (
             <li
@@ -131,7 +123,7 @@ export function TrafficVirtualListUI({
             >
               <button
                 type="button"
-                className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''}`}
+                className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
                 style={{ height: virtualRow.size }}
                 onClick={() => onSelect(entry.id)}
                 onDoubleClick={
@@ -140,34 +132,21 @@ export function TrafficVirtualListUI({
                     : undefined
                 }
               >
-                {matchState && (
-                  <span
-                    className={`${s.matchDot} ${
-                      matchState === 'both'
-                        ? s.matchDotBoth
-                        : matchState === 'breakpoint'
-                          ? s.matchDotBreakpoint
-                          : s.matchDotOverride
-                    }`}
-                    aria-label={matchState}
-                    title={matchState}
-                  />
-                )}
-                <span className={s.url} title={summary}>
-                  {summary}
+                <span className={s.url} title={entry.url}>
+                  {entry.url}
                 </span>
-                {entry.error && (
-                  <span className={`${s.tag} ${s.tagErr}`}>{tags.tagError}</span>
-                )}
-                {entry.mitmBypassed && (
-                  <span className={`${s.tag} ${s.tagWarn}`}>{tags.tagBypassed}</span>
-                )}
-                {entry.pending && (
-                  <span className={`${s.tag} ${s.tagWarn}`}>{tags.tagPending}</span>
-                )}
-                {entry.responseStatus != null && (
-                  <span className={s.status}>{entry.responseStatus}</span>
-                )}
+                <span className={s.code} title={rowStatusLabel}>
+                  {httpCodeText}
+                </span>
+                <span className={s.method} title={entry.method}>
+                  {entry.method}
+                </span>
+                <span className={s.contentType} title={contentType}>
+                  {contentType}
+                </span>
+                <span className={s.app} title={appName}>
+                  {appName}
+                </span>
               </button>
             </li>
           )
@@ -175,4 +154,67 @@ export function TrafficVirtualListUI({
       </ul>
     </div>
   )
+}
+
+function getEntryContentType(entry: TrafficEntry): string {
+  const responseContentType = entry.responseHeaders?.find(
+    ([headerName]) => headerName.toLowerCase() === 'content-type',
+  )?.[1]
+  if (responseContentType) return normalizeContentTypeLabel(responseContentType)
+  const requestContentType = entry.requestHeaders.find(
+    ([headerName]) => headerName.toLowerCase() === 'content-type',
+  )?.[1]
+  if (requestContentType) return normalizeContentTypeLabel(requestContentType)
+  return '—'
+}
+
+function getRowStatusLabel(entry: TrafficEntry, tags: TrafficVirtualListTagTexts): string {
+  if (entry.error) return tags.tagError
+  if (entry.pending) return tags.tagPending
+  if (entry.mitmBypassed) return tags.tagBypassed
+  if (entry.responseStatus != null) return `HTTP ${entry.responseStatus}`
+  return 'HTTP -'
+}
+
+function normalizeContentTypeLabel(contentTypeValue: string): string {
+  const mediaType = contentTypeValue
+    .toLowerCase()
+    .split(';')[0]
+    ?.trim()
+  if (!mediaType) return '—'
+  const subtypePart = mediaType.includes('/') ? mediaType.split('/')[1] : mediaType
+  if (!subtypePart) return mediaType
+  const normalizedSubtype = subtypePart.includes('+')
+    ? subtypePart.split('+').pop() || subtypePart
+    : subtypePart
+  if (normalizedSubtype === 'x-javascript' || normalizedSubtype === 'ecmascript') {
+    return 'javascript'
+  }
+  if (normalizedSubtype === 'xhtml+xml') return 'html'
+  return normalizedSubtype
+}
+
+function getRequesterAppName(entry: TrafficEntry): string {
+  if (entry.appName && entry.appName.trim()) return entry.appName.trim()
+  const userAgent = entry.requestHeaders.find(
+    ([headerName]) => headerName.toLowerCase() === 'user-agent',
+  )?.[1]
+  if (!userAgent) return entry.peer || '—'
+  const normalizedUserAgent = userAgent.toLowerCase()
+  if (normalizedUserAgent.includes('edg/')) return 'Microsoft Edge'
+  if (normalizedUserAgent.includes('chrome/') && !normalizedUserAgent.includes('edg/')) {
+    return 'Google Chrome'
+  }
+  if (normalizedUserAgent.includes('firefox/')) return 'Mozilla Firefox'
+  if (
+    normalizedUserAgent.includes('safari/') &&
+    !normalizedUserAgent.includes('chrome/') &&
+    !normalizedUserAgent.includes('chromium/')
+  ) {
+    return 'Safari'
+  }
+  const firstToken = userAgent.trim().split(/\s+/)[0]
+  if (!firstToken) return entry.peer || '—'
+  const productName = firstToken.split('/')[0]
+  return productName || entry.peer || '—'
 }
