@@ -1,6 +1,6 @@
 import { copyTextToClipboard } from '@/lib/clipboard'
-import { buildCurlCommand } from '@/lib/curl'
 import { showSuccessToast, showToast } from '@/lib/toast'
+import { X } from 'lucide-react'
 import { trafficTexts as t } from '../texts'
 import { getTrafficConnectDetailNote } from '../trafficDisplay'
 import { TrafficVirtualListUI } from './TrafficVirtualListUI'
@@ -11,29 +11,32 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 export function TrafficPanelUI({
   testError,
   filteredEntries,
+  matchedTrafficEntryIds,
+  savedTrafficEntryIds,
+  matchedOverrideByEntryId,
+  matchedBreakpointByEntryId,
   selectedId,
   setSelectedId,
   selected,
   selectedIsEventStream,
-  selectedIsSaved,
-  openOverrideDrawer,
-  saveSelectedRequest,
-  addBreakpointFromSelected,
-  openMatchedOverride,
-  openMatchedBreakpoint,
-  resumeRequest,
-  resumeSaving,
+  onEntryCopyCurl,
+  onEntrySaveRequest,
+  onEntryOverride,
+  onEntryAddBreakpoint,
+  onEntryReplay,
+  onEntryOpenSavedRequest,
+  onEntryOpenMatchedOverride,
+  onEntryOpenMatchedBreakpoint,
 }: TrafficPanelUIProps) {
-  const handleCopyCurl = () => {
+  const handleCopyRequestUrl = () => {
     if (!selected) return
-    const curl = buildCurlCommand(selected)
-    void copyTextToClipboard(curl)
+    void copyTextToClipboard(selected.url)
       .then(() => {
-        showSuccessToast(t.copyCurlSuccess)
+        showSuccessToast(t.copyUrlSuccess)
       })
       .catch((error) => {
         const detail = error instanceof Error ? error.message : String(error)
-        showToast(t.copyCurlFailed(detail), 'error')
+        showToast(t.copyUrlFailed(detail), 'error')
       })
   }
 
@@ -45,8 +48,20 @@ export function TrafficPanelUI({
           <TrafficVirtualListUI
             className="min-h-0 flex-1"
             entries={filteredEntries}
+            matchedEntryIds={matchedTrafficEntryIds}
+            savedEntryIds={savedTrafficEntryIds}
+            matchedOverrideByEntryId={matchedOverrideByEntryId}
+            matchedBreakpointByEntryId={matchedBreakpointByEntryId}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            onCopyCurl={onEntryCopyCurl}
+            onSaveRequest={onEntrySaveRequest}
+            onOverride={onEntryOverride}
+            onAddBreakpoint={onEntryAddBreakpoint}
+            onReplay={onEntryReplay}
+            onOpenSavedRequest={onEntryOpenSavedRequest}
+            onOpenMatchedOverride={onEntryOpenMatchedOverride}
+            onOpenMatchedBreakpoint={onEntryOpenMatchedBreakpoint}
           />
         </aside>
       </ResizablePanel>
@@ -59,42 +74,16 @@ export function TrafficPanelUI({
                 <div className={s.blockHead}>
                   <h2>{t.sectionRequest}</h2>
                   <div className={s.detailActions}>
-                    <button type="button" className="ghost" onClick={() => setSelectedId(null)}>
-                      {t.closeDetail}
-                    </button>
-                    {selected.kind === 'http' && selected.overrideMatchId && (
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={openMatchedOverride}
-                      >
-                        {t.viewMatchedOverride}
-                      </button>
-                    )}
-                    {selected.kind === 'http' && selected.breakpointMatchId && (
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={openMatchedBreakpoint}
-                      >
-                        {t.viewMatchedBreakpoint}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => void saveSelectedRequest()}
-                    >
-                      {selectedIsSaved ? t.requestSaved : t.saveRequest}
-                    </button>
-                    <button type="button" className="ghost" onClick={handleCopyCurl}>
-                      {t.copyCurl}
-                    </button>
+                    <X  onClick={() => setSelectedId(null)} className='cursor-pointer'/>
                   </div>
                 </div>
-                <p className={`mono small ${s.requestUrl}`}>
+                <button
+                  type="button"
+                  className={`mono small ${s.requestUrl} ${s.requestUrlButton}`}
+                  onClick={handleCopyRequestUrl}
+                >
                   {selected.method} {selected.url}
-                </p>
+                </button>
                 <p className="small muted">
                   {t.clientMeta(
                     selected.peer ?? '—',
@@ -126,32 +115,6 @@ export function TrafficPanelUI({
               <section className={s.block}>
                 <div className={s.blockHead}>
                   <h2>{t.sectionResponse}</h2>
-                  <div className={s.detailActions}>
-                    {selected.kind === 'http' && (
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => void addBreakpointFromSelected()}
-                      >
-                        {t.addBreakpoint}
-                      </button>
-                    )}
-                    {selected.pending && !selected.streamControllable && (
-                      <button
-                        type="button"
-                        className="primary inline-primary"
-                        disabled={resumeSaving[selected.id] === true}
-                        onClick={() => void resumeRequest(selected.id)}
-                      >
-                        {resumeSaving[selected.id] ? t.resuming : t.resume}
-                      </button>
-                    )}
-                    {selected.kind === 'http' && (
-                      <button type="button" className="ghost" onClick={openOverrideDrawer}>
-                        {t.overrideResponse}
-                      </button>
-                    )}
-                  </div>
                 </div>
                 {selected.pending && !selected.responseStatus && !selected.error && (
                   <p className="small muted">{t.noResponseYet}</p>

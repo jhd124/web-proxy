@@ -16,7 +16,10 @@ import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSel
 import { isTauri } from '../../../lib/tauriEnv'
 import { downloadBlob } from '../../../lib/download'
 import { trafficEntriesToHar } from '../../../lib/har'
+import { copyTextToClipboard } from '../../../lib/clipboard'
+import { buildCurlCommand } from '../../../lib/curl'
 import { showSuccessToast, showToast } from '../../../lib/toast'
+import { trafficTexts } from '../../traffic/texts'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
 
@@ -266,6 +269,10 @@ export function useDashboard() {
   }, [proxyListenAddress])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
+  const getEntryById = useCallback(
+    (id: string) => entries.find((entry) => entry.id === id) ?? null,
+    [entries],
+  )
 
   const exportFilteredTrafficAsHar = useCallback(() => {
     if (exportHarSaving) return
@@ -295,6 +302,10 @@ export function useDashboard() {
     () => Boolean(selected && isRequestSaved(selected.id)),
     [isRequestSaved, selected],
   )
+  const savedTrafficEntryIds = useMemo(
+    () => new Set(savedRequests.map((request) => request.id)),
+    [savedRequests],
+  )
 
   const saveSelectedRequest = useCallback(async () => {
     if (!selected) return
@@ -304,6 +315,37 @@ export function useDashboard() {
       window.alert(String(e))
     }
   }, [saveRequest, selected])
+
+  const saveEntryRequest = useCallback(
+    async (id: string) => {
+      const entry = getEntryById(id)
+      if (!entry) return
+      traffic.setSelectedId(id)
+      try {
+        await saveRequest(entry)
+      } catch (e) {
+        window.alert(String(e))
+      }
+    },
+    [getEntryById, saveRequest, traffic],
+  )
+
+  const copyEntryCurl = useCallback(
+    (id: string) => {
+      const entry = getEntryById(id)
+      if (!entry) return
+      const curl = buildCurlCommand(entry)
+      void copyTextToClipboard(curl)
+        .then(() => {
+          showSuccessToast(trafficTexts.copyCurlSuccess)
+        })
+        .catch((error) => {
+          const detail = error instanceof Error ? error.message : String(error)
+          showToast(trafficTexts.copyCurlFailed(detail), 'error')
+        })
+    },
+    [getEntryById],
+  )
 
   const selectedMatchingOverride = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
@@ -317,6 +359,24 @@ export function useDashboard() {
     )
   }, [overrides, selected])
 
+  const matchedOverrideByEntryId = useMemo(() => {
+    const matchedByEntryId = new Map<string, string>()
+    for (const entry of filteredEntries) {
+      if (entry.kind !== 'http') continue
+      if (entry.overrideMatchId) {
+        matchedByEntryId.set(entry.id, entry.overrideMatchId)
+        continue
+      }
+      const matchedOverride = overrides.find(
+        (rule) => rule.enabled && trafficEntryMatchesOverride(entry, rule),
+      )
+      if (matchedOverride) {
+        matchedByEntryId.set(entry.id, matchedOverride.id)
+      }
+    }
+    return matchedByEntryId
+  }, [filteredEntries, overrides])
+
   const selectedMatchingBreakpoint = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
     if (selected.breakpointMatchId) {
@@ -329,6 +389,24 @@ export function useDashboard() {
       null
     )
   }, [breakpoints, selected])
+
+  const matchedBreakpointByEntryId = useMemo(() => {
+    const matchedByEntryId = new Map<string, string>()
+    for (const entry of filteredEntries) {
+      if (entry.kind !== 'http') continue
+      if (entry.breakpointMatchId) {
+        matchedByEntryId.set(entry.id, entry.breakpointMatchId)
+        continue
+      }
+      const matchedBreakpoint = breakpoints.find(
+        (rule) => rule.enabled && breakpointMatches(rule, entry),
+      )
+      if (matchedBreakpoint) {
+        matchedByEntryId.set(entry.id, matchedBreakpoint.id)
+      }
+    }
+    return matchedByEntryId
+  }, [breakpoints, filteredEntries])
 
   const openMatchedOverride = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
@@ -350,6 +428,29 @@ export function useDashboard() {
     setOverridesPanel,
   ])
 
+  const openMatchedOverrideForEntry = useCallback(
+    (id: string) => {
+      const matchedOverrideId = matchedOverrideByEntryId.get(id)
+      if (!matchedOverrideId) return
+      const matchedOverride = overrides.find((rule) => rule.id === matchedOverrideId)
+      if (!matchedOverride) return
+      traffic.setSelectedId(id)
+      setOverrideError(null)
+      setOverridesPanel({ state: 'edit', source: 'traffic' })
+      openOverrideEditorForKey(matchedOverride)
+      navigateToTab('override')
+    },
+    [
+      matchedOverrideByEntryId,
+      navigateToTab,
+      openOverrideEditorForKey,
+      overrides,
+      setOverrideError,
+      setOverridesPanel,
+      traffic,
+    ],
+  )
+
   const openMatchedBreakpoint = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
     if (!selected.breakpointMatchId) return
@@ -366,6 +467,31 @@ export function useDashboard() {
     setHighlightedBreakpointId(selected.breakpointMatchId)
     openBreakpointsPanel()
   }, [breakpoints, openBreakpointsPanel, selected, setBreakpointForm])
+
+  const openMatchedBreakpointForEntry = useCallback(
+    (id: string) => {
+      const matchedBreakpointId = matchedBreakpointByEntryId.get(id)
+      if (!matchedBreakpointId) return
+      const matchedBreakpoint = breakpoints.find((rule) => rule.id === matchedBreakpointId)
+      if (matchedBreakpoint) {
+        setBreakpointForm({
+          name: matchedBreakpoint.name,
+          matchOrigin: matchedBreakpoint.matchOrigin ?? '',
+          matchPathRegex: matchedBreakpoint.matchPathRegex ?? '',
+        })
+      }
+      traffic.setSelectedId(id)
+      setHighlightedBreakpointId(matchedBreakpointId)
+      openBreakpointsPanel()
+    },
+    [
+      breakpoints,
+      matchedBreakpointByEntryId,
+      openBreakpointsPanel,
+      setBreakpointForm,
+      traffic,
+    ],
+  )
 
   const activeOverridesCount = useMemo(
     () => overrides.filter((rule) => rule.enabled).length,
@@ -384,6 +510,21 @@ export function useDashboard() {
       selectedMatchingOverride?.id === ovr.overrideEditingId &&
       selected.streamControllable,
   )
+
+  const matchedTrafficEntryIds = useMemo(() => {
+    const matchedIds = new Set<string>()
+    for (const entry of filteredEntries) {
+      if (
+        entry.overrideMatchId ||
+        entry.breakpointMatchId ||
+        matchedOverrideByEntryId.has(entry.id) ||
+        matchedBreakpointByEntryId.has(entry.id)
+      ) {
+        matchedIds.add(entry.id)
+      }
+    }
+    return matchedIds
+  }, [filteredEntries, matchedBreakpointByEntryId, matchedOverrideByEntryId])
 
   const addBreakpointFromSelected = useCallback(async () => {
     if (!selected || selected.kind !== 'http') return
@@ -423,6 +564,51 @@ export function useDashboard() {
     selected,
     setBreakpointForm,
   ])
+
+  const addBreakpointFromEntry = useCallback(
+    async (id: string) => {
+      const entry = getEntryById(id)
+      if (!entry || entry.kind !== 'http') return
+      traffic.setSelectedId(id)
+      const matchOrigin = urlOrigin(entry.url)
+      const matchPathRegex = `^${escapeRegex(entry.path)}$`
+      const existing = breakpoints.find(
+        (rule) =>
+          (rule.matchOrigin ?? '') === matchOrigin &&
+          (rule.matchPathRegex ?? '') === matchPathRegex,
+      )
+      setBreakpointForm({
+        name: `Pause ${entry.method} ${entry.path}`,
+        matchOrigin,
+        matchPathRegex,
+      })
+      openBreakpointsPanel()
+      if (existing) {
+        return
+      }
+      const response = await fetch('/api/breakpoints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `Pause ${entry.method} ${entry.path}`,
+          enabled: true,
+          matchOrigin: matchOrigin || null,
+          matchPathRegex,
+        }),
+      })
+      if (response.ok) {
+        await refreshBreakpoints()
+      }
+    },
+    [
+      breakpoints,
+      getEntryById,
+      openBreakpointsPanel,
+      refreshBreakpoints,
+      setBreakpointForm,
+      traffic,
+    ],
+  )
 
   const { addBreakpointFromOverride: addBreakpointFromOverrideApi } = brk
   const addBreakpointFromOverride = useCallback(
@@ -467,6 +653,70 @@ export function useDashboard() {
     setOverridesPanel,
   ])
 
+  const openEntryOverrideDrawer = useCallback(
+    (id: string) => {
+      const entry = getEntryById(id)
+      if (!entry || entry.kind !== 'http') return
+      traffic.setSelectedId(id)
+      setOverrideError(null)
+      const matchParts = urlMatchPartsForForm(entry)
+      setOverrideEditingId(null)
+      setOverrideForm({
+        ...getDefaultOverrideForm(),
+        status: entry.responseStatus ?? 200,
+        body: entry.responseBodyPreview ?? '',
+        headersText: headersToText(entry.responseHeaders ?? undefined),
+        matchProtocol: matchParts.matchProtocol,
+        matchHost: matchParts.matchHost,
+        matchPath: matchParts.matchPath,
+        matchQuery: matchParts.matchQuery,
+      })
+      bumpRequestPanel()
+      setOverridesPanel({ state: 'edit', source: 'traffic' })
+      navigateToTab('override')
+    },
+    [
+      bumpRequestPanel,
+      getEntryById,
+      navigateToTab,
+      setOverrideEditingId,
+      setOverrideError,
+      setOverrideForm,
+      setOverridesPanel,
+      traffic,
+    ],
+  )
+
+  const replayEntryRequest = useCallback(
+    async (id: string) => {
+      const entry = getEntryById(id)
+      if (!entry || entry.kind !== 'http') return
+      traffic.setSelectedId(id)
+      try {
+        const response = await fetch(`/api/requests/${entry.id}/replay`, {
+          method: 'POST',
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        showSuccessToast(trafficTexts.replayRequestSuccess)
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(trafficTexts.replayRequestFailed(detail), 'error')
+      }
+    },
+    [getEntryById, traffic],
+  )
+
+  const openSavedRequestForEntry = useCallback(
+    (id: string) => {
+      if (!savedTrafficEntryIds.has(id)) return
+      setSelectedSavedRequestId(id)
+      navigateToTab('saved')
+    },
+    [navigateToTab, savedTrafficEntryIds, setSelectedSavedRequestId],
+  )
+
   const onOverridesNavClick = useCallback(() => {
     ovr.onOverridesNavClick()
     navigateToTab('override')
@@ -504,6 +754,10 @@ export function useDashboard() {
     testError: traffic.testError,
     clearTraffic: traffic.clearTraffic,
     filteredEntries: traffic.filteredEntries,
+    matchedTrafficEntryIds,
+    savedTrafficEntryIds,
+    matchedOverrideByEntryId,
+    matchedBreakpointByEntryId,
     selectedId: traffic.selectedId,
     setSelectedId: traffic.setSelectedId,
     selected: traffic.selected,
@@ -553,6 +807,14 @@ export function useDashboard() {
     activeBreakpointsCount,
     openMatchedOverride,
     openMatchedBreakpoint,
+    openMatchedOverrideForEntry,
+    openMatchedBreakpointForEntry,
+    copyEntryCurl,
+    saveEntryRequest,
+    openEntryOverrideDrawer,
+    addBreakpointFromEntry,
+    replayEntryRequest,
+    openSavedRequestForEntry,
     savedRequests,
     selectedSavedRequestId,
     setSelectedSavedRequestId,

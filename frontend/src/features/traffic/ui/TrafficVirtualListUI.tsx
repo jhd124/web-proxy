@@ -1,5 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import s from './TrafficVirtualListUI.module.css'
@@ -15,8 +22,20 @@ export type TrafficVirtualListTagTexts = {
 
 export type TrafficVirtualListUIProps = {
   entries: TrafficEntry[]
+  matchedEntryIds?: ReadonlySet<string>
+  savedEntryIds?: ReadonlySet<string>
+  matchedOverrideByEntryId?: ReadonlyMap<string, string>
+  matchedBreakpointByEntryId?: ReadonlyMap<string, string>
   selectedId: string | null
   onSelect: (id: string) => void
+  onCopyCurl: (id: string) => void
+  onSaveRequest: (id: string) => Promise<void>
+  onOpenSavedRequest: (id: string) => void
+  onOverride: (id: string) => void
+  onOpenMatchedOverride: (id: string) => void
+  onAddBreakpoint: (id: string) => Promise<void>
+  onOpenMatchedBreakpoint: (id: string) => void
+  onReplay: (id: string) => Promise<void>
   onEntryDoubleClick?: (id: string) => void
   emptyText?: string
   className?: string
@@ -25,8 +44,20 @@ export type TrafficVirtualListUIProps = {
 
 export function TrafficVirtualListUI({
   entries,
+  matchedEntryIds,
+  savedEntryIds,
+  matchedOverrideByEntryId,
+  matchedBreakpointByEntryId,
   selectedId,
   onSelect,
+  onCopyCurl,
+  onSaveRequest,
+  onOpenSavedRequest,
+  onOverride,
+  onOpenMatchedOverride,
+  onAddBreakpoint,
+  onOpenMatchedBreakpoint,
+  onReplay,
   onEntryDoubleClick,
   emptyText,
   className,
@@ -41,6 +72,15 @@ export function TrafficVirtualListUI({
   const parentRef = useRef<HTMLDivElement>(null)
   const previousDisplayEntriesRef = useRef<TrafficEntry[]>(displayEntries)
   const previousScrollTopRef = useRef(0)
+  const [contextMenuState, setContextMenuState] = useState<{
+    entryId: string | null
+    x: number
+    y: number
+  }>({
+    entryId: null,
+    x: 0,
+    y: 0,
+  })
 
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
@@ -92,97 +132,209 @@ export function TrafficVirtualListUI({
   }
 
   const scrollerClass = className ? `${s.scroller} ${className}` : s.scroller
+  const activeContextEntryId = contextMenuState.entryId ?? selectedId
+  const contextMenuEntry =
+    activeContextEntryId == null
+      ? null
+      : displayEntries.find((entry) => entry.id === activeContextEntryId) ?? null
 
   return (
-    <div
-      ref={parentRef}
-      className={scrollerClass}
-      tabIndex={0}
-      onScroll={(event) => {
-        previousScrollTopRef.current = event.currentTarget.scrollTop
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-        event.preventDefault()
-        if (displayEntries.length === 0) return
-
-        const selectedIndex = selectedId
-          ? displayEntries.findIndex((entry) => entry.id === selectedId)
-          : -1
-        if (selectedIndex < 0) {
-          onSelect(displayEntries[0].id)
-          return
+    <ContextMenu
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setContextMenuState((prev) => ({ ...prev, entryId: null }))
         }
-
-        const nextIndex =
-          event.key === 'ArrowUp'
-            ? Math.max(selectedIndex - 1, 0)
-            : Math.min(selectedIndex + 1, displayEntries.length - 1)
-        if (nextIndex === selectedIndex) return
-        const nextEntry = displayEntries[nextIndex]
-        if (!nextEntry) return
-        onSelect(nextEntry.id)
       }}
     >
-      <ul
-        className={s.list}
-        style={{ height: virtualizer.getTotalSize() }}
-        aria-label="Traffic"
+      <ContextMenuTrigger asChild>
+        <div
+          ref={parentRef}
+          className={scrollerClass}
+          tabIndex={0}
+          onScroll={(event) => {
+            previousScrollTopRef.current = event.currentTarget.scrollTop
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+            event.preventDefault()
+            if (displayEntries.length === 0) return
+
+            const selectedIndex = selectedId
+              ? displayEntries.findIndex((entry) => entry.id === selectedId)
+              : -1
+            if (selectedIndex < 0) {
+              onSelect(displayEntries[0].id)
+              return
+            }
+
+            const nextIndex =
+              event.key === 'ArrowUp'
+                ? Math.max(selectedIndex - 1, 0)
+                : Math.min(selectedIndex + 1, displayEntries.length - 1)
+            if (nextIndex === selectedIndex) return
+            const nextEntry = displayEntries[nextIndex]
+            if (!nextEntry) return
+            onSelect(nextEntry.id)
+          }}
+        >
+          <ul
+            className={s.list}
+            style={{ height: virtualizer.getTotalSize() }}
+            aria-label="Traffic"
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const entry = displayEntries[virtualRow.index]
+              if (!entry) return null
+
+              const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
+              const contentType = getEntryContentType(entry)
+              const appName = getRequesterAppName(entry)
+              const rowStatusLabel = getRowStatusLabel(entry, tags)
+              const hasMatchedRule = Boolean(
+                entry.overrideMatchId ||
+                  entry.breakpointMatchId ||
+                  matchedEntryIds?.has(entry.id),
+              )
+
+              return (
+                <li
+                  key={entry.id}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: virtualRow.size,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    outline: 'none',
+                    outlineWidth: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
+                    style={{ height: virtualRow.size }}
+                    onClick={() => {
+                      onSelect(entry.id)
+                    }}
+                    onContextMenu={(event) => {
+                      onSelect(entry.id)
+                      setContextMenuState({
+                        entryId: entry.id,
+                        x: event.clientX,
+                        y: event.clientY,
+                      })
+                    }}
+                    onDoubleClick={
+                      onEntryDoubleClick
+                        ? () => onEntryDoubleClick(entry.id)
+                        : undefined
+                    }
+                  >
+                    <span className={s.url} title={entry.url}>
+                      {entry.url}
+                    </span>
+                    <span className={s.code} title={rowStatusLabel}>
+                      {httpCodeText}
+                    </span>
+                    <span className={s.method} title={entry.method}>
+                      {entry.method}
+                    </span>
+                    <span className={s.contentType} title={contentType}>
+                      {contentType}
+                    </span>
+                    <span className={s.app} title={appName}>
+                      {appName}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent
+        key={`${contextMenuState.entryId ?? 'none'}-${contextMenuState.x}-${contextMenuState.y}`}
+        aria-label={t.rowMenuOpen}
       >
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const entry = displayEntries[virtualRow.index]
-          if (!entry) return null
-
-          const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
-          const contentType = getEntryContentType(entry)
-          const appName = getRequesterAppName(entry)
-          const rowStatusLabel = getRowStatusLabel(entry, tags)
-          const hasMatchedRule = Boolean(entry.overrideMatchId || entry.breakpointMatchId)
-
-          return (
-            <li
-              key={entry.id}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: virtualRow.size,
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-            >
-              <button
-                type="button"
-                className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
-                style={{ height: virtualRow.size }}
-                onClick={() => onSelect(entry.id)}
-                onDoubleClick={
-                  onEntryDoubleClick
-                    ? () => onEntryDoubleClick(entry.id)
-                    : undefined
-                }
-              >
-                <span className={s.url} title={entry.url}>
-                  {entry.url}
-                </span>
-                <span className={s.code} title={rowStatusLabel}>
-                  {httpCodeText}
-                </span>
-                <span className={s.method} title={entry.method}>
-                  {entry.method}
-                </span>
-                <span className={s.contentType} title={contentType}>
-                  {contentType}
-                </span>
-                <span className={s.app} title={appName}>
-                  {appName}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+        <ContextMenuItem
+          disabled={!contextMenuEntry}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            onCopyCurl(contextMenuEntry.id)
+          }}
+        >
+          {t.rowMenuCopyCurl}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={!contextMenuEntry}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            const hasSavedRequest = savedEntryIds?.has(contextMenuEntry.id) === true
+            if (hasSavedRequest) {
+              onOpenSavedRequest(contextMenuEntry.id)
+              return
+            }
+            void onSaveRequest(contextMenuEntry.id)
+          }}
+        >
+          {contextMenuEntry && savedEntryIds?.has(contextMenuEntry.id)
+            ? t.rowMenuOpenSavedRequest
+            : t.rowMenuSaveRequest}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            const hasMatchedOverride =
+              Boolean(contextMenuEntry.overrideMatchId) ||
+              matchedOverrideByEntryId?.has(contextMenuEntry.id) === true
+            if (hasMatchedOverride) {
+              onOpenMatchedOverride(contextMenuEntry.id)
+              return
+            }
+            onOverride(contextMenuEntry.id)
+          }}
+        >
+          {contextMenuEntry &&
+          (Boolean(contextMenuEntry.overrideMatchId) ||
+            matchedOverrideByEntryId?.has(contextMenuEntry.id))
+            ? t.rowMenuViewMatchedOverride
+            : t.rowMenuOverride}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            const hasMatchedBreakpoint =
+              Boolean(contextMenuEntry.breakpointMatchId) ||
+              matchedBreakpointByEntryId?.has(contextMenuEntry.id) === true
+            if (hasMatchedBreakpoint) {
+              onOpenMatchedBreakpoint(contextMenuEntry.id)
+              return
+            }
+            void onAddBreakpoint(contextMenuEntry.id)
+          }}
+        >
+          {contextMenuEntry &&
+          (Boolean(contextMenuEntry.breakpointMatchId) ||
+            matchedBreakpointByEntryId?.has(contextMenuEntry.id))
+            ? t.rowMenuViewMatchedBreakpoint
+            : t.rowMenuAddBreakpoint}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            void onReplay(contextMenuEntry.id)
+          }}
+        >
+          {t.rowMenuReplay}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 

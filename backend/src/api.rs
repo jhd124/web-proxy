@@ -1,7 +1,7 @@
 use crate::state::AppState;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
-use axum::http::{header, StatusCode};
+use axum::http::{header, Method, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
 use axum::Json;
@@ -139,6 +139,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         )
         .route("/api/ui/actions", post(ui_action))
         .route("/api/requests/:id/resume", post(resume_request))
+        .route("/api/requests/:id/replay", post(replay_request))
         .route("/api/requests/:id/stream/play", post(play_stream))
         .route("/api/requests/:id/stream/pause", post(pause_stream))
         .route("/ws", get(ws_handler))
@@ -231,6 +232,40 @@ async fn resume_request(
         StatusCode::NO_CONTENT
     } else {
         StatusCode::NOT_FOUND
+    }
+}
+
+async fn replay_request(
+    axum::extract::Path(id): axum::extract::Path<uuid::Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> StatusCode {
+    let Some(entry) = state.traffic.read().iter().find(|entry| entry.id == id).cloned() else {
+        return StatusCode::NOT_FOUND;
+    };
+    if !matches!(entry.kind, crate::state::TrafficKind::Http) {
+        return StatusCode::BAD_REQUEST;
+    }
+    let Ok(method) = Method::from_bytes(entry.method.as_bytes()) else {
+        return StatusCode::BAD_REQUEST;
+    };
+    let mut request_builder = state.upstream_http_client.request(method, &entry.url);
+    for (name, value) in entry.request_headers {
+        if name.eq_ignore_ascii_case("host")
+            || name.eq_ignore_ascii_case("content-length")
+            || name.eq_ignore_ascii_case("accept-encoding")
+            || name.eq_ignore_ascii_case("proxy-authorization")
+            || name.eq_ignore_ascii_case("proxy-connection")
+        {
+            continue;
+        }
+        request_builder = request_builder.header(name, value);
+    }
+    if let Some(body_preview) = entry.request_body_preview {
+        request_builder = request_builder.body(body_preview);
+    }
+    match request_builder.send().await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::BAD_GATEWAY,
     }
 }
 

@@ -1,7 +1,10 @@
 use super::*;
 use crate::state::{BreakpointRule, OverrideRule, TrafficEntry, TrafficKind};
+use axum::routing::post;
+use axum::Router;
 use chrono::Utc;
 use reqwest::Client;
+use tokio::sync::oneshot;
 use uuid::Uuid;
 
 fn build_state() -> Arc<AppState> {
@@ -107,4 +110,66 @@ async fn clear_requests_clears_traffic_pending_and_stream_controllers() {
     assert!(state.traffic.read().is_empty());
     assert!(state.pending_requests.lock().is_empty());
     assert!(state.stream_controllers.lock().is_empty());
+}
+
+#[tokio::test]
+async fn replay_request_returns_not_found_for_missing_entry() {
+    let state = build_state();
+    let status = replay_request(axum::extract::Path(Uuid::new_v4()), State(state)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn replay_request_returns_bad_request_for_connect_entry() {
+    let state = build_state();
+    let id = Uuid::new_v4();
+    let mut entry = sample_entry(id);
+    entry.kind = TrafficKind::Connect;
+    state.push_traffic(entry);
+
+    let status = replay_request(axum::extract::Path(id), State(state)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn replay_request_replays_http_entry() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind test listener");
+    let addr = listener.local_addr().expect("read test listener addr");
+    let (request_seen_tx, request_seen_rx) = oneshot::channel::<()>();
+    let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(request_seen_tx)));
+    let app = Router::new().route(
+        "/replay",
+        post({
+            let tx = tx.clone();
+            move || {
+                let tx = tx.clone();
+                async move {
+                    if let Some(sender) = tx.lock().expect("lock replay tx").take() {
+                        let _ = sender.send(());
+                    }
+                    StatusCode::NO_CONTENT
+                }
+            }
+        }),
+    );
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let state = build_state();
+    let id = Uuid::new_v4();
+    let mut entry = sample_entry(id);
+    entry.url = format!("http://{addr}/replay");
+    entry.method = "POST".to_string();
+    entry.request_body_preview = Some("{\"hello\":\"world\"}".to_string());
+    entry.request_headers = vec![("content-type".to_string(), "application/json".to_string())];
+    state.push_traffic(entry);
+
+    let status = replay_request(axum::extract::Path(id), State(state)).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let seen = tokio::time::timeout(std::time::Duration::from_secs(1), request_seen_rx).await;
+    assert!(seen.is_ok(), "expected replay request to hit test server");
 }

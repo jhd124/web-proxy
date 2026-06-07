@@ -35,18 +35,22 @@ export function DashboardUI(p: DashboardViewModel) {
                   <TrafficPanelPortal
                     testError={p.testError}
                     filteredEntries={p.filteredEntries}
+                    matchedTrafficEntryIds={p.matchedTrafficEntryIds}
+                    savedTrafficEntryIds={p.savedTrafficEntryIds}
+                    matchedOverrideByEntryId={p.matchedOverrideByEntryId}
+                    matchedBreakpointByEntryId={p.matchedBreakpointByEntryId}
                     selectedId={p.selectedId}
                     setSelectedId={p.setSelectedId}
                     selected={p.selected}
                     selectedIsEventStream={p.selectedIsEventStream}
-                    selectedIsSaved={p.selectedIsSaved}
-                    openOverrideDrawer={p.openOverrideDrawer}
-                    saveSelectedRequest={p.saveSelectedRequest}
-                    addBreakpointFromSelected={p.addBreakpointFromSelected}
-                    openMatchedOverride={p.openMatchedOverride}
-                    openMatchedBreakpoint={p.openMatchedBreakpoint}
-                    resumeRequest={p.resumeRequest}
-                    resumeSaving={p.resumeSaving}
+                    onEntryCopyCurl={p.copyEntryCurl}
+                    onEntrySaveRequest={p.saveEntryRequest}
+                    onEntryOverride={p.openEntryOverrideDrawer}
+                    onEntryAddBreakpoint={p.addBreakpointFromEntry}
+                    onEntryReplay={p.replayEntryRequest}
+                    onEntryOpenSavedRequest={p.openSavedRequestForEntry}
+                    onEntryOpenMatchedOverride={p.openMatchedOverrideForEntry}
+                    onEntryOpenMatchedBreakpoint={p.openMatchedBreakpointForEntry}
                   />
                 </div>
               </div>

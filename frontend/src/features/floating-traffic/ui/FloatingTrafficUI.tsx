@@ -12,6 +12,9 @@ import type { FloatingTrafficViewModel } from '../types'
 import { FloatingTrafficDetailPanelUI } from './FloatingTrafficDetailPanelUI'
 import s from './FloatingTrafficUI.module.css'
 
+const EMPTY_ID_SET: ReadonlySet<string> = new Set()
+const EMPTY_ID_MAP: ReadonlyMap<string, string> = new Map()
+
 export function FloatingTrafficUI({
   urlFilter,
   setUrlFilter,
@@ -58,8 +61,30 @@ export function FloatingTrafficUI({
             <TrafficVirtualListUI
               className={s.listScroll}
               entries={filteredEntries}
+              matchedEntryIds={EMPTY_ID_SET}
+              savedEntryIds={EMPTY_ID_SET}
+              matchedOverrideByEntryId={EMPTY_ID_MAP}
+              matchedBreakpointByEntryId={EMPTY_ID_MAP}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              onCopyCurl={(id) => {
+                void openMainWindowForEntry(id)
+              }}
+              onSaveRequest={(id) => openMainWindowForEntry(id)}
+              onOpenSavedRequest={(id) => {
+                void openMainWindowForEntry(id)
+              }}
+              onOverride={(id) => {
+                void openMainWindowForEntry(id)
+              }}
+              onOpenMatchedOverride={(id) => {
+                void openMainWindowForEntry(id)
+              }}
+              onAddBreakpoint={(id) => openMainWindowForEntry(id)}
+              onOpenMatchedBreakpoint={(id) => {
+                void openMainWindowForEntry(id)
+              }}
+              onReplay={(id) => openMainWindowForEntry(id)}
               onEntryDoubleClick={(id) => void openMainWindowForEntry(id)}
               emptyText={t.empty}
               tagTexts={{

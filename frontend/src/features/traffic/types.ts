@@ -3,16 +3,20 @@ import type { TrafficEntry } from '../../types'
 export type TrafficPanelUIProps = {
   testError: string | null
   filteredEntries: TrafficEntry[]
+  matchedTrafficEntryIds: ReadonlySet<string>
+  savedTrafficEntryIds: ReadonlySet<string>
+  matchedOverrideByEntryId: ReadonlyMap<string, string>
+  matchedBreakpointByEntryId: ReadonlyMap<string, string>
   selectedId: string | null
   setSelectedId: (id: string | null) => void
   selected: TrafficEntry | null
   selectedIsEventStream: boolean
-  selectedIsSaved: boolean
-  openOverrideDrawer: () => void
-  saveSelectedRequest: () => Promise<void>
-  addBreakpointFromSelected: () => void
-  openMatchedOverride: () => void
-  openMatchedBreakpoint: () => void
-  resumeRequest: (id: string) => void
-  resumeSaving: Record<string, boolean>
+  onEntryCopyCurl: (id: string) => void
+  onEntrySaveRequest: (id: string) => Promise<void>
+  onEntryOverride: (id: string) => void
+  onEntryAddBreakpoint: (id: string) => Promise<void>
+  onEntryReplay: (id: string) => Promise<void>
+  onEntryOpenSavedRequest: (id: string) => void
+  onEntryOpenMatchedOverride: (id: string) => void
+  onEntryOpenMatchedBreakpoint: (id: string) => void
 }

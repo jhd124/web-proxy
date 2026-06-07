@@ -20,9 +20,9 @@
 
 .row {
   align-items: center;
-  background: var(--background-list-item-light);
+  background: var(--background-list-item);
   border: none;
-  border-bottom: 1px solid #1e2430;
+  border-bottom: 1px solid var(--list-border);
   color: inherit;
   cursor: pointer;
   display: grid;
@@ -35,6 +35,8 @@
   text-align: left;
   top: 0;
   width: 100%;
+  outline: none;
+  outline-width: 0;
 }
 
 .code,.method,.contentType,.app {
@@ -42,11 +44,11 @@
 }
 
 .row:hover {
-  background: #1a1f2a;
+  background: var(--background-list-item-hover);
 }
 
-.rowActive {
-  background: #1e2635;
+.row.rowActive {
+  background: var(--background-list-item-active);
 }
 
 .rowMatched::before {
