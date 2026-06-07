@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import {
   CirclePause,
   CirclePlay,
+  Download,
   KeyRound,
   Pin,
   Trash,
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SimpleTooltip } from '@/components/ui/tooltip'
 import { downloadFromUrl } from '@/lib/download'
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 type Props = {
   urlFilter: string
@@ -24,9 +25,11 @@ type Props = {
   capturePaused: boolean
   captureToggleSaving: boolean
   wifiProxySaving: boolean
+  exportHarSaving: boolean
   onCaptureToggleClick: () => void
   onEnableWifiProxyClick: () => void
   onFloatingTrafficEntryClick: () => void
+  onExportHarClick: () => void
 }
 
 export function DashboardHeaderUI({
@@ -37,9 +40,11 @@ export function DashboardHeaderUI({
   capturePaused,
   captureToggleSaving,
   wifiProxySaving,
+  exportHarSaving,
   onCaptureToggleClick,
   onEnableWifiProxyClick,
   onFloatingTrafficEntryClick,
+  onExportHarClick,
 }: Props) {
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
@@ -61,7 +66,7 @@ export function DashboardHeaderUI({
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     console.log('handleSubmit', e)
     e.preventDefault()
-  }, [clearTraffic])
+  }, [])
 
   return (
     <header className={s.top}>
@@ -133,6 +138,18 @@ export function DashboardHeaderUI({
             onClick={onEnableWifiProxyClick}
           >
             <WifiCog />
+          </Button>
+        </SimpleTooltip>
+
+        <SimpleTooltip label={t.exportHarTooltip}>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={t.exportHarAriaLabel}
+            disabled={exportHarSaving}
+            onClick={onExportHarClick}
+          >
+            <Download />
           </Button>
         </SimpleTooltip>
 

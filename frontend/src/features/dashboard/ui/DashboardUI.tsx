@@ -25,9 +25,11 @@ export function DashboardUI(p: DashboardViewModel) {
                   capturePaused={p.capturePaused}
                   captureToggleSaving={p.captureToggleSaving}
                   wifiProxySaving={p.wifiProxySaving}
+                  exportHarSaving={p.exportHarSaving}
                   onCaptureToggleClick={p.toggleCapturePaused}
                   onEnableWifiProxyClick={p.enableWifiHttpHttpsProxy}
                   onFloatingTrafficEntryClick={p.openFloatingTrafficWindow}
+                  onExportHarClick={p.exportFilteredTrafficAsHar}
                 />
                 <div className={root.tabPanel}>
                   <TrafficPanelPortal

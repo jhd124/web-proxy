@@ -6,6 +6,12 @@ export const dashboardTexts = {
       `${label} (${count} ${count === 1 ? 'active item' : 'active items'})`,
   },
   header: {
+    exportHarTooltip: 'Export filtered traffic as HAR',
+    exportHarAriaLabel: 'Export filtered traffic as HAR',
+    exportHarSuccess: (count: number) =>
+      `Exported ${count} traffic ${count === 1 ? 'entry' : 'entries'} as HAR`,
+    exportHarFailed: (detail: string) =>
+      `Could not export HAR: ${detail}`,
     downloadCaTooltip: 'Download MITM CA certificate (PEM)',
     downloadCaAriaLabel: 'Download MITM CA certificate',
     downloadCaFailed: (detail: string) =>

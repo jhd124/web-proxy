@@ -14,6 +14,9 @@ import {
 import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
 import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSelect'
 import { isTauri } from '../../../lib/tauriEnv'
+import { downloadBlob } from '../../../lib/download'
+import { trafficEntriesToHar } from '../../../lib/har'
+import { showSuccessToast, showToast } from '../../../lib/toast'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
 
@@ -112,6 +115,7 @@ export function useDashboard() {
   const [capturePaused, setCapturePaused] = useState(false)
   const [captureToggleSaving, setCaptureToggleSaving] = useState(false)
   const [wifiProxySaving, setWifiProxySaving] = useState(false)
+  const [exportHarSaving, setExportHarSaving] = useState(false)
 
   const traffic = useTrafficState()
   useMainWindowTrafficSelect(traffic.setSelectedId)
@@ -262,6 +266,30 @@ export function useDashboard() {
   }, [proxyListenAddress])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
+
+  const exportFilteredTrafficAsHar = useCallback(() => {
+    if (exportHarSaving) return
+    setExportHarSaving(true)
+    try {
+      const har = trafficEntriesToHar(filteredEntries)
+      const payload = JSON.stringify(har, null, 2)
+      const timestamp = new Date().toISOString().replace(/:/g, '-')
+      downloadBlob(
+        new Blob([payload], {
+          type: 'application/json;charset=utf-8',
+        }),
+        `traffic-${timestamp}.har`,
+      )
+      showSuccessToast(
+        dashboardTexts.header.exportHarSuccess(filteredEntries.length),
+      )
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      showToast(dashboardTexts.header.exportHarFailed(detail), 'error')
+    } finally {
+      setExportHarSaving(false)
+    }
+  }, [exportHarSaving, filteredEntries])
 
   const selectedIsSaved = useMemo(
     () => Boolean(selected && isRequestSaved(selected.id)),
@@ -462,6 +490,8 @@ export function useDashboard() {
     toggleCapturePaused,
     wifiProxySaving,
     enableWifiHttpHttpsProxy,
+    exportHarSaving,
+    exportFilteredTrafficAsHar,
     breakpointsOpen,
     savedRequestsOpen,
     closeBreakpointsPanel,

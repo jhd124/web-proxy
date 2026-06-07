@@ -50,6 +50,13 @@ export function TrafficVirtualListUI({
   })
 
   useLayoutEffect(() => {
+    if (!selectedId) return
+    const selectedIndex = displayEntries.findIndex((entry) => entry.id === selectedId)
+    if (selectedIndex < 0) return
+    virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
+  }, [displayEntries, selectedId, virtualizer])
+
+  useLayoutEffect(() => {
     const parent = parentRef.current
     const previousDisplayEntries = previousDisplayEntriesRef.current
     if (!parent) {
@@ -90,8 +97,31 @@ export function TrafficVirtualListUI({
     <div
       ref={parentRef}
       className={scrollerClass}
+      tabIndex={0}
       onScroll={(event) => {
         previousScrollTopRef.current = event.currentTarget.scrollTop
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+        event.preventDefault()
+        if (displayEntries.length === 0) return
+
+        const selectedIndex = selectedId
+          ? displayEntries.findIndex((entry) => entry.id === selectedId)
+          : -1
+        if (selectedIndex < 0) {
+          onSelect(displayEntries[0].id)
+          return
+        }
+
+        const nextIndex =
+          event.key === 'ArrowUp'
+            ? Math.max(selectedIndex - 1, 0)
+            : Math.min(selectedIndex + 1, displayEntries.length - 1)
+        if (nextIndex === selectedIndex) return
+        const nextEntry = displayEntries[nextIndex]
+        if (!nextEntry) return
+        onSelect(nextEntry.id)
       }}
     >
       <ul
