@@ -92,7 +92,7 @@ export function TrafficPanelUI({
                     </button>
                   </div>
                 </div>
-                <p className="mono small">
+                <p className={`mono small ${s.requestUrl}`}>
                   {selected.method} {selected.url}
                 </p>
                 <p className="small muted">
