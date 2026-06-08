@@ -7,7 +7,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { ArrowUpToLine } from 'lucide-react'
+import { ArrowUpToLine, Focus } from 'lucide-react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import s from './TrafficVirtualListUI.module.css'
@@ -74,6 +74,7 @@ export function TrafficVirtualListUI({
   const parentRef = useRef<HTMLDivElement>(null)
   const previousDisplayEntriesRef = useRef<TrafficEntry[]>(displayEntries)
   const previousScrollTopRef = useRef(0)
+  const previousSelectedIdRef = useRef<string | null>(null)
   const [contextMenuState, setContextMenuState] = useState<{
     entryId: string | null
     x: number
@@ -94,10 +95,15 @@ export function TrafficVirtualListUI({
 
   useLayoutEffect(() => {
     if (!selectedId) return
+    if (selectedId === previousSelectedIdRef.current) return
     const selectedIndex = displayEntries.findIndex((entry) => entry.id === selectedId)
     if (selectedIndex < 0) return
     virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
   }, [displayEntries, selectedId, virtualizer])
+
+  useLayoutEffect(() => {
+    previousSelectedIdRef.current = selectedId
+  }, [selectedId])
 
   useLayoutEffect(() => {
     const parent = parentRef.current
@@ -140,6 +146,10 @@ export function TrafficVirtualListUI({
     activeContextEntryId == null
       ? null
       : displayEntries.find((entry) => entry.id === activeContextEntryId) ?? null
+  const selectedIndex = selectedId
+    ? displayEntries.findIndex((entry) => entry.id === selectedId)
+    : -1
+  const canFocusSelectedEntry = selectedIndex >= 0
 
   return (
     <ContextMenu
@@ -258,17 +268,34 @@ export function TrafficVirtualListUI({
               })}
             </ul>
           </div>
-          <button
-            type="button"
-            className={`${s.backToTop} ${showBackToTop ? s.backToTopVisible : ''}`}
-            onClick={() => {
-              parentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-            }}
-            aria-label={t.backToTop}
-            title={t.backToTop}
-          >
-            <ArrowUpToLine className={s.backToTopIcon} aria-hidden />
-          </button>
+          <div className={s.actionGroup}>
+            {showBackToTop ? (
+              <button
+                type="button"
+                className={`${s.floatingAction} ${s.floatingActionVisible}`}
+                onClick={() => {
+                  parentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                aria-label={t.backToTop}
+                title={t.backToTop}
+              >
+                <ArrowUpToLine className={s.floatingActionIcon} aria-hidden />
+              </button>
+            ) : null}
+            {canFocusSelectedEntry ? (
+              <button
+                type="button"
+                className={`${s.floatingAction} ${s.floatingActionVisible}`}
+                onClick={() => {
+                  virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
+                }}
+                aria-label={t.focusSelected}
+                title={t.focusSelected}
+              >
+                <Focus className={s.floatingActionIcon} aria-hidden />
+              </button>
+            ) : null}
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent

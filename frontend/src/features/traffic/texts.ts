@@ -32,6 +32,7 @@ export const trafficTexts = {
   rowMenuViewMatchedBreakpoint: 'View matched breakpoint',
   rowMenuReplay: 'Replay request',
   backToTop: 'Top',
+  focusSelected: 'Focus selected',
   replayRequestSuccess: 'Replay sent',
   replayRequestFailed: (detail: string) => `Replay failed: ${detail}`,
   addBreakpoint: 'Add breakpoint',

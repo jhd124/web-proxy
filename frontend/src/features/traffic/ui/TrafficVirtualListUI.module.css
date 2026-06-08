@@ -111,36 +111,42 @@
   color: var(--muted);
 }
 
-.backToTop {
-  background: var(--background-base);
-  border-radius: 9999px;
+.actionGroup {
   bottom: 0.9rem;
-  color: var(--muted);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
+  display: flex;
+  gap: 8px;
   left: 0.9rem;
-  opacity: 0;
-  padding: 0;
   pointer-events: none;
   position: absolute;
-  transition: opacity 120ms ease;
-  height: 3rem;
-  width: 3rem;
   z-index: 3;
 }
 
-.backToTopVisible {
+.floatingAction {
+  background: var(--background-base);
+  border-radius: 9999px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  height: 3rem;
+  opacity: 0;
+  place-items: center;
+  padding: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  width: 3rem;
+}
+
+.floatingActionVisible {
   opacity: 0.7;
   pointer-events: auto;
 }
 
-.backToTopVisible:hover {
+.floatingActionVisible:hover {
   background: var(--background-popover);
   opacity: 1;
 }
 
-.backToTopIcon {
+.floatingActionIcon {
   height: 0.95rem;
   width: 0.95rem;
 }
