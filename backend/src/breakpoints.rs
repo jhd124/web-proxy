@@ -11,6 +11,7 @@ use uuid::Uuid;
 pub struct UpsertBreakpointBody {
     pub name: String,
     pub enabled: Option<bool>,
+    pub match_method: Option<String>,
     pub match_origin: Option<String>,
     pub match_path_regex: Option<String>,
 }
@@ -27,6 +28,14 @@ pub async fn create_breakpoint(
         id: Uuid::new_v4(),
         name: body.name,
         enabled: body.enabled.unwrap_or(true),
+        match_method: body.match_method.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
         match_origin: body.match_origin,
         match_path_regex: body.match_path_regex,
     };
@@ -44,6 +53,14 @@ pub async fn update_breakpoint(
         id,
         name: body.name,
         enabled: body.enabled.unwrap_or(true),
+        match_method: body.match_method.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
         match_origin: body.match_origin,
         match_path_regex: body.match_path_regex,
     };

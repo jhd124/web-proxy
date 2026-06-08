@@ -275,6 +275,7 @@ export function OverrideEditorUI({
                       .map((x) => (x ?? '').trim())
                       .filter(Boolean)
                       .join(' ') || 'Override',
+                  matchMethod: overrideForm.matchMethod || null,
                   matchHost: overrideForm.matchHost || null,
                   matchPath: overrideForm.matchPath || null,
                 },

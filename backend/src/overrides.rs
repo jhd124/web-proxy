@@ -34,6 +34,7 @@ impl From<InsertOverrideError> for StatusCode {
 #[serde(rename_all = "camelCase")]
 pub struct UpsertOverrideBody {
     pub enabled: Option<bool>,
+    pub match_method: Option<String>,
     pub match_protocol: Option<String>,
     pub match_host: Option<String>,
     pub match_path: Option<String>,
@@ -64,6 +65,14 @@ fn rule_from_body(body: &UpsertOverrideBody, id: String) -> OverrideRule {
     OverrideRule {
         id,
         enabled: body.enabled.unwrap_or(true),
+        match_method: body.match_method.as_ref().and_then(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }),
         match_protocol: body.match_protocol.clone(),
         match_host: body.match_host.as_ref().map(|s| s.trim().to_string()),
         match_path: body.match_path.clone(),
@@ -109,6 +118,9 @@ fn ensure_overrides_schema(conn: &Connection) -> rusqlite::Result<()> {
         .collect();
     cols.sort();
     let has = |c: &str| cols.iter().any(|x| x == c);
+    if !has("match_method") {
+        conn.execute("ALTER TABLE overrides ADD COLUMN match_method TEXT", [])?;
+    }
     if !has("match_protocol") {
         conn.execute("ALTER TABLE overrides ADD COLUMN match_protocol TEXT", [])?;
     }
@@ -180,7 +192,7 @@ pub fn init_and_load(path: &StdPath) -> anyhow::Result<Vec<OverrideRule>> {
     let conn = Connection::open(path).with_context(|| format!("open sqlite {}", path.display()))?;
     conn.execute_batch(
         r#"
-        -- `id` is the sole primary key; must be unique. `match_method` is unused (left for old DBs).
+        -- `id` is the sole primary key; must be unique.
         CREATE TABLE IF NOT EXISTS overrides (
             id TEXT PRIMARY KEY NOT NULL,
             name TEXT NOT NULL,
@@ -223,6 +235,7 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
         SELECT
             id,
             enabled,
+            match_method,
             match_host,
             match_path_regex,
             match_protocol,
@@ -242,16 +255,16 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
         "#,
     )?;
     let rows = stmt.query_map([], |row| {
-        let headers_json: String = row.get(9)?;
+        let headers_json: String = row.get(10)?;
         let headers =
             serde_json::from_str::<Vec<(String, String)>>(&headers_json).unwrap_or_default();
         let mrh: String = row
-            .get::<_, Option<String>>(5)
+            .get::<_, Option<String>>(6)
             .ok()
             .flatten()
             .unwrap_or_else(|| "[]".to_string());
         let mq: String = row
-            .get::<_, Option<String>>(6)
+            .get::<_, Option<String>>(7)
             .ok()
             .flatten()
             .unwrap_or_else(|| "[]".to_string());
@@ -259,9 +272,9 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
             serde_json::from_str::<Vec<(String, String)>>(&mrh).unwrap_or_default();
         let match_query = serde_json::from_str::<Vec<(String, String)>>(&mq).unwrap_or_default();
         let id: String = row.get(0)?;
-        let mut map_remote_protocol: Option<String> = row.get(11)?;
-        let mut map_remote_host: Option<String> = row.get(12)?;
-        let mut map_remote_path: Option<String> = row.get(13)?;
+        let mut map_remote_protocol: Option<String> = row.get(12)?;
+        let mut map_remote_host: Option<String> = row.get(13)?;
+        let mut map_remote_path: Option<String> = row.get(14)?;
         if map_remote_protocol
             .as_deref()
             .map(str::trim)
@@ -274,7 +287,7 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
                 .unwrap_or(true)
         {
             let (legacy_protocol, legacy_host, legacy_path) =
-                map_remote_rule_from_legacy_url(row.get(14)?);
+                map_remote_rule_from_legacy_url(row.get(15)?);
             if map_remote_protocol.is_none() {
                 map_remote_protocol = legacy_protocol;
             }
@@ -288,19 +301,20 @@ fn load_all_from_conn(conn: &Connection) -> anyhow::Result<Vec<OverrideRule>> {
         Ok(OverrideRule {
             id,
             enabled: row.get::<_, i64>(1)? != 0,
-            match_host: row.get(2)?,
-            match_path: path_from_stored_column(row.get(3)?),
-            match_protocol: row.get(4)?,
+            match_method: row.get(2)?,
+            match_host: row.get(3)?,
+            match_path: path_from_stored_column(row.get(4)?),
+            match_protocol: row.get(5)?,
             match_request_headers,
             match_query,
-            match_request_body: row.get(7)?,
-            status: row.get(8)?,
+            match_request_body: row.get(8)?,
+            status: row.get(9)?,
             headers,
-            body: row.get(10)?,
+            body: row.get(11)?,
             map_remote_protocol,
             map_remote_host,
             map_remote_path,
-            stream_interval_ms: row.get::<_, Option<i64>>(15)?.map(|x| x as u64),
+            stream_interval_ms: row.get::<_, Option<i64>>(16)?.map(|x| x as u64),
         })
     })?;
     let mut out = Vec::new();
@@ -330,7 +344,7 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOver
             &rule.id,
             &String::new(),
             if rule.enabled { 1 } else { 0 },
-            Option::<String>::None,
+            &rule.match_method,
             &rule.match_host,
             &rule.match_path,
             &rule.match_protocol,
@@ -340,7 +354,7 @@ fn insert_override(path: &StdPath, rule: &OverrideRule) -> Result<(), InsertOver
             &rule.map_remote_protocol,
             &rule.map_remote_host,
             &rule.map_remote_path,
-            Option::<String>::None,
+            &rule.match_method,
             rule.status,
             &headers_json,
             &rule.body,

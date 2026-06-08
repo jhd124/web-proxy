@@ -11,6 +11,8 @@ export const breakpointTexts = {
   /** New breakpoint name from override/traffic: Pause <name> */
   pauseName: (name: string) => `Pause ${name}`,
   nameLabel: 'Name',
+  methodLabel: 'Method',
+  methodPlaceholder: 'GET',
   originLabel: 'Origin',
   pathRegexLabel: 'Path regex',
   originPlaceholder: 'https://example.com',

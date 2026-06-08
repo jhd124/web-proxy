@@ -173,3 +173,22 @@ async fn replay_request_replays_http_entry() {
     let seen = tokio::time::timeout(std::time::Duration::from_secs(1), request_seen_rx).await;
     assert!(seen.is_ok(), "expected replay request to hit test server");
 }
+
+#[tokio::test]
+async fn create_breakpoint_persists_match_method() {
+    let state = build_state();
+    let body = crate::breakpoints::UpsertBreakpointBody {
+        name: "Pause POST".to_string(),
+        enabled: Some(true),
+        match_method: Some("POST".to_string()),
+        match_origin: Some("https://example.com".to_string()),
+        match_path_regex: Some("^/api".to_string()),
+    };
+    let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(body))
+        .await
+        .expect("create breakpoint should succeed");
+    assert_eq!(created.0.match_method.as_deref(), Some("POST"));
+    let rules = state.breakpoints.read();
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].match_method.as_deref(), Some("POST"));
+}

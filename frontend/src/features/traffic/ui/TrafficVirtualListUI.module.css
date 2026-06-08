@@ -1,5 +1,14 @@
+.scrollerWrap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
 .scroller {
   flex: 1;
+  height: 100%;
   min-height: 0;
   overflow: auto;
 }
@@ -100,6 +109,40 @@
 .contentType,
 .app {
   color: var(--muted);
+}
+
+.backToTop {
+  background: var(--background-base);
+  border-radius: 9999px;
+  bottom: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  left: 0.9rem;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 120ms ease;
+  height: 3rem;
+  width: 3rem;
+  z-index: 3;
+}
+
+.backToTopVisible {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+.backToTopVisible:hover {
+  background: var(--background-popover);
+  opacity: 1;
+}
+
+.backToTopIcon {
+  height: 0.95rem;
+  width: 0.95rem;
 }
 
 @container (max-width: 650px) {

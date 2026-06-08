@@ -3,6 +3,7 @@ import type { BreakpointRule } from '../../types'
 
 export type BreakpointForm = {
   name: string
+  matchMethod: string
   matchOrigin: string
   matchPathRegex: string
 }

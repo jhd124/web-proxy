@@ -608,11 +608,12 @@ fn find_override(
 
 fn find_breakpoint(
     state: &AppState,
+    method: &str,
     origin: &str,
     path: &str,
 ) -> Option<crate::state::BreakpointRule> {
     let rules = state.breakpoints.read();
-    rules.iter().find(|r| r.matches(origin, path)).cloned()
+    rules.iter().find(|r| r.matches(method, origin, path)).cloned()
 }
 
 pub async fn run_proxy(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()> {
@@ -1192,7 +1193,7 @@ async fn forward_proxied_http(
         request_headers,
         collected.as_ref(),
     );
-    let matched_breakpoint = find_breakpoint(&state, &origin, &path_with_query);
+    let matched_breakpoint = find_breakpoint(&state, method.as_str(), &origin, &path_with_query);
     let mapped_remote_url = matched_override
         .as_ref()
         .and_then(|rule| build_mapped_remote_url(rule, &path_with_query));

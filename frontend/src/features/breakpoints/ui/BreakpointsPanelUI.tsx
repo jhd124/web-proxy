@@ -75,6 +75,20 @@ export function BreakpointsPanelUI({
                 />
               </label>
               <label className={s.wide}>
+                {t.methodLabel}
+                <input
+                  className="mono"
+                  placeholder={t.methodPlaceholder}
+                  value={breakpointForm.matchMethod}
+                  onChange={(e) =>
+                    setBreakpointForm((f) => ({
+                      ...f,
+                      matchMethod: e.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className={s.wide}>
                 {t.originLabel}
                 <input
                   className="mono"
@@ -167,6 +181,8 @@ export function BreakpointsPanelUI({
                       </div>
                     </div>
                     <p className={`small mono ${s.ruleBody}`}>
+                      {(rule.matchMethod ?? '∗').toUpperCase()}
+                      <br />
                       {rule.matchOrigin ?? '∗'}
                       <br />
                       {rule.matchPathRegex ?? '∗'}

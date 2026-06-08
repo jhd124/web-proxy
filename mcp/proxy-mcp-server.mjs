@@ -49,6 +49,7 @@ const tools = [
       properties: {
         dashboardUrl: { type: "string" },
         enabled: { type: "boolean" },
+        matchMethod: { type: "string" },
         matchProtocol: { type: "string" },
         matchHost: { type: "string" },
         matchPath: { type: "string" },
@@ -99,6 +100,7 @@ const tools = [
         dashboardUrl: { type: "string" },
         name: { type: "string" },
         enabled: { type: "boolean" },
+        matchMethod: { type: "string" },
         matchOrigin: { type: "string" },
         matchPathRegex: { type: "string" },
       },
@@ -407,6 +409,8 @@ async function handleAddOverride(rawArgs) {
   const baseUrl = resolveDashboardUrl(args);
   const payload = {
     enabled: args.enabled ?? true,
+    matchMethod:
+      typeof args.matchMethod === "string" ? args.matchMethod : null,
     matchProtocol:
       typeof args.matchProtocol === "string" ? args.matchProtocol : null,
     matchHost: typeof args.matchHost === "string" ? args.matchHost : null,
@@ -439,6 +443,8 @@ async function handleAddBreakpoint(rawArgs) {
         ? args.name
         : "MCP Breakpoint",
     enabled: args.enabled ?? true,
+    matchMethod:
+      typeof args.matchMethod === "string" ? args.matchMethod : null,
     matchOrigin: typeof args.matchOrigin === "string" ? args.matchOrigin : null,
     matchPathRegex:
       typeof args.matchPathRegex === "string" ? args.matchPathRegex : null,

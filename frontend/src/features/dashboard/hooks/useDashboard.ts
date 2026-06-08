@@ -460,6 +460,7 @@ export function useDashboard() {
     if (matchedBreakpoint) {
       setBreakpointForm({
         name: matchedBreakpoint.name,
+        matchMethod: matchedBreakpoint.matchMethod ?? '',
         matchOrigin: matchedBreakpoint.matchOrigin ?? '',
         matchPathRegex: matchedBreakpoint.matchPathRegex ?? '',
       })
@@ -476,6 +477,7 @@ export function useDashboard() {
       if (matchedBreakpoint) {
         setBreakpointForm({
           name: matchedBreakpoint.name,
+          matchMethod: matchedBreakpoint.matchMethod ?? '',
           matchOrigin: matchedBreakpoint.matchOrigin ?? '',
           matchPathRegex: matchedBreakpoint.matchPathRegex ?? '',
         })
@@ -532,11 +534,13 @@ export function useDashboard() {
     const matchPathRegex = `^${escapeRegex(selected.path)}$`
     const existing = breakpoints.find(
       (rule) =>
+        (rule.matchMethod ?? '').toLowerCase() === selected.method.toLowerCase() &&
         (rule.matchOrigin ?? '') === matchOrigin &&
         (rule.matchPathRegex ?? '') === matchPathRegex,
     )
     setBreakpointForm({
       name: `Pause ${selected.method} ${selected.path}`,
+      matchMethod: selected.method,
       matchOrigin,
       matchPathRegex,
     })
@@ -550,6 +554,7 @@ export function useDashboard() {
       body: JSON.stringify({
         name: `Pause ${selected.method} ${selected.path}`,
         enabled: true,
+        matchMethod: selected.method,
         matchOrigin: matchOrigin || null,
         matchPathRegex,
       }),
@@ -574,11 +579,13 @@ export function useDashboard() {
       const matchPathRegex = `^${escapeRegex(entry.path)}$`
       const existing = breakpoints.find(
         (rule) =>
+          (rule.matchMethod ?? '').toLowerCase() === entry.method.toLowerCase() &&
           (rule.matchOrigin ?? '') === matchOrigin &&
           (rule.matchPathRegex ?? '') === matchPathRegex,
       )
       setBreakpointForm({
         name: `Pause ${entry.method} ${entry.path}`,
+        matchMethod: entry.method,
         matchOrigin,
         matchPathRegex,
       })
@@ -592,6 +599,7 @@ export function useDashboard() {
         body: JSON.stringify({
           name: `Pause ${entry.method} ${entry.path}`,
           enabled: true,
+          matchMethod: entry.method,
           matchOrigin: matchOrigin || null,
           matchPathRegex,
         }),
@@ -615,6 +623,7 @@ export function useDashboard() {
     (
       source: {
         name: string
+        matchMethod?: string | null
         matchHost?: string | null
         matchPath?: string | null
       },
@@ -635,6 +644,7 @@ export function useDashboard() {
       status: selected.responseStatus ?? 200,
       body: selected.responseBodyPreview ?? '',
       headersText: headersToText(selected.responseHeaders ?? undefined),
+      matchMethod: m.matchMethod,
       matchProtocol: m.matchProtocol,
       matchHost: m.matchHost,
       matchPath: m.matchPath,
@@ -666,6 +676,7 @@ export function useDashboard() {
         status: entry.responseStatus ?? 200,
         body: entry.responseBodyPreview ?? '',
         headersText: headersToText(entry.responseHeaders ?? undefined),
+        matchMethod: matchParts.matchMethod,
         matchProtocol: matchParts.matchProtocol,
         matchHost: matchParts.matchHost,
         matchPath: matchParts.matchPath,

@@ -38,6 +38,7 @@ export interface SavedRequest {
 export interface OverrideRule {
   id: string
   enabled: boolean
+  matchMethod?: string | null
   matchProtocol?: string | null
   matchHost?: string | null
   /** Plain request path (no query); compared (after normalization) to the incoming path. */
@@ -59,6 +60,7 @@ export interface BreakpointRule {
   id: string
   name: string
   enabled: boolean
+  matchMethod?: string | null
   matchOrigin?: string | null
   matchPathRegex?: string | null
 }
@@ -69,6 +71,7 @@ export interface OverrideFormState {
   status: number
   body: string
   headersText: string
+  matchMethod: string
   matchProtocol: string
   matchHost: string
   matchPath: string

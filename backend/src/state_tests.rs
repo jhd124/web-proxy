@@ -8,6 +8,7 @@ fn rule_with(host: &str, path: &str) -> OverrideRule {
     OverrideRule {
         id: "r".to_string(),
         enabled: true,
+        match_method: None,
         match_protocol: Some("https".to_string()),
         match_host: Some(host.to_string()),
         match_path: Some(path.to_string()),
@@ -58,6 +59,32 @@ fn wildcard_path_supports_single_char() {
         "example.com",
         "/v10/users",
         "/v10/users",
+        &[],
+        &HeaderMap::new(),
+        b"",
+    ));
+}
+
+#[test]
+fn method_match_is_case_insensitive_and_optional() {
+    let mut rule = rule_with("example.com", "/api");
+    rule.match_method = Some("POST".to_string());
+    assert!(rule.matches(
+        "post",
+        "https",
+        "example.com",
+        "/api",
+        "/api",
+        &[],
+        &HeaderMap::new(),
+        b"",
+    ));
+    assert!(!rule.matches(
+        "GET",
+        "https",
+        "example.com",
+        "/api",
+        "/api",
         &[],
         &HeaderMap::new(),
         b"",
@@ -142,4 +169,18 @@ fn push_traffic_is_ignored_when_capture_paused() {
     state.set_capture_paused(true);
     state.push_traffic(sample_traffic_entry(Uuid::new_v4()));
     assert!(state.traffic.read().is_empty());
+}
+
+#[test]
+fn breakpoint_method_match_is_case_insensitive_and_optional() {
+    let rule = BreakpointRule {
+        id: Uuid::new_v4(),
+        name: "bp".to_string(),
+        enabled: true,
+        match_method: Some("POST".to_string()),
+        match_origin: Some("https://example.com".to_string()),
+        match_path_regex: Some("^/api".to_string()),
+    };
+    assert!(rule.matches("post", "https://example.com", "/api/v1"));
+    assert!(!rule.matches("GET", "https://example.com", "/api/v1"));
 }

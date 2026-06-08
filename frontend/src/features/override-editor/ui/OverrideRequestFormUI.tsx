@@ -107,6 +107,18 @@ export function OverrideRequestFormUI({
         </span>
       </label>
       <label>
+        {t.method}
+        <input
+          className="mono"
+          value={overrideForm.matchMethod}
+          placeholder="GET"
+          onChange={(e) =>
+            setOverrideForm((f) => ({ ...f, matchMethod: e.target.value }))
+          }
+        />
+        <span className="tiny muted">{t.methodHint}</span>
+      </label>
+      <label>
         {t.protocol}
         <input
           className="mono"

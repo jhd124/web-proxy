@@ -8,11 +8,12 @@
 将以下各段**直接拼接**（段与段之间**无**额外分隔符），再对该 UTF-8 字节序列做 SHA-256：
 
 ```
-material = P + H + Path + H_blob + Q_blob + B
+material = M + P + H + Path + H_blob + Q_blob + B
 ```
 
 | 段 | 含义 | 缺省 / 空值 |
 |----|------|-------------|
+| **M** | 请求方法，如 `GET` / `POST` | 无则 `""` |
 | **P** | 协议，如 `http` / `https` | 无则 `""` |
 | **H** | 主机名（`match_host`） | 无则 `""`；**当前产品要求创建/更新时 host 非空**，若仍见空串多为历史数据 |
 | **Path** | 仅路径，不含 `?` | 见下「Path 段」 |
@@ -63,7 +64,7 @@ id = 小写十六进制( SHA256( UTF-8( material ) ) )
 
 可以。**存储层**只以 `id` 为主键；**没有**「同一 host + path 只能一条」的约束。
 
-- 两条规则若 **H、Path 相同**，但 **P、H_blob、Q_blob、B** 中任一项在规范串里不同，则 `material` 不同 → **`id` 不同** → 可同时插入数据库。
+- 两条规则若 **H、Path 相同**，但 **M、P、H_blob、Q_blob、B** 中任一项在规范串里不同，则 `material` 不同 → **`id` 不同** → 可同时插入数据库。
 - 若**整条** `material` 与另一条完全相同，则 `id` 相同 → 创建时会出现 **409 CONFLICT**（与「两条完全相同的匹配定义不能重复」一致）。
 
 因此：**只要 `id` 不同，就允许同时存在**；即「同 host、同 path」时，仍可通过不同协议、请求头、查询参数、请求体等区分出不同 `id`。
@@ -71,8 +72,8 @@ id = 小写十六进制( SHA256( UTF-8( material ) ) )
 ### 与代理「首条命中」的关系
 
 `backend/src/proxy.rs` 的 `find_override` 在内存规则列表上按**顺序**查找，**第一个** `matches` 为真的规则生效。  
-若存在多条在「某次实际请求」上**同时**满足 `matches` 的规则（例如仅 host+path 重叠、其它条件在这一次请求上也都满足），则**先被遍历到**的那条 wins。列表顺序以加载/插入后的 `Vec` 为准（新创建会插到前面等，以 `backend/src/overrides.rs` 为准）。需要避免歧义时，应让各条规则在 P / H_blob / Q_blob / B 等维度上**互斥**，或接受顺序带来的优先级。
+若存在多条在「某次实际请求」上**同时**满足 `matches` 的规则（例如仅 host+path 重叠、其它条件在这一次请求上也都满足），则**先被遍历到**的那条 wins。列表顺序以加载/插入后的 `Vec` 为准（新创建会插到前面等，以 `backend/src/overrides.rs` 为准）。需要避免歧义时，应让各条规则在 M / P / H_blob / Q_blob / B 等维度上**互斥**，或接受顺序带来的优先级。
 
 ## 与响应内容的关系
 
-**响应**的 status / response headers / response **body** 不参与 `id` 计算；`id` 只由**如何匹配请求**的字段（P、H、Path、H_blob、Q_blob、B）决定。HTTP 方法名不参与 `id` 与匹配。
+**响应**的 status / response headers / response **body** 不参与 `id` 计算；`id` 只由**如何匹配请求**的字段（M、P、H、Path、H_blob、Q_blob、B）决定。

@@ -42,6 +42,7 @@ export function getDefaultOverrideForm(): OverrideFormState {
     status: 200,
     body: '',
     headersText: '',
+    matchMethod: '',
     matchProtocol: '',
     matchHost: '',
     matchPath: '',
@@ -65,6 +66,7 @@ export function isDefaultOverrideForm(f: OverrideFormState): boolean {
     f.status === d.status &&
     f.body === d.body &&
     f.headersText === d.headersText &&
+    f.matchMethod === d.matchMethod &&
     f.matchProtocol === d.matchProtocol &&
     f.matchHost === d.matchHost &&
     f.matchPath === d.matchPath &&
@@ -89,6 +91,7 @@ export function normalizePath(p: string): string {
 
 /** Values to pre-fill request match fields from a captured traffic row. */
 export function urlMatchPartsForForm(entry: TrafficEntry): {
+  matchMethod: string
   matchProtocol: string
   matchHost: string
   matchPath: string
@@ -101,6 +104,7 @@ export function urlMatchPartsForForm(entry: TrafficEntry): {
       matchQuery.push([k, v])
     })
     return {
+      matchMethod: entry.method,
       matchProtocol: u.protocol.replace(':', ''),
       matchHost: u.host,
       matchPath: u.pathname,
@@ -109,6 +113,7 @@ export function urlMatchPartsForForm(entry: TrafficEntry): {
   } catch {
     const pathOnly = entry.path.split('?')[0] ?? entry.path
     return {
+      matchMethod: entry.method,
       matchProtocol: entry.scheme,
       matchHost: entry.host,
       matchPath: normalizePath(pathOnly),
@@ -140,6 +145,12 @@ export function breakpointMatches(
   rule: BreakpointRule,
   entry: TrafficEntry,
 ): boolean {
+  if (
+    rule.matchMethod &&
+    rule.matchMethod.toLowerCase() !== entry.method.toLowerCase()
+  ) {
+    return false
+  }
   const origin = urlOrigin(entry.url)
   if (
     rule.matchOrigin &&

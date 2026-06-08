@@ -15,9 +15,11 @@ export function sortedKvBlob(pairs: [string, string][]): string {
 }
 
 /**
- * Canonical string hashed to the override id (mirrors `override_identity` in Rust).
+ * Canonical string hashed to the override id (mirrors `override_identity` in Rust):
+ * method + protocol + host + path + sorted headers/query + body.
  */
 export function identityMaterialFromMatch(args: {
+  matchMethod: string
   matchProtocol: string
   matchHost: string
   matchPath: string
@@ -25,6 +27,7 @@ export function identityMaterialFromMatch(args: {
   matchQuery: [string, string][]
   matchRequestBody: string
 }): string {
+  const m = args.matchMethod
   const p = args.matchProtocol
   const h = args.matchHost
   const path =
@@ -32,7 +35,7 @@ export function identityMaterialFromMatch(args: {
   const hb = sortedKvBlob(args.matchRequestHeaders)
   const qb = sortedKvBlob(args.matchQuery)
   const b = args.matchRequestBody
-  return `${p}${h}${path}${hb}${qb}${b}`
+  return `${m}${p}${h}${path}${hb}${qb}${b}`
 }
 
 export async function sha256Hex(utf8: string): Promise<string> {
@@ -44,6 +47,7 @@ export async function sha256Hex(utf8: string): Promise<string> {
 }
 
 export async function computeOverrideIdFromForm(args: {
+  matchMethod: string
   matchProtocol: string
   matchHost: string
   matchPath: string
@@ -65,6 +69,7 @@ export async function computeOverrideIdFromFormState(
   const matchRequestHeaders = cleanKv(f.matchRequestHeaders)
   const matchQuery = cleanKv(f.matchQuery)
   return computeOverrideIdFromForm({
+    matchMethod: f.matchMethod,
     matchProtocol: f.matchProtocol,
     matchHost: f.matchHost,
     matchPath: f.matchPath,
@@ -82,6 +87,7 @@ export function apiPayloadFromRule(
 ) {
   return {
     enabled,
+    matchMethod: override.matchMethod?.trim() ? override.matchMethod : null,
     matchProtocol: override.matchProtocol ?? null,
     matchHost: override.matchHost ?? null,
     matchPath: override.matchPath ?? null,

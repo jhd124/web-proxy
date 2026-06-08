@@ -7,12 +7,14 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { ArrowUpToLine } from 'lucide-react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import s from './TrafficVirtualListUI.module.css'
 
 const ROW_HEIGHT_PX = 40
 const TOP_STABLE_THRESHOLD_PX = 8
+const BACK_TO_TOP_THRESHOLD_PX = 160
 
 export type TrafficVirtualListTagTexts = {
   tagError: string
@@ -81,6 +83,7 @@ export function TrafficVirtualListUI({
     x: 0,
     y: 0,
   })
+  const [showBackToTop, setShowBackToTop] = useState(false)
 
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
@@ -147,110 +150,125 @@ export function TrafficVirtualListUI({
       }}
     >
       <ContextMenuTrigger asChild>
-        <div
-          ref={parentRef}
-          className={scrollerClass}
-          tabIndex={0}
-          onScroll={(event) => {
-            previousScrollTopRef.current = event.currentTarget.scrollTop
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-            event.preventDefault()
-            if (displayEntries.length === 0) return
+        <div className={s.scrollerWrap}>
+          <div
+            ref={parentRef}
+            className={scrollerClass}
+            tabIndex={0}
+            onScroll={(event) => {
+              const scrollTop = event.currentTarget.scrollTop
+              previousScrollTopRef.current = scrollTop
+              setShowBackToTop(scrollTop > BACK_TO_TOP_THRESHOLD_PX)
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+              event.preventDefault()
+              if (displayEntries.length === 0) return
 
-            const selectedIndex = selectedId
-              ? displayEntries.findIndex((entry) => entry.id === selectedId)
-              : -1
-            if (selectedIndex < 0) {
-              onSelect(displayEntries[0].id)
-              return
-            }
+              const selectedIndex = selectedId
+                ? displayEntries.findIndex((entry) => entry.id === selectedId)
+                : -1
+              if (selectedIndex < 0) {
+                onSelect(displayEntries[0].id)
+                return
+              }
 
-            const nextIndex =
-              event.key === 'ArrowUp'
-                ? Math.max(selectedIndex - 1, 0)
-                : Math.min(selectedIndex + 1, displayEntries.length - 1)
-            if (nextIndex === selectedIndex) return
-            const nextEntry = displayEntries[nextIndex]
-            if (!nextEntry) return
-            onSelect(nextEntry.id)
-          }}
-        >
-          <ul
-            className={s.list}
-            style={{ height: virtualizer.getTotalSize() }}
-            aria-label="Traffic"
+              const nextIndex =
+                event.key === 'ArrowUp'
+                  ? Math.max(selectedIndex - 1, 0)
+                  : Math.min(selectedIndex + 1, displayEntries.length - 1)
+              if (nextIndex === selectedIndex) return
+              const nextEntry = displayEntries[nextIndex]
+              if (!nextEntry) return
+              onSelect(nextEntry.id)
+            }}
           >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const entry = displayEntries[virtualRow.index]
-              if (!entry) return null
+            <ul
+              className={s.list}
+              style={{ height: virtualizer.getTotalSize() }}
+              aria-label="Traffic"
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const entry = displayEntries[virtualRow.index]
+                if (!entry) return null
 
-              const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
-              const contentType = getEntryContentType(entry)
-              const appName = getRequesterAppName(entry)
-              const rowStatusLabel = getRowStatusLabel(entry, tags)
-              const hasMatchedRule = Boolean(
-                entry.overrideMatchId ||
-                  entry.breakpointMatchId ||
-                  matchedEntryIds?.has(entry.id),
-              )
+                const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
+                const contentType = getEntryContentType(entry)
+                const appName = getRequesterAppName(entry)
+                const rowStatusLabel = getRowStatusLabel(entry, tags)
+                const hasMatchedRule = Boolean(
+                  entry.overrideMatchId ||
+                    entry.breakpointMatchId ||
+                    matchedEntryIds?.has(entry.id),
+                )
 
-              return (
-                <li
-                  key={entry.id}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    outline: 'none',
-                    outlineWidth: 0,
-                  }}
-                >
-                  <button
-                    type="button"
-                    className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
-                    style={{ height: virtualRow.size }}
-                    onClick={() => {
-                      onSelect(entry.id)
+                return (
+                  <li
+                    key={entry.id}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: virtualRow.size,
+                      transform: `translateY(${virtualRow.start}px)`,
+                      outline: 'none',
+                      outlineWidth: 0,
                     }}
-                    onContextMenu={(event) => {
-                      onSelect(entry.id)
-                      setContextMenuState({
-                        entryId: entry.id,
-                        x: event.clientX,
-                        y: event.clientY,
-                      })
-                    }}
-                    onDoubleClick={
-                      onEntryDoubleClick
-                        ? () => onEntryDoubleClick(entry.id)
-                        : undefined
-                    }
                   >
-                    <span className={s.url} title={entry.url}>
-                      {entry.url}
-                    </span>
-                    <span className={s.code} title={rowStatusLabel}>
-                      {httpCodeText}
-                    </span>
-                    <span className={s.method} title={entry.method}>
-                      {entry.method}
-                    </span>
-                    <span className={s.contentType} title={contentType}>
-                      {contentType}
-                    </span>
-                    <span className={s.app} title={appName}>
-                      {appName}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+                    <button
+                      type="button"
+                      className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
+                      style={{ height: virtualRow.size }}
+                      onClick={() => {
+                        onSelect(entry.id)
+                      }}
+                      onContextMenu={(event) => {
+                        onSelect(entry.id)
+                        setContextMenuState({
+                          entryId: entry.id,
+                          x: event.clientX,
+                          y: event.clientY,
+                        })
+                      }}
+                      onDoubleClick={
+                        onEntryDoubleClick
+                          ? () => onEntryDoubleClick(entry.id)
+                          : undefined
+                      }
+                    >
+                      <span className={s.url} title={entry.url}>
+                        {entry.url}
+                      </span>
+                      <span className={s.code} title={rowStatusLabel}>
+                        {httpCodeText}
+                      </span>
+                      <span className={s.method} title={entry.method}>
+                        {entry.method}
+                      </span>
+                      <span className={s.contentType} title={contentType}>
+                        {contentType}
+                      </span>
+                      <span className={s.app} title={appName}>
+                        {appName}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+          <button
+            type="button"
+            className={`${s.backToTop} ${showBackToTop ? s.backToTopVisible : ''}`}
+            onClick={() => {
+              parentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            aria-label={t.backToTop}
+            title={t.backToTop}
+          >
+            <ArrowUpToLine className={s.backToTopIcon} aria-hidden />
+          </button>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent

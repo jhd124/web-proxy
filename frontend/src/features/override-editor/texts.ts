@@ -36,6 +36,8 @@ export const overrideEditorTexts = {
     matchIdLabel: 'Override id (SHA-256 of match fields)',
     matchIdDrift:
       'Differs from saved id until you save; changing match fields changes the id.',
+    method: 'Method',
+    methodHint: 'GET / POST etc; leave empty to match any method',
     protocol: 'Protocol',
     protocolHint: 'http or https; leave empty to match any',
     host: 'Hostname',

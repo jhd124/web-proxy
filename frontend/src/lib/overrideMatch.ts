@@ -142,6 +142,9 @@ export function trafficEntryMatchesOverride(
 ): boolean {
   if (entry.kind !== 'http' || !r.enabled) return false
   if (!r.matchHost?.trim()) return false
+  if (r.matchMethod?.trim() && r.matchMethod.toLowerCase() !== entry.method.toLowerCase()) {
+    return false
+  }
   if (!hostMatches(entry.host, r.matchHost.trim())) {
     return false
   }

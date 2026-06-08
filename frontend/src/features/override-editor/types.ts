@@ -6,6 +6,7 @@ export type SetOverrideForm = Dispatch<SetStateAction<OverrideFormState>>
 export type AddBreakpointFromOverride = (
   source: {
     name: string
+    matchMethod?: string | null
     matchHost?: string | null
     matchPath?: string | null
   },

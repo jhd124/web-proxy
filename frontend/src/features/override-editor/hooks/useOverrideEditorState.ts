@@ -80,6 +80,7 @@ export function useOverrideEditorState() {
         : null
       return {
         enabled: form.enabled,
+        matchMethod: form.matchMethod.trim() || null,
         matchProtocol: form.matchProtocol || null,
         matchHost: form.matchHost.trim() || null,
         matchPath: form.matchPath || null,
@@ -142,6 +143,7 @@ export function useOverrideEditorState() {
         status: override.status,
         body: override.body,
         headersText: headersToText(override.headers),
+        matchMethod: override.matchMethod ?? '',
         matchProtocol: override.matchProtocol ?? '',
         matchHost: override.matchHost ?? '',
         matchPath: override.matchPath ?? '',

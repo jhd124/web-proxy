@@ -15,6 +15,8 @@ pub struct OverrideRule {
     /// SHA-256 hex (64 chars) from match identity, or an older id string from pre-hash DB rows.
     pub id: String,
     pub enabled: bool,
+    /// e.g. `GET` / `POST`; empty means match any method.
+    pub match_method: Option<String>,
     /// e.g. `http` / `https`
     pub match_protocol: Option<String>,
     pub match_host: Option<String>,
@@ -43,7 +45,7 @@ pub struct OverrideRule {
 impl OverrideRule {
     pub fn matches(
         &self,
-        _method: &str,
+        method: &str,
         scheme: &str,
         host: &str,
         _path_with_query: &str,
@@ -62,6 +64,12 @@ impl OverrideRule {
         };
         if !host_matches(host, host_want) {
             return false;
+        }
+        if let Some(ref m) = self.match_method {
+            let want = m.trim();
+            if !want.is_empty() && !want.eq_ignore_ascii_case(method) {
+                return false;
+            }
         }
         if let Some(ref p) = self.match_protocol {
             if !p.eq_ignore_ascii_case(scheme) {
@@ -214,6 +222,8 @@ pub struct BreakpointRule {
     pub id: Uuid,
     pub name: String,
     pub enabled: bool,
+    /// e.g. `GET` / `POST`; empty means match any method.
+    pub match_method: Option<String>,
     /// Exact origin match, e.g. `https://example.com` or `http://localhost:3000`.
     pub match_origin: Option<String>,
     /// Regex on path (leading `/` path only, or full path).
@@ -221,9 +231,15 @@ pub struct BreakpointRule {
 }
 
 impl BreakpointRule {
-    pub fn matches(&self, origin: &str, path: &str) -> bool {
+    pub fn matches(&self, method: &str, origin: &str, path: &str) -> bool {
         if !self.enabled {
             return false;
+        }
+        if let Some(ref expected_method) = self.match_method {
+            let want = expected_method.trim();
+            if !want.is_empty() && !want.eq_ignore_ascii_case(method) {
+                return false;
+            }
         }
         if let Some(ref expected_origin) = self.match_origin {
             if !expected_origin.eq_ignore_ascii_case(origin) {

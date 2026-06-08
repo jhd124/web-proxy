@@ -36,9 +36,10 @@ pub fn sorted_kv_blob(pairs: &[(String, String)]) -> String {
     s
 }
 
-/// Canonical string hashed into an override id (see product spec: protocol, host, path,
+/// Canonical string hashed into an override id (see product spec: method, protocol, host, path,
 /// sorted header and query key/value, body).
 pub fn identity_material(rule: &OverrideRule) -> String {
+    let m = rule.match_method.as_deref().unwrap_or("");
     let p = rule.match_protocol.as_deref().unwrap_or("");
     let h = rule.match_host.as_deref().unwrap_or("");
     let path = match &rule.match_path {
@@ -49,7 +50,7 @@ pub fn identity_material(rule: &OverrideRule) -> String {
     let hb = sorted_kv_blob(&rule.match_request_headers);
     let qb = sorted_kv_blob(&rule.match_query);
     let b = rule.match_request_body.as_deref().unwrap_or("");
-    format!("{p}{h}{path}{hb}{qb}{b}")
+    format!("{m}{p}{h}{path}{hb}{qb}{b}")
 }
 
 pub fn override_id_from_material(material: &str) -> String {
@@ -72,6 +73,7 @@ mod tests {
         let r = OverrideRule {
             id: "x".to_string(),
             enabled: true,
+            match_method: Some("GET".to_string()),
             match_protocol: Some("https".to_string()),
             match_host: Some("example.com".to_string()),
             match_path: Some("/a".to_string()),
@@ -90,5 +92,31 @@ mod tests {
         let id2 = override_id_for_rule(&r);
         assert_eq!(id1, id2);
         assert_eq!(id1.len(), 64);
+    }
+
+    #[test]
+    fn id_changes_when_method_changes() {
+        let mut get_rule = OverrideRule {
+            id: "x".to_string(),
+            enabled: true,
+            match_method: Some("GET".to_string()),
+            match_protocol: Some("https".to_string()),
+            match_host: Some("example.com".to_string()),
+            match_path: Some("/a".to_string()),
+            match_request_headers: vec![],
+            match_query: vec![],
+            match_request_body: None,
+            status: 200,
+            headers: vec![],
+            body: String::new(),
+            map_remote_protocol: None,
+            map_remote_host: None,
+            map_remote_path: None,
+            stream_interval_ms: None,
+        };
+        let get_id = override_id_for_rule(&get_rule);
+        get_rule.match_method = Some("POST".to_string());
+        let post_id = override_id_for_rule(&get_rule);
+        assert_ne!(get_id, post_id);
     }
 }

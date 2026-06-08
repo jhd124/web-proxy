@@ -5,6 +5,7 @@ import { breakpointTexts } from '../texts'
 
 type BreakpointFormState = {
   name: string
+  matchMethod: string
   matchOrigin: string
   matchPathRegex: string
 }
@@ -18,6 +19,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
   >({})
   const [breakpointForm, setBreakpointForm] = useState<BreakpointFormState>({
     name: t.defaultFormName,
+    matchMethod: '',
     matchOrigin: '',
     matchPathRegex: t.defaultPathRegex,
   })
@@ -34,6 +36,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       body: JSON.stringify({
         name: breakpointForm.name.trim() || t.defaultRuleName,
         enabled: true,
+        matchMethod: breakpointForm.matchMethod.trim() || null,
         matchOrigin: breakpointForm.matchOrigin.trim() || null,
         matchPathRegex: breakpointForm.matchPathRegex.trim() || null,
       }),
@@ -63,6 +66,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
           body: JSON.stringify({
             name: rule.name,
             enabled,
+            matchMethod: rule.matchMethod ?? null,
             matchOrigin: rule.matchOrigin ?? null,
             matchPathRegex: rule.matchPathRegex ?? null,
           }),
@@ -82,6 +86,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
     async (
       source: {
         name: string
+        matchMethod?: string | null
         matchHost?: string | null
         /** Plain path from override form; converted to a regex for the breakpoint rule. */
         matchPath?: string | null
@@ -94,6 +99,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       const matchPathRegex = p === '' ? '' : `^${escapeRegex(p)}$`
       setBreakpointForm({
         name: t.pauseName(source.name),
+        matchMethod: (source.matchMethod ?? '').trim(),
         matchOrigin,
         matchPathRegex,
       })
@@ -103,6 +109,8 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       }
       const existing = breakpoints.find(
         (rule) =>
+          (rule.matchMethod ?? '').toLowerCase() ===
+            (source.matchMethod ?? '').trim().toLowerCase() &&
           (rule.matchOrigin ?? '') === matchOrigin &&
           (rule.matchPathRegex ?? '') === matchPathRegex,
       )
@@ -115,6 +123,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
         body: JSON.stringify({
           name: t.pauseName(source.name),
           enabled: true,
+          matchMethod: (source.matchMethod ?? '').trim() || null,
           matchOrigin,
           matchPathRegex,
         }),
