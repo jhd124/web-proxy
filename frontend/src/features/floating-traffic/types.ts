@@ -3,6 +3,10 @@ import type { TrafficEntry } from '../../types'
 export type FloatingTrafficViewModel = {
   urlFilter: string
   setUrlFilter: (value: string) => void
+  urlFilterTags: string[]
+  commitUrlFilterInputAsTag: () => void
+  removeUrlFilterTag: (keyword: string) => void
+  popUrlFilterTag: () => void
   clearTraffic: () => Promise<void>
   filteredEntries: TrafficEntry[]
   selectedId: string | null

@@ -4,12 +4,19 @@ import {
   CirclePlay,
   Download,
   KeyRound,
+  ListFilter,
   Pin,
   Trash,
   WifiCog,
+  X,
 } from 'lucide-react'
 import { dashboardTexts } from '../texts'
 import { trafficTexts } from '../../traffic/texts'
+import { TrafficFilterDialogUI } from '../../traffic/ui/TrafficFilterDialogUI'
+import type {
+  TrafficFilterGroupKey,
+  TrafficFilters,
+} from '../../traffic/trafficFilter'
 import s from './DashboardHeaderUI.module.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +27,15 @@ import { cn } from '@/lib/utils'
 type Props = {
   urlFilter: string
   setUrlFilter: (value: string) => void
+  urlFilterTags: string[]
+  commitUrlFilterInputAsTag: () => void
+  removeUrlFilterTag: (keyword: string) => void
+  popUrlFilterTag: () => void
   clearTraffic: () => void
+  trafficFilters: TrafficFilters
+  toggleTrafficFilterValue: (group: TrafficFilterGroupKey, value: string) => void
+  clearTrafficFilters: () => void
+  hasTrafficFilters: boolean
   proxyListenAddress: string | null
   capturePaused: boolean
   captureToggleSaving: boolean
@@ -35,7 +50,15 @@ type Props = {
 export function DashboardHeaderUI({
   urlFilter,
   setUrlFilter,
+  urlFilterTags,
+  commitUrlFilterInputAsTag,
+  removeUrlFilterTag,
+  popUrlFilterTag,
   clearTraffic,
+  trafficFilters,
+  toggleTrafficFilterValue,
+  clearTrafficFilters,
+  hasTrafficFilters,
   proxyListenAddress,
   capturePaused,
   captureToggleSaving,
@@ -49,6 +72,7 @@ export function DashboardHeaderUI({
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
   const [downloading, setDownloading] = useState(false)
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false)
 
   const downloadMitmCa = useCallback(async () => {
     setDownloading(true)
@@ -64,30 +88,88 @@ export function DashboardHeaderUI({
   }, [mitm.linkPath, mitm.linkDownload, t])
 
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    console.log('handleSubmit', e)
     e.preventDefault()
-  }, [])
+    commitUrlFilterInputAsTag()
+  }, [commitUrlFilterInputAsTag])
 
   return (
     <header className={s.top}>
       <div className={s.left}>
-        <form onSubmit={handleSubmit} className={cn("flex items-center gap-1", s.form)}>
-          <Input
-            type="search"
-            value={urlFilter}
-            onChange={(e) => setUrlFilter(e.target.value)}
-            placeholder={trafficTexts.filterPlaceholder}
-            autoComplete="off"
-            spellCheck={false}
-            className={cn("border-none active:border-none focus-visible:border-none", s.input)}
-          />
+        <form
+          onSubmit={handleSubmit}
+          className={cn('flex items-center gap-1', s.form)}
+        >
+          <div className={s.filterBox}>
+            {urlFilterTags.map((keyword) => (
+              <button
+                key={keyword}
+                type="button"
+                className={s.filterTag}
+                onClick={() => removeUrlFilterTag(keyword)}
+                aria-label={trafficTexts.removeKeywordAriaLabel(keyword)}
+              >
+                <span className={s.filterTagLabel}>{keyword}</span>
+                <X className={s.filterTagCloseIcon} />
+              </button>
+            ))}
+            <Input
+              type="search"
+              value={urlFilter}
+              onChange={(e) => setUrlFilter(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  commitUrlFilterInputAsTag()
+                  return
+                }
+                if (event.key !== 'Backspace') return
+                if (urlFilter.trim().length > 0) return
+                if (urlFilterTags.length === 0) return
+                event.preventDefault()
+                popUrlFilterTag()
+              }}
+              placeholder={trafficTexts.filterPlaceholder}
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                'border-none active:border-none focus-visible:border-none',
+                s.input,
+              )}
+            />
+          </div>
           <SimpleTooltip label={trafficTexts.clear}>
             <Button type="button" variant="ghost" onClick={clearTraffic}>
               <Trash />
             </Button>
           </SimpleTooltip>
+          <span className={s.entryBadgeWrap}>
+            <SimpleTooltip label={trafficTexts.filter.buttonTooltip}>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={trafficTexts.filter.buttonAriaLabel}
+                aria-pressed={hasTrafficFilters}
+                onClick={() => setFilterDialogOpen(true)}
+              >
+                <ListFilter />
+              </Button>
+            </SimpleTooltip>
+            {hasTrafficFilters && (
+              <span
+                className={s.badgeDot}
+                aria-label={trafficTexts.filter.activeBadgeAriaLabel}
+              />
+            )}
+          </span>
         </form>
       </div>
+      <TrafficFilterDialogUI
+        open={filterDialogOpen}
+        onOpenChange={setFilterDialogOpen}
+        filters={trafficFilters}
+        toggleFilterValue={toggleTrafficFilterValue}
+        clearFilters={clearTrafficFilters}
+      />
       <div className={s.right}>
         {proxyListenAddress != null && (
           <span
@@ -125,7 +207,7 @@ export function DashboardHeaderUI({
             disabled={captureToggleSaving}
             onClick={onCaptureToggleClick}
           >
-            {capturePaused ? <CirclePlay  /> : <CirclePause />}
+            {capturePaused ? <CirclePlay /> : <CirclePause />}
           </Button>
         </SimpleTooltip>
 

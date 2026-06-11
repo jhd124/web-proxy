@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# Frontend 项目说明
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+前端位于 `frontend/`，技术栈为 React + TypeScript + Vite，包管理器使用 Bun。
 
-Currently, two official plugins are available:
+## README 索引
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### 根目录与基础目录
 
-## React Compiler
+- `public/README.md`
+- `src/README.md`
+- `src/theme/README.md`
+- `src/components/README.md`
+- `src/components/ui/README.md`
+- `src/hooks/README.md`
+- `src/lib/README.md`
+- `src/features/README.md`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Feature 模块目录
 
-## Expanding the ESLint configuration
+- `src/features/dashboard/README.md`
+- `src/features/dashboard/hooks/README.md`
+- `src/features/dashboard/ui/README.md`
+- `src/features/traffic/README.md`
+- `src/features/traffic/hooks/README.md`
+- `src/features/traffic/ui/README.md`
+- `src/features/floating-traffic/README.md`
+- `src/features/floating-traffic/hooks/README.md`
+- `src/features/floating-traffic/ui/README.md`
+- `src/features/breakpoints/README.md`
+- `src/features/breakpoints/hooks/README.md`
+- `src/features/breakpoints/ui/README.md`
+- `src/features/override-editor/README.md`
+- `src/features/override-editor/hooks/README.md`
+- `src/features/override-editor/ui/README.md`
+- `src/features/saved-requests/README.md`
+- `src/features/saved-requests/hooks/README.md`
+- `src/features/saved-requests/ui/README.md`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 当前目录快照（简版）
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- `public/`：静态资源。
+- `src/`：前端源码主目录。
+- `src/theme/`：主题与设计令牌。
+- `src/components/ui/`：通用基础组件。
+- `src/hooks/`：共享 Hook。
+- `src/lib/`：工具函数与基础封装。
+- `src/features/`：业务模块集合。
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 常用命令
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `bun install`：安装依赖。
+- `bun run dev`：启动开发环境。
+- `bun run build`：执行类型检查并打包。
+- `bun run lint`：执行代码检查。
+- `bun run test`：启动测试（watch）。
+- `bun run test:run`：一次性运行测试。
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 维护约定（必须遵守）
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+当你修改任一目录下代码时，必须同步更新该目录的 `README.md`（至少包含职责、关键文件或子目录说明变化）。  
+若涉及目录新增、删除、重命名，或 README 路径变动，还必须同步更新本文件中的 README 索引。

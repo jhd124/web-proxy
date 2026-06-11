@@ -20,7 +20,15 @@ export function DashboardUI(p: DashboardViewModel) {
                 <DashboardHeaderUI
                   urlFilter={p.urlFilter}
                   setUrlFilter={p.setUrlFilter}
+                  urlFilterTags={p.urlFilterTags}
+                  commitUrlFilterInputAsTag={p.commitUrlFilterInputAsTag}
+                  removeUrlFilterTag={p.removeUrlFilterTag}
+                  popUrlFilterTag={p.popUrlFilterTag}
                   clearTraffic={p.clearTraffic}
+                  trafficFilters={p.trafficFilters}
+                  toggleTrafficFilterValue={p.toggleTrafficFilterValue}
+                  clearTrafficFilters={p.clearTrafficFilters}
+                  hasTrafficFilters={p.hasTrafficFilters}
                   proxyListenAddress={p.proxyListenAddress}
                   capturePaused={p.capturePaused}
                   captureToggleSaving={p.captureToggleSaving}

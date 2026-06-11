@@ -5,7 +5,7 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { SimpleTooltip } from '@/components/ui/tooltip'
-import { Trash } from 'lucide-react'
+import { Trash, X } from 'lucide-react'
 import { TrafficVirtualListUI } from '../../traffic/ui/TrafficVirtualListUI'
 import { floatingTrafficTexts as t } from '../texts'
 import type { FloatingTrafficViewModel } from '../types'
@@ -18,6 +18,10 @@ const EMPTY_ID_MAP: ReadonlyMap<string, string> = new Map()
 export function FloatingTrafficUI({
   urlFilter,
   setUrlFilter,
+  urlFilterTags,
+  commitUrlFilterInputAsTag,
+  removeUrlFilterTag,
+  popUrlFilterTag,
   clearTraffic,
   filteredEntries,
   selectedId,
@@ -30,14 +34,39 @@ export function FloatingTrafficUI({
   return (
     <section className={s.panel}>
       <header className={s.header}>
-        <div>
+        <div className={s.filterBox}>
+          {urlFilterTags.map((keyword) => (
+            <button
+              key={keyword}
+              type="button"
+              className={s.filterTag}
+              onClick={() => removeUrlFilterTag(keyword)}
+              aria-label={t.removeKeywordAriaLabel(keyword)}
+            >
+              <span className={s.filterTagLabel}>{keyword}</span>
+              <X className={s.filterTagCloseIcon} />
+            </button>
+          ))}
           <Input
             type="search"
             value={urlFilter}
             onChange={(event) => setUrlFilter(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commitUrlFilterInputAsTag()
+                return
+              }
+              if (event.key !== 'Backspace') return
+              if (urlFilter.trim().length > 0) return
+              if (urlFilterTags.length === 0) return
+              event.preventDefault()
+              popUrlFilterTag()
+            }}
             placeholder={t.filterPlaceholder}
             autoComplete="off"
             spellCheck={false}
+            className={s.input}
           />
         </div>
         <SimpleTooltip label={t.clear}>

@@ -7,6 +7,7 @@ alwaysApply: true
 
 # backend
 * Rust crate: `backend/`；仓库根 workspace 含 `backend` 与 `desktop/src`；在根目录执行 `cargo build -p proxy-app` 等即可。
+* `backend/` 下目录必须维护 `README.md`；每次修改代码时同步更新对应目录 README；若目录/README 路径变更，需同步更新 `backend/README.md` 索引。
 
 # 桌面 (Tauri 2)
 * 目录为 `desktop/`：其中 `package.json` + `src/`。在 `desktop/` 执行 `npm install`，再 `npm run tauri:dev` 或 `npm run tauri:build`；或根目录 `make tauri-dev` / `make tauri-build`。sidecar 跑 `proxy-app`，WebView `http://127.0.0.1:9091`；`PROXY_DATA_DIR` 为应用 support 数据目录。
@@ -23,3 +24,8 @@ alwaysApply: true
 * 包管理器: bun
 * UI: react
 * 打包: vite
+
+## 文档同步规则（强制）
+* `frontend/` 下每个子目录都必须维护自己的 `README.md`，用于说明该目录职责、关键文件和子目录分工。
+* `frontend/README.md` 必须维护所有子目录 `README.md` 的索引（至少覆盖当前存在的业务与基础目录）。
+* 每次修改代码时，必须同步更新对应目录的 `README.md`；若有目录新增/删除/重命名或 README 路径变化，必须同步更新 `frontend/README.md` 的索引。

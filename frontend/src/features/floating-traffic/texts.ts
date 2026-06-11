@@ -1,7 +1,9 @@
 export const floatingTrafficTexts = {
   title: 'Traffic',
   subtitle: '悬浮模式',
-  filterPlaceholder: 'Filter traffic',
+  filterPlaceholder: 'Type keyword and press Enter…',
+  removeKeywordAriaLabel: (keyword: string) =>
+    `Remove filter keyword ${keyword}`,
   clear: 'Clear traffic',
   empty: 'No traffic yet',
   tagError: 'ERR',

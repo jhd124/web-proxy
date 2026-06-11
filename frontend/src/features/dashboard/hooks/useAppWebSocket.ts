@@ -13,7 +13,7 @@ export function useAppWebSocket(p: {
   selectedIdRef: MutableRefObject<string | null>
   setSelectedId: (id: string | null) => void
   setWsStatus: (s: Ws) => void
-  setUrlFilter: (value: string) => void
+  setUrlFilterFromQuery: (value: string) => void
   onProxyListenAddressChange?: (value: string | null) => void
   openFloatingTrafficWindow: () => Promise<void>
   refreshOverrides: () => Promise<void>
@@ -24,7 +24,7 @@ export function useAppWebSocket(p: {
     selectedIdRef,
     setSelectedId,
     setWsStatus,
-    setUrlFilter,
+    setUrlFilterFromQuery,
     onProxyListenAddressChange,
     openFloatingTrafficWindow,
     refreshOverrides,
@@ -105,7 +105,7 @@ export function useAppWebSocket(p: {
             } else if (action.action === 'select_request') {
               setSelectedId(action.requestId)
             } else if (action.action === 'set_url_filter') {
-              setUrlFilter(action.query)
+              setUrlFilterFromQuery(action.query)
             }
           }
         } catch {
@@ -126,7 +126,7 @@ export function useAppWebSocket(p: {
     selectedIdRef,
     setEntries,
     setSelectedId,
-    setUrlFilter,
+    setUrlFilterFromQuery,
     setWsStatus,
     onProxyListenAddressChange,
   ])
