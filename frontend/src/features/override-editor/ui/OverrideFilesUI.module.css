@@ -10,20 +10,6 @@
   gap: 0.5rem;
 }
 
-.newOverrideBtn {
-  width: 100%;
-  justify-content: center;
-  font-weight: 600;
-  border-color: #34d39944;
-  color: var(--accent);
-}
-
-.fileManagerSep {
-  height: 1px;
-  background: var(--border);
-  margin: 0.25rem 0 0.35rem;
-}
-
 .fileManagerListIntro {
   line-height: 1.45;
   margin: 0.15rem 0 0.25rem;

@@ -1,13 +1,19 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Save, FilePlusCorner } from 'lucide-react'
 import { usePanelRef, type PanelSize } from 'react-resizable-panels'
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import { isDefaultOverrideForm, urlOrigin } from '../../../lib/dashboardUtils'
+import {
+  isDefaultOverrideForm,
+  parseHeadersText,
+  urlOrigin,
+} from '../../../lib/dashboardUtils'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
+import type { OverrideRule } from '../../../types'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
 import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
@@ -32,6 +38,75 @@ type FabPointerState = {
 
 function clamp(n: number, a: number, b: number) {
   return Math.min(b, Math.max(a, n))
+}
+
+type ComparableOverridePayload = {
+  enabled: boolean
+  matchMethod: string | null
+  matchProtocol: string | null
+  matchHost: string | null
+  matchPath: string | null
+  matchRequestHeaders: [string, string][]
+  matchQuery: [string, string][]
+  matchRequestBody: string | null
+  mapRemoteProtocol: string | null
+  mapRemoteHost: string | null
+  mapRemotePath: string | null
+  status: number
+  headers: [string, string][]
+  body: string
+  streamIntervalMs: number | null
+}
+
+function normalizeRows(rows: [string, string][]): [string, string][] {
+  return rows.filter(([name, value]) => name.trim() !== '' || value.trim() !== '')
+}
+
+function toComparableFromForm(
+  form: OverrideEditorUIProps['overrideForm'],
+): ComparableOverridePayload {
+  const streamIntervalMs = form.streamEnabled
+    ? Math.max(0, Number(form.streamIntervalMs) || 500)
+    : null
+  return {
+    enabled: form.enabled,
+    matchMethod: form.matchMethod.trim() || null,
+    matchProtocol: form.matchProtocol || null,
+    matchHost: form.matchHost.trim() || null,
+    matchPath: form.matchPath || null,
+    matchRequestHeaders: normalizeRows(form.matchRequestHeaders),
+    matchQuery: normalizeRows(form.matchQuery),
+    matchRequestBody: form.matchRequestBody.trim() || null,
+    mapRemoteProtocol: form.mapRemoteEnabled ? form.mapRemoteProtocol.trim() || null : null,
+    mapRemoteHost: form.mapRemoteEnabled ? form.mapRemoteHost.trim() || null : null,
+    mapRemotePath: form.mapRemoteEnabled ? form.mapRemotePath.trim() || null : null,
+    status: form.status,
+    headers: parseHeadersText(form.headersText),
+    body: form.body,
+    streamIntervalMs,
+  }
+}
+
+function toComparableFromRule(rule: OverrideRule): ComparableOverridePayload {
+  const hasMapRemote =
+    !!rule.mapRemoteProtocol?.trim() && !!rule.mapRemoteHost?.trim()
+  return {
+    enabled: rule.enabled,
+    matchMethod: rule.matchMethod?.trim() || null,
+    matchProtocol: rule.matchProtocol || null,
+    matchHost: rule.matchHost?.trim() || null,
+    matchPath: rule.matchPath || null,
+    matchRequestHeaders: normalizeRows([...(rule.matchRequestHeaders ?? [])]),
+    matchQuery: normalizeRows([...(rule.matchQuery ?? [])]),
+    matchRequestBody: rule.matchRequestBody?.trim() || null,
+    mapRemoteProtocol: hasMapRemote ? rule.mapRemoteProtocol?.trim() || null : null,
+    mapRemoteHost: hasMapRemote ? rule.mapRemoteHost?.trim() || null : null,
+    mapRemotePath: hasMapRemote ? rule.mapRemotePath?.trim() || null : null,
+    status: rule.status,
+    headers: [...(rule.headers ?? [])],
+    body: rule.body,
+    streamIntervalMs: rule.streamIntervalMs != null ? Math.max(0, rule.streamIntervalMs) : null,
+  }
 }
 
 export function OverrideEditorUI({
@@ -80,6 +155,26 @@ export function OverrideEditorUI({
     requestPanelRef.current?.resize(REQUEST_PCT)
   }, [requestPanelFocusKey, requestPanelRef])
 
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      const isSaveShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 's'
+      if (!isSaveShortcut) return
+      event.preventDefault()
+      saveOverride()
+    }
+
+    window.addEventListener('keydown', handleSaveShortcut, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', handleSaveShortcut, {
+        capture: true,
+      })
+    }
+  }, [saveOverride])
+
   const openRequestFromFab = () => {
     requestPanelRef.current?.resize(REQUEST_PCT)
   }
@@ -87,6 +182,118 @@ export function OverrideEditorUI({
   const editingRule = overrideEditingId
     ? (overrideEntries.find((r) => r.id === overrideEditingId) ?? null)
     : null
+  const hasUnsavedChanges = useMemo(() => {
+    if (!editingRule) {
+      return !isDefaultOverride
+    }
+    const formPayload = toComparableFromForm(overrideForm)
+    const rulePayload = toComparableFromRule(editingRule)
+    return JSON.stringify(formPayload) !== JSON.stringify(rulePayload)
+  }, [editingRule, isDefaultOverride, overrideForm])
+  const shouldShowSaveButton = editingRule !== null || !isDefaultOverride
+
+  const actionButtons = (
+    <>
+      <button
+        type="button"
+        className={`ghost ${s.saveIconBtn}`}
+        onClick={startNewOverride}
+        aria-label={tf.newRule}
+        title={tf.newRule}
+      >
+        <FilePlusCorner size={16} aria-hidden />
+      </button>
+      {shouldShowSaveButton ? (
+        <button
+          type="button"
+          className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${s.saveIconBtn}`}
+          onClick={saveOverride}
+          aria-label={overrideEditingId ? t.saveChanges : t.saveOverride}
+          title={overrideEditingId ? t.saveChanges : t.saveOverride}
+        >
+          <Save size={16} aria-hidden />
+        </button>
+      ) : null}
+      {editingRule ? (
+        <>
+          {selected?.pending &&
+            selectedMatchingOverride?.id === overrideEditingId && (
+              <button
+                type="button"
+                className="primary inline-primary"
+                disabled={resumeSaving[selected.id] === true}
+                onClick={() => void resumeRequest(selected.id)}
+              >
+                {resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
+              </button>
+            )}
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              addBreakpointFromOverride(
+                {
+                  name:
+                    [overrideForm.matchHost, overrideForm.matchPath]
+                      .map((x) => (x ?? '').trim())
+                      .filter(Boolean)
+                      .join(' ') || 'Override',
+                  matchMethod: overrideForm.matchMethod || null,
+                  matchHost: overrideForm.matchHost || null,
+                  matchPath: overrideForm.matchPath || null,
+                },
+                selectedMatchingOverride?.id === overrideEditingId && selected
+                  ? urlOrigin(selected.url)
+                  : undefined,
+              )
+              closeOverrideDrawer()
+            }}
+          >
+            {t.footAddBreakpoint}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={overrideToggleSaving[editingRule.id] === true}
+            onClick={() =>
+              void setOverrideEnabled(editingRule, !editingRule.enabled)
+            }
+          >
+            {overrideToggleSaving[editingRule.id] === true
+              ? tf.saving
+              : editingRule.enabled
+                ? tf.disable
+                : tf.enable}
+          </button>
+          <button
+            type="button"
+            className="ghost danger"
+            onClick={async () => {
+              try {
+                await confirm({
+                  title: tf.deleteRule,
+                  description: tf.deleteRuleConfirm,
+                  confirmLabel: tf.deleteRule,
+                })
+                await deleteOverrideRule(editingRule.id)
+                startNewOverride()
+              } catch (e) {
+                if (e instanceof ConfirmCancelledError) return
+                showToast(String(e), 'error')
+              }
+            }}
+          >
+            {tf.deleteRule}
+          </button>
+          {!isInline && (
+            <button type="button" className="ghost" onClick={closeOverrideDrawer}>
+              {t.footCancel}
+            </button>
+          )}
+        </>
+      ) : null}
+    </>
+  )
 
   return (
     <div
@@ -105,16 +312,19 @@ export function OverrideEditorUI({
           <div>
             <h2 id="override-fs-title">{t.title}</h2>
           </div>
-          {!isInline && (
-            <button
-              type="button"
-              className={`ghost ${s.drawerClose}`}
-              onClick={closeOverrideDrawer}
-              aria-label={t.closeAria}
-            >
-              ×
-            </button>
-          )}
+          <div className={s.fsHeadRight}>
+            <div className={s.headActions}>{actionButtons}</div>
+            {!isInline && (
+              <button
+                type="button"
+                className={`ghost ${s.drawerClose}`}
+                onClick={closeOverrideDrawer}
+                aria-label={t.closeAria}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         {overrideError && (
           <p className={`small err ${s.fsErr}`}>{overrideError}</p>
@@ -138,7 +348,6 @@ export function OverrideEditorUI({
                     overrideForm={overrideForm}
                     setOverrideForm={setOverrideForm}
                     overrideEntries={overrideEntries}
-                    startNewOverride={startNewOverride}
                     openOverrideEditorForKey={openOverrideEditorForKey}
                   />
                 </div>
@@ -180,7 +389,6 @@ export function OverrideEditorUI({
                   streamActionSaving={streamActionSaving}
                   playControlledStream={playControlledStream}
                   pauseControlledStream={pauseControlledStream}
-                  computedOverrideId={computedOverrideId}
                 />
               </div>
             </ResizablePanel>
@@ -251,89 +459,6 @@ export function OverrideEditorUI({
               <span className={s.requestOpenFabHint}>{t.fabDrag}</span>
             </div>
           )}
-        </div>
-        <div className={s.foot}>
-          {selected?.pending &&
-            selectedMatchingOverride?.id === overrideEditingId && (
-              <button
-                type="button"
-                className="primary inline-primary"
-                disabled={resumeSaving[selected.id] === true}
-                onClick={() => void resumeRequest(selected.id)}
-              >
-                {resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
-              </button>
-            )}
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              addBreakpointFromOverride(
-                {
-                  name:
-                    [overrideForm.matchHost, overrideForm.matchPath]
-                      .map((x) => (x ?? '').trim())
-                      .filter(Boolean)
-                      .join(' ') || 'Override',
-                  matchMethod: overrideForm.matchMethod || null,
-                  matchHost: overrideForm.matchHost || null,
-                  matchPath: overrideForm.matchPath || null,
-                },
-                selectedMatchingOverride?.id === overrideEditingId && selected
-                  ? urlOrigin(selected.url)
-                  : undefined,
-              )
-              closeOverrideDrawer()
-            }}
-          >
-            {t.footAddBreakpoint}
-          </button>
-          {editingRule && (
-            <>
-              <button
-                type="button"
-                className="ghost"
-                disabled={overrideToggleSaving[editingRule.id] === true}
-                onClick={() =>
-                  void setOverrideEnabled(editingRule, !editingRule.enabled)
-                }
-              >
-                {overrideToggleSaving[editingRule.id] === true
-                  ? tf.saving
-                  : editingRule.enabled
-                    ? tf.disable
-                    : tf.enable}
-              </button>
-              <button
-                type="button"
-                className="ghost danger"
-                onClick={async () => {
-                  try {
-                    await confirm({
-                      title: tf.deleteRule,
-                      description: tf.deleteRuleConfirm,
-                      confirmLabel: tf.deleteRule,
-                    })
-                    await deleteOverrideRule(editingRule.id)
-                    startNewOverride()
-                  } catch (e) {
-                    if (e instanceof ConfirmCancelledError) return
-                    showToast(String(e), 'error')
-                  }
-                }}
-              >
-                {tf.deleteRule}
-              </button>
-            </>
-          )}
-          {!isInline && (
-            <button type="button" className="ghost" onClick={closeOverrideDrawer}>
-              {t.footCancel}
-            </button>
-          )}
-          <button type="button" className="primary" onClick={saveOverride}>
-            {overrideEditingId ? t.saveChanges : t.saveOverride}
-          </button>
         </div>
       </div>
     </div>

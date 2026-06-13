@@ -1,9 +1,18 @@
 import type { OverrideFormState, TrafficEntry } from '../../../types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { overrideEditorTexts } from '../texts'
 import type { SetOverrideForm } from '../types'
 import s from './OverrideRequestFormUI.module.css'
 
 const t = overrideEditorTexts.request
+const METHOD_ANY_VALUE = '__ANY__'
+const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 type Props = {
   overrideForm: OverrideFormState
@@ -13,7 +22,6 @@ type Props = {
   streamActionSaving: Record<string, boolean>
   playControlledStream: (id: string) => void
   pauseControlledStream: (id: string) => void
-  computedOverrideId: string | null
 }
 
 function KvList({
@@ -83,39 +91,32 @@ export function OverrideRequestFormUI({
   streamActionSaving,
   playControlledStream,
   pauseControlledStream,
-  computedOverrideId,
 }: Props) {
   return (
     <div className={s.form}>
-      <div className={s.matchIdBlock}>
-        <div className="small muted">{t.matchIdLabel}</div>
-        <code className={`${s.idHex} mono tiny`}>
-          {computedOverrideId === null ? '…' : computedOverrideId}
-        </code>
-        <p className={`tiny muted ${s.matchIdDrift}`}>{t.matchIdDrift}</p>
-      </div>
-      <label className={s.streamToggle}>
-        <span className={s.streamToggleRow}>
-          <input
-            type="checkbox"
-            checked={overrideForm.enabled}
-            onChange={(e) =>
-              setOverrideForm((f) => ({ ...f, enabled: e.target.checked }))
-            }
-          />
-          <span>{t.enableRule}</span>
-        </span>
-      </label>
       <label>
         {t.method}
-        <input
-          className="mono"
-          value={overrideForm.matchMethod}
-          placeholder="GET"
-          onChange={(e) =>
-            setOverrideForm((f) => ({ ...f, matchMethod: e.target.value }))
+        <Select
+          value={overrideForm.matchMethod || METHOD_ANY_VALUE}
+          onValueChange={(value) =>
+            setOverrideForm((f) => ({
+              ...f,
+              matchMethod: value === METHOD_ANY_VALUE ? '' : value,
+            }))
           }
-        />
+        >
+          <SelectTrigger className="mono">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={METHOD_ANY_VALUE}>ANY</SelectItem>
+            {METHOD_OPTIONS.map((method) => (
+              <SelectItem key={method} value={method}>
+                {method}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="tiny muted">{t.methodHint}</span>
       </label>
       <label>

@@ -4,25 +4,6 @@
   gap: 0.6rem;
 }
 
-.matchIdBlock {
-  padding: 0.45rem 0.5rem;
-  border-radius: 8px;
-  background: #0f1218;
-  border: 1px solid var(--border);
-}
-
-.idHex {
-  display: block;
-  margin: 0.2rem 0 0;
-  line-height: 1.4;
-  word-break: break-all;
-}
-
-.matchIdDrift {
-  margin: 0.35rem 0 0;
-  line-height: 1.35;
-}
-
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -73,6 +54,7 @@
 }
 
 .form input,
+.form select,
 .form textarea {
   padding: 0.4rem 0.5rem;
   border-radius: 6px;

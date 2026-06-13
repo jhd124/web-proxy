@@ -21,8 +21,10 @@
 
 .sidebarBackdrop {
   display: flex;
+  min-width: 0;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .fs {
@@ -30,6 +32,7 @@
   flex-direction: column;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   min-height: 0;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -49,12 +52,37 @@
 
 .fsHead {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--panel-bg);
+  flex-shrink: 0;
+}
+
+.fsHeadRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.saveIconBtn {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -156,19 +184,4 @@
   min-height: 0;
   overflow: auto;
   padding: 0.65rem 0.75rem 1rem;
-}
-
-.foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--panel-bg);
-  position: static;
-}
-
-.foot :global(.primary) {
-  grid-column: auto;
 }

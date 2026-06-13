@@ -47,11 +47,17 @@ export function OverrideBodyEditorUI({
         ? t.imagePreviewUnavailable
         : t.body
 
+  const matchUrl = overrideForm.matchHost
+    ? `${overrideForm.matchProtocol || 'https'}://${overrideForm.matchHost}${overrideForm.matchPath || ''}`
+    : ''
+
   return (
     <div className={s.mainCol}>
       <div className={s.bodyWrap}>
         <div className={s.mainHintRow}>
-          <p className={`${s.mainHint} small muted`}>{hintText}</p>
+          <p className={`${s.mainHint} small muted`} title={matchUrl || hintText}>
+            {matchUrl || hintText}
+          </p>
           <div className={s.mainHintActions}>
             {!imageSrc && languageLabel ? (
               <span className={`${s.langBadge} small muted`}>{languageLabel}</span>

@@ -23,6 +23,10 @@
   margin: 0;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
 .mainHintActions {

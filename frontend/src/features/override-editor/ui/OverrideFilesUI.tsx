@@ -22,7 +22,6 @@ type Props = {
   overrideForm: OverrideFormState
   setOverrideForm: SetOverrideForm
   overrideEntries: OverrideRule[]
-  startNewOverride: () => void
   openOverrideEditorForKey: (override: OverrideRule) => void
 }
 
@@ -58,7 +57,6 @@ export function OverrideFilesUI({
   overrideForm,
   setOverrideForm,
   overrideEntries,
-  startNewOverride,
   openOverrideEditorForKey,
 }: Props) {
   const pathGroups = useMemo(
@@ -68,14 +66,6 @@ export function OverrideFilesUI({
 
   return (
     <div className={`${s.fileManager} ${s.fileManagerEmbed}`}>
-      <button
-        type="button"
-        className={`ghost ${s.newOverrideBtn}`}
-        onClick={startNewOverride}
-      >
-        {tf.newRule}
-      </button>
-      <p className="small muted">{tf.importHint}</p>
       <input
         ref={overrideFileInputRef}
         type="file"
@@ -99,36 +89,7 @@ export function OverrideFilesUI({
           e.target.value = ''
         }}
       />
-      <div className={s.fileManagerActions}>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => overrideFileInputRef.current?.click()}
-        >
-          {tf.importToBody}
-        </button>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => {
-            const blob = new Blob([overrideForm.body], { type: 'text/plain' })
-            const a = document.createElement('a')
-            a.href = URL.createObjectURL(blob)
-            a.download = 'override-response-body.txt'
-            a.click()
-            URL.revokeObjectURL(a.href)
-          }}
-        >
-          {tf.exportBody}
-        </button>
-      </div>
-      <div className={s.fileManagerSep} aria-hidden="true" />
-      <p className={`small muted ${s.fileManagerListIntro}`}>
-        {tf.listIntroLead}{' '}
-        <strong>Traffic → Override response</strong>
-        {tf.listIntroOr} <strong>New rule</strong> {tf.listIntroAbove}{' '}
-        <strong>Request</strong> {tf.listIntroTail}
-      </p>
+
       {overrideEntries.length === 0 ? (
         <p className="small muted" style={{ margin: '0.15rem 0' }}>
           {tf.noRulesLead} <strong>{tf.newRule}</strong> {tf.noRulesTail}

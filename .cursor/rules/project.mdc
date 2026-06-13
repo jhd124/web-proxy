@@ -16,6 +16,7 @@ alwaysApply: true
 
 ## components
  * basic component library is shadcn
+ * 组件优先使用 shadcn；仅当 shadcn 缺少所需能力时，才在 `src/components` 中封装自定义组件
  * custom components is in src/components 
 
 * 持久操作使用toast给出反馈
