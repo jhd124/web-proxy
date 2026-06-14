@@ -54,7 +54,9 @@ export function DashboardUI(p: DashboardViewModel) {
                     onEntryCopyCurl={p.copyEntryCurl}
                     onEntrySaveRequest={p.saveEntryRequest}
                     onEntryOverride={p.openEntryOverrideDrawer}
-                    onEntryAddBreakpoint={p.addBreakpointFromEntry}
+                    onEntryAddBreakpoint={async (id) => {
+                      p.addBreakpointFromEntry(id)
+                    }}
                     onEntryReplay={p.replayEntryRequest}
                     onEntryOpenSavedRequest={p.openSavedRequestForEntry}
                     onEntryOpenMatchedOverride={p.openMatchedOverrideForEntry}
@@ -102,10 +104,14 @@ export function DashboardUI(p: DashboardViewModel) {
                   breakpointForm={p.breakpointForm}
                   setBreakpointForm={p.setBreakpointForm}
                   breakpointEntries={p.breakpointEntries}
+                  pendingRequestIdByBreakpointId={p.pendingRequestIdByBreakpointId}
+                  resumeRequest={p.resumeRequest}
+                  resumeSaving={p.resumeSaving}
+                  isBreakpointFormActive={p.isBreakpointFormActive}
                   selectedBreakpointId={p.selectedBreakpointId}
                   setSelectedBreakpointId={p.setSelectedBreakpointId}
                   startNewBreakpoint={p.startNewBreakpoint}
-                  addBreakpoint={p.addBreakpoint}
+                  saveBreakpoint={p.saveBreakpoint}
                   selectedRequestOrigin={p.selectedRequestOrigin}
                   removeBreakpoint={p.removeBreakpoint}
                   setBreakpointEnabled={p.setBreakpointEnabled}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { FilePlusCorner, Save, Trash2 } from 'lucide-react'
+import { FilePlusCorner, Save, StepForward, Trash2 } from 'lucide-react'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -7,6 +7,13 @@ import {
 } from '@/components/ui/resizable'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { HostGroupList } from '@/components/host-group-list/HostGroupList'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { breakpointTexts } from '../texts'
 import type { BreakpointsPanelUIProps } from '../types'
 import { buildBreakpointGroups } from '../breakpointGroups'
@@ -19,6 +26,8 @@ import s from './BreakpointsPanelUI.module.css'
 
 const t = breakpointTexts
 const sh = t.shell
+const METHOD_ANY_VALUE = '__ANY_METHOD__'
+const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 export function BreakpointsPanelUI({
   closeBreakpointsPanel,
@@ -26,10 +35,14 @@ export function BreakpointsPanelUI({
   breakpointForm,
   setBreakpointForm,
   breakpointEntries,
+  pendingRequestIdByBreakpointId,
+  resumeRequest,
+  resumeSaving,
+  isBreakpointFormActive,
   selectedBreakpointId,
   setSelectedBreakpointId,
   startNewBreakpoint,
-  addBreakpoint,
+  saveBreakpoint,
   selectedRequestOrigin,
   removeBreakpoint,
   setBreakpointEnabled,
@@ -49,10 +62,82 @@ export function BreakpointsPanelUI({
       null)
     : null
 
+  const hasUnsavedChanges = useMemo(() => {
+    if (!selectedBreakpoint && !isBreakpointFormActive) {
+      return false
+    }
+    const normalizedCurrent = normalizeBreakpointForm({
+      name: breakpointForm.name,
+      matchMethod: breakpointForm.matchMethod,
+      matchOrigin: breakpointForm.matchOrigin,
+      matchPathRegex: breakpointForm.matchPathRegex,
+    })
+
+    if (selectedBreakpoint) {
+      const normalizedSelected = normalizeBreakpointForm({
+        name: selectedBreakpoint.name,
+        matchMethod: selectedBreakpoint.matchMethod ?? '',
+        matchOrigin: selectedBreakpoint.matchOrigin ?? '',
+        matchPathRegex: selectedBreakpoint.matchPathRegex ?? '',
+      })
+      return (
+        normalizedCurrent.name !== normalizedSelected.name ||
+        normalizedCurrent.matchMethod !== normalizedSelected.matchMethod ||
+        normalizedCurrent.matchOrigin !== normalizedSelected.matchOrigin ||
+        normalizedCurrent.matchPathRegex !== normalizedSelected.matchPathRegex
+      )
+    }
+
+    const normalizedDefault = normalizeBreakpointForm({
+      name: t.defaultFormName,
+      matchMethod: 'GET',
+      matchOrigin: '',
+      matchPathRegex: t.defaultPathRegex,
+    })
+    return (
+      normalizedCurrent.name !== normalizedDefault.name ||
+      normalizedCurrent.matchMethod !== normalizedDefault.matchMethod ||
+      normalizedCurrent.matchOrigin !== normalizedDefault.matchOrigin ||
+      normalizedCurrent.matchPathRegex !== normalizedDefault.matchPathRegex
+    )
+  }, [breakpointForm, isBreakpointFormActive, selectedBreakpoint])
+
+  const canSaveBreakpoint = selectedBreakpoint != null || isBreakpointFormActive
+
   useEffect(() => {
     if (!highlightedBreakpointId) return
     setSelectedBreakpointId(highlightedBreakpointId)
   }, [highlightedBreakpointId, setSelectedBreakpointId])
+
+  useEffect(() => {
+    if (!selectedBreakpoint) return
+    setBreakpointForm({
+      name: selectedBreakpoint.name,
+      matchMethod: selectedBreakpoint.matchMethod ?? '',
+      matchOrigin: selectedBreakpoint.matchOrigin ?? '',
+      matchPathRegex: selectedBreakpoint.matchPathRegex ?? '',
+    })
+  }, [selectedBreakpoint, setBreakpointForm])
+
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      const isSaveShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 's'
+      if (!isSaveShortcut) return
+      event.preventDefault()
+      void saveBreakpoint(selectedRequestOrigin)
+    }
+
+    window.addEventListener('keydown', handleSaveShortcut, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', handleSaveShortcut, {
+        capture: true,
+      })
+    }
+  }, [saveBreakpoint, selectedRequestOrigin])
 
   const actionButtons = (
     <>
@@ -65,18 +150,35 @@ export function BreakpointsPanelUI({
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
-      {!selectedBreakpoint ? (
-        <TooltipButton
-          type="button"
-          className={`primary ${s.actionIconBtn}`}
-          onClick={() => addBreakpoint(selectedRequestOrigin)}
-          aria-label={t.add}
-          tooltip={t.add}
-        >
-          <Save size={16} aria-hidden />
-        </TooltipButton>
-      ) : (
+      <TooltipButton
+        type="button"
+        className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${s.actionIconBtn}`}
+        disabled={!canSaveBreakpoint}
+        onClick={() => void saveBreakpoint(selectedRequestOrigin)}
+        aria-label={selectedBreakpoint ? t.saveChanges : t.add}
+        tooltip={selectedBreakpoint ? t.saveChanges : t.add}
+      >
+        <Save size={16} aria-hidden />
+      </TooltipButton>
+      {selectedBreakpoint ? (
         <>
+          {(() => {
+            const pendingRequestId =
+              pendingRequestIdByBreakpointId.get(selectedBreakpoint.id) ?? null
+            if (!pendingRequestId) return null
+            return (
+              <TooltipButton
+                type="button"
+                className={`primary inline-primary ${s.actionIconBtn}`}
+                disabled={resumeSaving[pendingRequestId] === true}
+                aria-label={t.continueAllFromBreakpoint}
+                tooltip={t.continueAllFromBreakpoint}
+                onClick={() => void resumeRequest(pendingRequestId)}
+              >
+                <StepForward size={16} aria-hidden />
+              </TooltipButton>
+            )
+          })()}
           <TooltipButton
             type="button"
             className={`ghost ${s.actionIconBtn}`}
@@ -127,25 +229,46 @@ export function BreakpointsPanelUI({
             <Trash2 size={16} aria-hidden />
           </TooltipButton>
         </>
-      )}
+      ) : null}
     </>
   )
 
   const renderItem = (rule: BreakpointRule) => {
     const isActive = selectedBreakpoint?.id === rule.id
+    const pendingRequestId = pendingRequestIdByBreakpointId.get(rule.id) ?? null
     return (
-      <button
-        type="button"
-        className={`${s.itemButton} ${isActive ? s.itemButtonActive : ''}`}
-        onClick={() => setSelectedBreakpointId(rule.id)}
-        data-breakpoint-id={rule.id}
-      >
-        <span
-          className={`${s.stateDot} ${rule.enabled ? s.stateDotEnabled : ''}`}
-          aria-hidden
-        />
-        <span className={s.itemName}>{rule.name}</span>
-      </button>
+      <div className={s.itemRow}>
+        <button
+          type="button"
+          className={`${s.itemButton} ${isActive ? s.itemButtonActive : ''}`}
+          onClick={() => setSelectedBreakpointId(rule.id)}
+          data-breakpoint-id={rule.id}
+        >
+          <span
+            className={`${s.stateDot} ${
+              pendingRequestId
+                ? s.stateDotDisabled
+                : rule.enabled
+                  ? s.stateDotEnabled
+                  : ''
+            }`}
+            aria-hidden
+          />
+          <span className={s.itemName}>{rule.name}</span>
+        </button>
+        {pendingRequestId ? (
+          <TooltipButton
+            type="button"
+            className={`primary inline-primary ${s.itemContinueBtn}`}
+            disabled={resumeSaving[pendingRequestId] === true}
+            aria-label={t.continueRequest}
+            tooltip={t.continueRequest}
+            onClick={() => void resumeRequest(pendingRequestId)}
+          >
+            <StepForward size={14} aria-hidden />
+          </TooltipButton>
+        ) : null}
+      </div>
     )
   }
 
@@ -202,6 +325,11 @@ export function BreakpointsPanelUI({
                       idPrefix="breakpoint-origin"
                       getItemKey={(rule) => rule.id}
                       renderItem={renderItem}
+                      isGroupAlert={(group) =>
+                        group.items.some((rule) =>
+                          pendingRequestIdByBreakpointId.has(rule.id),
+                        )
+                      }
                       isGroupActive={(group) =>
                         group.items.some((rule) => rule.enabled)
                       }
@@ -221,15 +349,16 @@ export function BreakpointsPanelUI({
               minSize={28}
             >
               <main className={s.detail}>
-                {selectedBreakpoint ? (
-                  <BreakpointDetail
-                    rule={selectedBreakpoint}
-                  />
-                ) : (
-                  <BreakpointCreateForm
+                {selectedBreakpoint || isBreakpointFormActive ? (
+                  <BreakpointForm
                     breakpointForm={breakpointForm}
                     setBreakpointForm={setBreakpointForm}
+                    selectedBreakpoint={selectedBreakpoint}
                   />
+                ) : (
+                  <div className={s.emptyDetail}>
+                    <p className="muted">{t.selectHint}</p>
+                  </div>
                 )}
               </main>
             </ResizablePanel>
@@ -240,53 +369,35 @@ export function BreakpointsPanelUI({
   )
 }
 
-function BreakpointDetail({
-  rule,
-}: {
-  rule: BreakpointRule
+function normalizeBreakpointForm(form: {
+  name: string
+  matchMethod: string
+  matchOrigin: string
+  matchPathRegex: string
+}) {
+  return {
+    name: form.name.trim(),
+    matchMethod: form.matchMethod.trim().toUpperCase(),
+    matchOrigin: form.matchOrigin.trim(),
+    matchPathRegex: form.matchPathRegex.trim(),
+  }
+}
+
+function BreakpointForm({
+  breakpointForm,
+  setBreakpointForm,
+  selectedBreakpoint,
+}: Pick<BreakpointsPanelUIProps, 'breakpointForm' | 'setBreakpointForm'> & {
+  selectedBreakpoint: BreakpointRule | null
 }) {
   return (
     <>
       <div className={s.detailHead}>
         <div>
-          <h3>{rule.name}</h3>
-          {!rule.enabled && <span className="pill subtle">{t.disabledPill}</span>}
-        </div>
-      </div>
-
-      <section className={s.block}>
-        <h4>{t.matchSection}</h4>
-        <div className={s.matchGrid}>
-          <span className={s.matchKey}>{t.methodLabel}</span>
-          <span className={s.matchVal}>
-            {(rule.matchMethod ?? '').trim() || t.anyValue}
-          </span>
-          <span className={s.matchKey}>{t.originLabel}</span>
-          <span className={s.matchVal}>
-            {(rule.matchOrigin ?? '').trim() || t.anyValue}
-          </span>
-          <span className={s.matchKey}>{t.pathRegexLabel}</span>
-          <span className={s.matchVal}>
-            {(rule.matchPathRegex ?? '').trim() || t.anyValue}
-          </span>
-        </div>
-      </section>
-    </>
-  )
-}
-
-function BreakpointCreateForm({
-  breakpointForm,
-  setBreakpointForm,
-}: Pick<
-  BreakpointsPanelUIProps,
-  'breakpointForm' | 'setBreakpointForm'
->) {
-  return (
-    <>
-      <div className={s.detailHead}>
-        <div>
-          <h3>{t.newTitle}</h3>
+          <h3>{selectedBreakpoint ? t.detailTitle : t.newTitle}</h3>
+          {selectedBreakpoint && !selectedBreakpoint.enabled && (
+            <span className="pill subtle">{t.disabledPill}</span>
+          )}
         </div>
       </div>
       <div className={s.form}>
@@ -301,14 +412,27 @@ function BreakpointCreateForm({
         </label>
         <label>
           {t.methodLabel}
-          <input
-            className="mono"
-            placeholder={t.methodPlaceholder}
-            value={breakpointForm.matchMethod}
-            onChange={(e) =>
-              setBreakpointForm((f) => ({ ...f, matchMethod: e.target.value }))
+          <Select
+            value={breakpointForm.matchMethod || METHOD_ANY_VALUE}
+            onValueChange={(value) =>
+              setBreakpointForm((f) => ({
+                ...f,
+                matchMethod: value === METHOD_ANY_VALUE ? '' : value,
+              }))
             }
-          />
+          >
+            <SelectTrigger className="mono">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={METHOD_ANY_VALUE}>ANY</SelectItem>
+              {METHOD_OPTIONS.map((method) => (
+                <SelectItem key={method} value={method}>
+                  {method}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label>
           {t.originLabel}
@@ -335,6 +459,7 @@ function BreakpointCreateForm({
             }
           />
         </label>
+        <div className="small muted">{t.saveHint}</div>
       </div>
     </>
   )

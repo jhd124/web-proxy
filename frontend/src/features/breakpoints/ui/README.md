@@ -4,7 +4,7 @@
 
 ## 当前 UI
 
-- `BreakpointsPanelUI.tsx`：断点面板主体。左侧为按 origin（域名）分组的可折叠列表（复用 `components/host-group-list`，分组含已启用断点时箭头变绿，列表项带启用状态圆点），右侧为详情区；左右宽度可拖拽调整（`components/ui/resizable`）。头部操作区与 override 对齐，统一使用 `TooltipButton` + icon：新建（`FilePlusCorner`）、新增保存（`Save`，仅新建态显示）、启用/禁用（圆点动作语义，选中态显示）、删除（`Trash2`，选中态显示）。右侧详情仅保留信息展示，新增表单仅保留字段输入。左侧列表默认宽度与 traffic / override / saved 页面统一，复用 `lib/panelLayout.ts` 常量。
+- `BreakpointsPanelUI.tsx`：断点面板主体。左侧为按 origin（域名）分组的可折叠列表（复用 `components/host-group-list`，分组含已启用断点时箭头变绿；若分组内存在命中且等待放行的请求则箭头变红。列表项默认带启用状态圆点，命中等待放行时圆点变红，且条目最右展示绿色 `StepForward` 继续按钮）。右侧按状态展示：未选择且未进入新建态时显示空状态提示；新建态或选中已有规则时显示可编辑表单（`Method` 字段为下拉选择，含 `ANY/GET/POST/...`；路径字段改为字符串精确匹配，不再按正则解释）；左右宽度可拖拽调整（`components/ui/resizable`）。头部操作区与 override 对齐，统一使用 `TooltipButton` + icon：新建（`FilePlusCorner`）、保存（`Save`，新建=创建、选中=更新；仅在表单有未保存改动时高亮为主按钮，且仅在新建态/选中态可点击）、继续放行（选中规则且存在 pending 请求时显示绿色 `StepForward`）、启用/禁用（圆点动作语义，选中态显示）、删除（`Trash2`，选中态显示）。面板打开时支持 `Cmd/Ctrl + S` 触发表单保存。左侧列表默认宽度与 traffic / override / saved 页面统一，复用 `lib/panelLayout.ts` 常量。
 - `BreakpointsPanelUI.module.css`：列表项、详情区与新建表单样式。
 - `BreakpointsPanelUI.overlay.module.css`：覆盖层与外层容器样式。
 

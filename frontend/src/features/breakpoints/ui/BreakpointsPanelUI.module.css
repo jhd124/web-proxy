@@ -71,6 +71,23 @@
   transition: background 0.12s ease, color 0.12s ease;
 }
 
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.itemContinueBtn {
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .itemButton:hover {
   background: var(--background-hover);
   color: var(--text-primary);
@@ -122,6 +139,14 @@
   overflow: auto;
   padding: 1rem 1.25rem 2rem;
   background: var(--bg);
+}
+
+.emptyDetail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
 }
 
 .detailHead {

@@ -17,6 +17,7 @@ type HostGroupListProps<TItem> = {
   getItemKey: (item: TItem) => string
   renderItem: (item: TItem) => ReactNode
   isGroupActive?: (group: HostGroup<TItem>) => boolean
+  isGroupAlert?: (group: HostGroup<TItem>) => boolean
   toggleLabel?: (host: string) => string
   idPrefix?: string
 }
@@ -26,6 +27,7 @@ export function HostGroupList<TItem>({
   getItemKey,
   renderItem,
   isGroupActive,
+  isGroupAlert,
   toggleLabel,
   idPrefix = 'host-group',
 }: HostGroupListProps<TItem>) {
@@ -35,6 +37,7 @@ export function HostGroupList<TItem>({
         const hostId = `${idPrefix}-${String(group.host).replace(/\s+/g, '_')}`
         const contentId = `${hostId}-items`
         const isActive = isGroupActive?.(group) ?? false
+        const isAlert = isGroupAlert?.(group) ?? false
         return (
           <section
             key={group.host}
@@ -51,7 +54,11 @@ export function HostGroupList<TItem>({
                 >
                   <ChevronDown
                     className={`${s.originChevron} ${
-                      isActive ? s.originChevronActive : ''
+                      isAlert
+                        ? s.originChevronAlert
+                        : isActive
+                          ? s.originChevronActive
+                          : ''
                     }`}
                     data-icon="inline-start"
                     aria-hidden

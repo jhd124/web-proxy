@@ -16,10 +16,14 @@ export type BreakpointsPanelUIProps = {
   breakpointForm: BreakpointForm
   setBreakpointForm: SetBreakpointForm
   breakpointEntries: BreakpointRule[]
+  pendingRequestIdByBreakpointId: ReadonlyMap<string, string>
+  resumeRequest: (id: string) => Promise<void>
+  resumeSaving: Record<string, boolean>
+  isBreakpointFormActive: boolean
   selectedBreakpointId: string | null
   setSelectedBreakpointId: (id: string | null) => void
   startNewBreakpoint: () => void
-  addBreakpoint: (originFallback?: string) => void
+  saveBreakpoint: (originFallback?: string) => void
   selectedRequestOrigin: string
   removeBreakpoint: (id: string) => Promise<void>
   setBreakpointEnabled: (rule: BreakpointRule, enabled: boolean) => void

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { escapeRegex, inferOriginFromHostHint } from '../../../lib/dashboardUtils'
+import { useCallback, useEffect, useState } from 'react'
+import { inferOriginFromHostHint } from '../../../lib/dashboardUtils'
 import { showToast } from '../../../lib/toast'
 import type { BreakpointRule } from '../../../types'
 import { breakpointTexts } from '../texts'
@@ -21,18 +21,25 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
   const [selectedBreakpointId, setSelectedBreakpointId] = useState<
     string | null
   >(null)
+  const [isBreakpointFormActive, setIsBreakpointFormActive] = useState(false)
   const [breakpointForm, setBreakpointForm] = useState<BreakpointFormState>({
     name: t.defaultFormName,
-    matchMethod: '',
+    matchMethod: 'GET',
     matchOrigin: '',
     matchPathRegex: t.defaultPathRegex,
   })
 
+  useEffect(() => {
+    if (!selectedBreakpointId) return
+    setIsBreakpointFormActive(false)
+  }, [selectedBreakpointId])
+
   const startNewBreakpoint = useCallback(() => {
+    setIsBreakpointFormActive(true)
     setSelectedBreakpointId(null)
     setBreakpointForm({
       name: t.defaultFormName,
-      matchMethod: '',
+      matchMethod: 'GET',
       matchOrigin: '',
       matchPathRegex: t.defaultPathRegex,
     })
@@ -44,42 +51,63 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
   }, [])
 
   const showBreakpointUpsertError = useCallback(
-    (status: number) => {
+    (status: number, mode: 'create' | 'update') => {
       if (status === 409) {
         showToast(t.duplicateIdentity, 'error')
         return
       }
-      showToast(t.createFailed(status), 'error')
+      showToast(
+        mode === 'create' ? t.createFailed(status) : t.updateFailed(status),
+        'error',
+      )
     },
     [t],
   )
 
-  const addBreakpoint = useCallback(async (originFallback?: string) => {
+  const saveBreakpoint = useCallback(async (originFallback?: string) => {
+    if (!selectedBreakpointId && !isBreakpointFormActive) {
+      return
+    }
     const normalizedOriginFallback = originFallback?.trim() ?? ''
     const normalizedFormOrigin = breakpointForm.matchOrigin.trim()
     const matchOrigin =
       normalizedFormOrigin.length > 0 ? normalizedFormOrigin : normalizedOriginFallback
-    const r = await fetch('/api/breakpoints', {
-      method: 'POST',
+    const editingRule = selectedBreakpointId
+      ? (breakpoints.find((rule) => rule.id === selectedBreakpointId) ?? null)
+      : null
+    const requestUrl = editingRule
+      ? `/api/breakpoints/${editingRule.id}`
+      : '/api/breakpoints'
+    const requestMethod = editingRule ? 'PUT' : 'POST'
+    const r = await fetch(requestUrl, {
+      method: requestMethod,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: breakpointForm.name.trim() || t.defaultRuleName,
-        enabled: true,
+        enabled: editingRule?.enabled ?? true,
         matchMethod: breakpointForm.matchMethod.trim() || null,
         matchOrigin: matchOrigin || null,
         matchPathRegex: breakpointForm.matchPathRegex.trim() || null,
       }),
     })
     if (r.ok) {
+      const savedRule = (await r.json().catch(() => null)) as BreakpointRule | null
+      if (savedRule?.id) {
+        setSelectedBreakpointId(savedRule.id)
+        setIsBreakpointFormActive(false)
+      }
       await refreshBreakpoints()
       openBreakpointsPanel()
       return
     }
-    showBreakpointUpsertError(r.status)
+    showBreakpointUpsertError(r.status, editingRule ? 'update' : 'create')
   }, [
+    breakpoints,
     breakpointForm,
     openBreakpointsPanel,
     refreshBreakpoints,
+    isBreakpointFormActive,
+    selectedBreakpointId,
     showBreakpointUpsertError,
     t,
   ])
@@ -89,9 +117,12 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       const r = await fetch(`/api/breakpoints/${id}`, { method: 'DELETE' })
       if (!r.ok) throw new Error(`Delete failed (HTTP ${r.status})`)
       setSelectedBreakpointId((prev) => (prev === id ? null : prev))
+      if (selectedBreakpointId === id) {
+        setIsBreakpointFormActive(false)
+      }
       await refreshBreakpoints()
     },
-    [refreshBreakpoints],
+    [refreshBreakpoints, selectedBreakpointId],
   )
 
   const setBreakpointEnabled = useCallback(
@@ -128,7 +159,7 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
   )
 
   const addBreakpointFromOverride = useCallback(
-    async (
+    (
       source: {
         name: string
         matchMethod?: string | null
@@ -141,7 +172,9 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       const matchOrigin =
         originHint || inferOriginFromHostHint(source.matchHost) || ''
       const p = (source.matchPath ?? '').trim()
-      const matchPathRegex = p === '' ? '' : `^${escapeRegex(p)}$`
+      const matchPathRegex = p
+      setIsBreakpointFormActive(true)
+      setSelectedBreakpointId(null)
       setBreakpointForm({
         name: t.pauseName(source.name),
         matchMethod: (source.matchMethod ?? '').trim(),
@@ -149,49 +182,21 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
         matchPathRegex,
       })
       openBreakpointsPanel()
-      if (!matchOrigin || !matchPathRegex) {
-        return
-      }
-      const existing = breakpoints.find(
-        (rule) =>
-          (rule.matchMethod ?? '').toLowerCase() ===
-            (source.matchMethod ?? '').trim().toLowerCase() &&
-          (rule.matchOrigin ?? '') === matchOrigin &&
-          (rule.matchPathRegex ?? '') === matchPathRegex,
-      )
-      if (existing) {
-        return
-      }
-      const r = await fetch('/api/breakpoints', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: t.pauseName(source.name),
-          enabled: true,
-          matchMethod: (source.matchMethod ?? '').trim() || null,
-          matchOrigin,
-          matchPathRegex,
-        }),
-      })
-      if (r.ok) {
-        await refreshBreakpoints()
-        return
-      }
-      showBreakpointUpsertError(r.status)
     },
-    [breakpoints, openBreakpointsPanel, refreshBreakpoints, showBreakpointUpsertError, t],
+    [openBreakpointsPanel, t],
   )
 
   return {
     breakpoints,
     setBreakpoints,
+    isBreakpointFormActive,
     breakpointForm,
     setBreakpointForm,
     selectedBreakpointId,
     setSelectedBreakpointId,
     startNewBreakpoint,
     refreshBreakpoints,
-    addBreakpoint,
+    saveBreakpoint,
     removeBreakpoint,
     setBreakpointEnabled,
     breakpointToggleSaving,

@@ -179,8 +179,9 @@ fn breakpoint_method_match_is_case_insensitive_and_optional() {
         enabled: true,
         match_method: Some("POST".to_string()),
         match_origin: Some("https://example.com".to_string()),
-        match_path_regex: Some("^/api".to_string()),
+        match_path_regex: Some("/api/v1".to_string()),
     };
     assert!(rule.matches("post", "https://example.com", "/api/v1"));
+    assert!(!rule.matches("post", "https://example.com", "/api/v2"));
     assert!(!rule.matches("GET", "https://example.com", "/api/v1"));
 }

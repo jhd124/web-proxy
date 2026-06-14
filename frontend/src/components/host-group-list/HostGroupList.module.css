@@ -96,6 +96,10 @@
   color: var(--green-500, #22c55e);
 }
 
+.originChevronAlert {
+  color: #ef4444;
+}
+
 .originCollapsible[data-state="closed"] .originChevron {
   transform: rotate(-90deg);
 }

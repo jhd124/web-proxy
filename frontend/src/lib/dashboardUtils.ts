@@ -42,7 +42,7 @@ export function getDefaultOverrideForm(): OverrideFormState {
     status: 200,
     body: '',
     headersText: '',
-    matchMethod: '',
+    matchMethod: 'GET',
     matchProtocol: '',
     matchHost: '',
     matchPath: '',
@@ -168,9 +168,5 @@ export function breakpointMatches(
     return false
   }
   if (!rule.matchPathRegex) return true
-  try {
-    return new RegExp(rule.matchPathRegex).test(entry.path)
-  } catch {
-    return false
-  }
+  return normalizePath(rule.matchPathRegex) === normalizePath(entry.path)
 }

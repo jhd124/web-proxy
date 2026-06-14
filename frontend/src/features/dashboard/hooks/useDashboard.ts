@@ -5,7 +5,6 @@ import { useSavedRequests } from '../../saved-requests/hooks/useSavedRequests'
 import { useTrafficState } from '../../traffic/hooks/useTrafficState'
 import {
   breakpointMatches,
-  escapeRegex,
   getDefaultOverrideForm,
   headersToText,
   trafficEntryOrigin,
@@ -144,7 +143,7 @@ export function useDashboard() {
     refreshOverrides,
   } = ovr
   const brk = useBreakpointState({ openBreakpointsPanel })
-  const { breakpoints, setBreakpointForm, refreshBreakpoints } = brk
+  const { breakpoints, setBreakpointForm, refreshBreakpoints, startNewBreakpoint } = brk
 
   const selectedIdRef = useRef<string | null>(null)
 
@@ -408,6 +407,18 @@ export function useDashboard() {
     return matchedByEntryId
   }, [breakpoints, filteredEntries])
 
+  const pendingRequestIdByBreakpointId = useMemo(() => {
+    const pendingByBreakpointId = new Map<string, string>()
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      const entry = entries[i]
+      if (!entry || entry.kind !== 'http' || !entry.pending) continue
+      const breakpointId = entry.breakpointMatchId ?? null
+      if (!breakpointId || pendingByBreakpointId.has(breakpointId)) continue
+      pendingByBreakpointId.set(breakpointId, entry.id)
+    }
+    return pendingByBreakpointId
+  }, [entries])
+
   const openMatchedOverride = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
     if (!selected.overrideMatchId) return
@@ -528,16 +539,11 @@ export function useDashboard() {
     return matchedIds
   }, [filteredEntries, matchedBreakpointByEntryId, matchedOverrideByEntryId])
 
-  const addBreakpointFromSelected = useCallback(async () => {
+  const addBreakpointFromSelected = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
     const matchOrigin = trafficEntryOrigin(selected)
-    const matchPathRegex = `^${escapeRegex(selected.path)}$`
-    const existing = breakpoints.find(
-      (rule) =>
-        (rule.matchMethod ?? '').toLowerCase() === selected.method.toLowerCase() &&
-        (rule.matchOrigin ?? '') === matchOrigin &&
-        (rule.matchPathRegex ?? '') === matchPathRegex,
-    )
+    const matchPathRegex = selected.path
+    startNewBreakpoint()
     setBreakpointForm({
       name: `Pause ${selected.method} ${selected.path}`,
       matchMethod: selected.method,
@@ -545,29 +551,11 @@ export function useDashboard() {
       matchPathRegex,
     })
     openBreakpointsPanel()
-    if (existing) {
-      return
-    }
-    const r = await fetch('/api/breakpoints', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: `Pause ${selected.method} ${selected.path}`,
-        enabled: true,
-        matchMethod: selected.method,
-        matchOrigin: matchOrigin || null,
-        matchPathRegex,
-      }),
-    })
-    if (r.ok) {
-      await refreshBreakpoints()
-    }
   }, [
-    breakpoints,
     openBreakpointsPanel,
-    refreshBreakpoints,
     selected,
     setBreakpointForm,
+    startNewBreakpoint,
   ])
 
   const addBreakpointFromEntry = useCallback(
@@ -576,13 +564,8 @@ export function useDashboard() {
       if (!entry || entry.kind !== 'http') return
       traffic.setSelectedId(id)
       const matchOrigin = trafficEntryOrigin(entry)
-      const matchPathRegex = `^${escapeRegex(entry.path)}$`
-      const existing = breakpoints.find(
-        (rule) =>
-          (rule.matchMethod ?? '').toLowerCase() === entry.method.toLowerCase() &&
-          (rule.matchOrigin ?? '') === matchOrigin &&
-          (rule.matchPathRegex ?? '') === matchPathRegex,
-      )
+      const matchPathRegex = entry.path
+      startNewBreakpoint()
       setBreakpointForm({
         name: `Pause ${entry.method} ${entry.path}`,
         matchMethod: entry.method,
@@ -590,30 +573,12 @@ export function useDashboard() {
         matchPathRegex,
       })
       openBreakpointsPanel()
-      if (existing) {
-        return
-      }
-      const response = await fetch('/api/breakpoints', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `Pause ${entry.method} ${entry.path}`,
-          enabled: true,
-          matchMethod: entry.method,
-          matchOrigin: matchOrigin || null,
-          matchPathRegex,
-        }),
-      })
-      if (response.ok) {
-        await refreshBreakpoints()
-      }
     },
     [
-      breakpoints,
       getEntryById,
       openBreakpointsPanel,
-      refreshBreakpoints,
       setBreakpointForm,
+      startNewBreakpoint,
       traffic,
     ],
   )
@@ -815,10 +780,12 @@ export function useDashboard() {
     breakpointForm: brk.breakpointForm,
     setBreakpointForm: brk.setBreakpointForm,
     breakpointEntries: brk.breakpoints,
+    pendingRequestIdByBreakpointId,
+    isBreakpointFormActive: brk.isBreakpointFormActive,
     selectedBreakpointId: brk.selectedBreakpointId,
     setSelectedBreakpointId: brk.setSelectedBreakpointId,
     startNewBreakpoint: brk.startNewBreakpoint,
-    addBreakpoint: brk.addBreakpoint,
+    saveBreakpoint: brk.saveBreakpoint,
     selectedRequestOrigin,
     removeBreakpoint: brk.removeBreakpoint,
     setBreakpointEnabled: brk.setBreakpointEnabled,

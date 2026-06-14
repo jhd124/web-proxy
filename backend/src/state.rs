@@ -226,7 +226,7 @@ pub struct BreakpointRule {
     pub match_method: Option<String>,
     /// Exact origin match, e.g. `https://example.com` or `http://localhost:3000`.
     pub match_origin: Option<String>,
-    /// Regex on path (leading `/` path only, or full path).
+    /// Plain path string match (after normalization to leading `/`).
     pub match_path_regex: Option<String>,
 }
 
@@ -246,11 +246,11 @@ impl BreakpointRule {
                 return false;
             }
         }
-        if let Some(ref pattern) = self.match_path_regex {
-            if let Ok(re) = regex::Regex::new(pattern) {
-                return re.is_match(path);
+        if let Some(ref expected_path) = self.match_path_regex {
+            let want = expected_path.trim();
+            if !want.is_empty() && normalize_path(path) != normalize_path(want) {
+                return false;
             }
-            return false;
         }
         true
     }

@@ -146,12 +146,24 @@ export function useTrafficState() {
     try {
       const r = await fetch(`/api/requests/${id}/resume`, { method: 'POST' })
       if (!r.ok) throw new Error(`Resume failed (HTTP ${r.status})`)
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === id
+            ? {
+                ...entry,
+                pending: false,
+                breakpointName: null,
+                breakpointMatchId: null,
+              }
+            : entry,
+        ),
+      )
     } catch (e) {
       window.alert(String(e))
     } finally {
       setResumeSaving((prev) => ({ ...prev, [id]: false }))
     }
-  }, [])
+  }, [setEntries])
 
   const playControlledStream = useCallback(async (id: string) => {
     setStreamActionSaving((prev) => ({ ...prev, [id]: true }))

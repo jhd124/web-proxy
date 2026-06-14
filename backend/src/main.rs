@@ -73,7 +73,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|| PathBuf::from("proxy-overrides.sqlite3"));
     let overrides = overrides::init_and_load(&override_db_path).context("override sqlite init")?;
     saved_requests::init(&override_db_path).context("saved requests sqlite init")?;
-    let breakpoints = Vec::new();
+    let breakpoints =
+        breakpoints::load_breakpoints(&override_db_path).context("load breakpoints")?;
 
     let upstream_http_client = reqwest::Client::builder()
         .no_proxy()

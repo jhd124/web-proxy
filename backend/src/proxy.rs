@@ -1193,7 +1193,7 @@ async fn forward_proxied_http(
         request_headers,
         collected.as_ref(),
     );
-    let matched_breakpoint = find_breakpoint(&state, method.as_str(), &origin, &path_with_query);
+    let matched_breakpoint = find_breakpoint(&state, method.as_str(), &origin, &path_only);
     let mapped_remote_url = matched_override
         .as_ref()
         .and_then(|rule| build_mapped_remote_url(rule, &path_with_query));
@@ -1209,7 +1209,7 @@ async fn forward_proxied_http(
         url: url.clone(),
         scheme: scheme.clone(),
         host: host.clone(),
-        path: path_with_query.clone(),
+        path: path_only.clone(),
         request_headers: request_headers
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))

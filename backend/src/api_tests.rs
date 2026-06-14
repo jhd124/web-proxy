@@ -8,11 +8,15 @@ use tokio::sync::oneshot;
 use uuid::Uuid;
 
 fn build_state() -> Arc<AppState> {
+    let db_path = std::env::temp_dir().join(format!(
+        "proxy-app-test-overrides-{}.sqlite",
+        Uuid::new_v4()
+    ));
     Arc::new(AppState::new(
         128,
         None,
         None,
-        std::env::temp_dir().join("proxy-app-test-overrides.sqlite"),
+        db_path,
         Vec::<OverrideRule>::new(),
         Vec::<BreakpointRule>::new(),
         Client::new(),
@@ -182,7 +186,7 @@ async fn create_breakpoint_persists_match_method() {
         enabled: Some(true),
         match_method: Some("POST".to_string()),
         match_origin: Some("https://example.com".to_string()),
-        match_path_regex: Some("^/api".to_string()),
+        match_path_regex: Some("/api".to_string()),
     };
     let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(body))
         .await
@@ -194,6 +198,26 @@ async fn create_breakpoint_persists_match_method() {
 }
 
 #[tokio::test]
+async fn create_breakpoint_persists_to_disk() {
+    let state = build_state();
+    let body = crate::breakpoints::UpsertBreakpointBody {
+        name: "Pause persisted".to_string(),
+        enabled: Some(true),
+        match_method: Some("GET".to_string()),
+        match_origin: Some("https://example.com".to_string()),
+        match_path_regex: Some("/persist".to_string()),
+    };
+    let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(body))
+        .await
+        .expect("create breakpoint should succeed");
+    let loaded =
+        crate::breakpoints::load_breakpoints(&state.override_db_path).expect("load breakpoints");
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].id, created.0.id);
+    assert_eq!(loaded[0].match_method.as_deref(), Some("GET"));
+}
+
+#[tokio::test]
 async fn create_breakpoint_conflicts_on_same_method_origin_path() {
     let state = build_state();
     let first_body = crate::breakpoints::UpsertBreakpointBody {
@@ -201,7 +225,7 @@ async fn create_breakpoint_conflicts_on_same_method_origin_path() {
         enabled: Some(true),
         match_method: Some("POST".to_string()),
         match_origin: Some("https://example.com".to_string()),
-        match_path_regex: Some("^/api".to_string()),
+        match_path_regex: Some("/api".to_string()),
     };
     let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(first_body))
         .await
@@ -214,7 +238,7 @@ async fn create_breakpoint_conflicts_on_same_method_origin_path() {
         enabled: Some(false),
         match_method: Some("  post  ".to_string()),
         match_origin: Some(" HTTPS://EXAMPLE.COM ".to_string()),
-        match_path_regex: Some("^/api".to_string()),
+        match_path_regex: Some("/api".to_string()),
     };
     let err =
         crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(duplicate_body))
@@ -233,7 +257,7 @@ async fn update_breakpoint_conflicts_when_identity_collides() {
             enabled: Some(true),
             match_method: Some("GET".to_string()),
             match_origin: Some("https://example.com".to_string()),
-            match_path_regex: Some("^/api".to_string()),
+            match_path_regex: Some("/api".to_string()),
         }),
     )
     .await
@@ -245,7 +269,7 @@ async fn update_breakpoint_conflicts_when_identity_collides() {
             enabled: Some(true),
             match_method: Some("POST".to_string()),
             match_origin: Some("https://example.com".to_string()),
-            match_path_regex: Some("^/login".to_string()),
+            match_path_regex: Some("/login".to_string()),
         }),
     )
     .await
@@ -265,4 +289,40 @@ async fn update_breakpoint_conflicts_when_identity_collides() {
     .await
     .expect_err("updating identity to existing one should conflict");
     assert_eq!(err, StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn update_breakpoint_keeps_same_id_when_match_fields_change() {
+    let state = build_state();
+    let created = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause API".to_string(),
+            enabled: Some(true),
+            match_method: Some("GET".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/api".to_string()),
+        }),
+    )
+    .await
+    .expect("create breakpoint");
+
+    let updated = crate::breakpoints::update_breakpoint(
+        State(state.clone()),
+        axum::extract::Path(created.0.id),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause Login".to_string(),
+            enabled: Some(false),
+            match_method: Some("POST".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/login".to_string()),
+        }),
+    )
+    .await
+    .expect("update breakpoint");
+
+    assert_eq!(updated.0.id, created.0.id);
+    assert_eq!(updated.0.name, "Pause Login");
+    assert_eq!(updated.0.match_method.as_deref(), Some("POST"));
+    assert_eq!(updated.0.match_path_regex.as_deref(), Some("/login"));
 }

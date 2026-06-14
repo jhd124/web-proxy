@@ -7,7 +7,12 @@ import { TrafficVirtualListUI } from './TrafficVirtualListUI'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { useDefaultLayout } from 'react-resizable-panels'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
+
+const TRAFFIC_LAYOUT_ID = 'traffic-panels-group'
+const TRAFFIC_LIST_PANEL_ID = 'traffic-list'
+const TRAFFIC_DETAIL_PANEL_ID = 'traffic-detail'
 
 export function TrafficPanelUI({
   testError,
@@ -29,6 +34,16 @@ export function TrafficPanelUI({
   onEntryOpenMatchedOverride,
   onEntryOpenMatchedBreakpoint,
 }: TrafficPanelUIProps) {
+  // 通过库自带持久化按「当前面板集合」精确记忆并恢复分栏宽度，切换 tab 后保持不变。
+  const panelIds = selected
+    ? [TRAFFIC_LIST_PANEL_ID, TRAFFIC_DETAIL_PANEL_ID]
+    : [TRAFFIC_LIST_PANEL_ID]
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: TRAFFIC_LAYOUT_ID,
+    panelIds,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  })
+
   const handleCopyRequestUrl = () => {
     if (!selected) return
     void copyTextToClipboard(selected.url)
@@ -42,10 +57,15 @@ export function TrafficPanelUI({
   }
 
   return (
-    <ResizablePanelGroup>
+    <ResizablePanelGroup
+      id={TRAFFIC_LAYOUT_ID}
+      defaultLayout={defaultLayout}
+      onLayoutChanged={onLayoutChanged}
+    >
       <ResizablePanel
-        defaultSize={selected ? LEFT_LIST_PANEL_DEFAULT_SIZE : 100}
+        defaultSize={LEFT_LIST_PANEL_DEFAULT_SIZE}
         minSize={16}
+        id={TRAFFIC_LIST_PANEL_ID}
       >
         <aside className={s.listPanel}>
           {testError && <p className={`small err ${s.testErr}`}>{testError}</p>}
@@ -72,7 +92,12 @@ export function TrafficPanelUI({
       {selected && (
         <>
           <ResizableHandle withHandle className="w-1.5 shrink-0 bg-border/90" />
-          <ResizablePanel className="min-h-0 min-w-0" minSize={28} defaultSize={38}>
+          <ResizablePanel
+            className="min-h-0 min-w-0"
+            minSize={28}
+            defaultSize={38}
+            id={TRAFFIC_DETAIL_PANEL_ID}
+          >
             <main className={s.detail}>
               <section className={s.block}>
                 <div className={s.blockHead}>
