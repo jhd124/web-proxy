@@ -21,8 +21,10 @@
 
 .sidebarBackdrop {
   display: flex;
+  min-width: 0;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .fs {
@@ -30,6 +32,7 @@
   flex-direction: column;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   min-height: 0;
   flex: 1;
   background: var(--bg);
@@ -64,6 +67,24 @@
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--text);
+}
+
+.fsHeadRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.headIconBtn {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .fsBody {
@@ -135,14 +156,6 @@
   color: var(--text-primary);
 }
 
-.itemMethod {
-  flex-shrink: 0;
-  font-weight: 700;
-  color: var(--accent);
-  font-size: 0.68rem;
-  letter-spacing: 0.02em;
-}
-
 .itemPath {
   flex: 1;
   min-width: 0;
@@ -175,11 +188,14 @@
   margin-bottom: 1rem;
 }
 
-.detailActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: flex-end;
+.detailMeta {
+  min-width: 0;
+}
+
+.detailUrl {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .block {

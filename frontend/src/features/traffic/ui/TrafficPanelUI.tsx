@@ -9,6 +9,7 @@ import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { useDefaultLayout } from 'react-resizable-panels'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
+import { HeadersTable } from '@/components/headers-table/HeadersTable'
 
 const TRAFFIC_LAYOUT_ID = 'traffic-panels-group'
 const TRAFFIC_LIST_PANEL_ID = 'traffic-list'
@@ -131,9 +132,7 @@ export function TrafficPanelUI({
                     {getTrafficConnectDetailNote(selected.error, selected.mitmBypassed)}
                   </p>
                 )}
-                <pre className={s.pre}>
-                  {selected.requestHeaders.map(([k, v]) => `${k}: ${v}\n`).join('')}
-                </pre>
+                <HeadersTable headers={selected.requestHeaders} />
                 {selected.requestBodyPreview && (
                   <>
                     <h3>{t.body}</h3>
@@ -153,9 +152,7 @@ export function TrafficPanelUI({
                   <p className="mono">HTTP {selected.responseStatus}</p>
                 )}
                 {selected.responseHeaders && (
-                  <pre className={s.pre}>
-                    {selected.responseHeaders.map(([k, v]) => `${k}: ${v}\n`).join('')}
-                  </pre>
+                  <HeadersTable headers={selected.responseHeaders} />
                 )}
                 {selectedIsEventStream && !selected.responseBodyPreview && (
                   <p className={`small muted ${s.hintSpaced}`}>

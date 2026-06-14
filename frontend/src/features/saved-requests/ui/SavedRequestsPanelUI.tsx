@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
+import { Trash2 } from 'lucide-react'
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { SimpleTooltip } from '@/components/ui/tooltip'
 import { HostGroupList } from '@/components/host-group-list/HostGroupList'
+import { HeadersTable } from '@/components/headers-table/HeadersTable'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
@@ -30,10 +33,6 @@ function urlPathLabel(url: string): string {
   }
 }
 
-function headersToText(headers: [string, string][] | null | undefined): string {
-  return headers?.map(([key, value]) => `${key}: ${value}\n`).join('') ?? ''
-}
-
 export function SavedRequestsPanelUI({
   savedRequests,
   selectedSavedRequestId,
@@ -41,7 +40,6 @@ export function SavedRequestsPanelUI({
   closeSavedRequestsPanel,
   variant = 'dialog',
   removeSavedRequest,
-  clearSavedRequests,
 }: SavedRequestsPanelUIProps) {
   const isInline = variant !== 'dialog'
   const inlineClassName = variant === 'sidebar' ? s.sidebarFs : s.embeddedFs
@@ -56,6 +54,21 @@ export function SavedRequestsPanelUI({
     [savedRequests],
   )
 
+  const handleDeleteSelected = async () => {
+    if (!selectedSavedRequest) return
+    try {
+      await confirm({
+        title: t.delete,
+        description: t.deleteConfirm,
+        confirmLabel: t.delete,
+      })
+      await removeSavedRequest(selectedSavedRequest.id)
+    } catch (e) {
+      if (e instanceof ConfirmCancelledError) return
+      showToast(String(e), 'error')
+    }
+  }
+
   const renderItem = (request: SavedRequest) => {
     const entry = request.entry
     const isActive = selectedSavedRequest?.id === request.id
@@ -65,8 +78,7 @@ export function SavedRequestsPanelUI({
         className={`${s.itemButton} ${isActive ? s.itemButtonActive : ''}`}
         onClick={() => setSelectedSavedRequestId(request.id)}
       >
-        <span className={s.itemMethod}>{entry.method}</span>
-        <span className={s.itemPath} title={entry.url}>
+        <span className={s.itemPath} title={`${entry.method} ${entry.url}`}>
           {urlPathLabel(entry.url)}
         </span>
         {entry.responseStatus != null && (
@@ -92,20 +104,31 @@ export function SavedRequestsPanelUI({
         <div className={s.fsHead}>
           <div>
             <h2 id="saved-requests-title">{t.shell.title}</h2>
-            <p className="small muted" style={{ margin: '0.15rem 0 0' }}>
-              {t.shell.subtitle}
-            </p>
           </div>
-          {!isInline && (
-            <button
-              type="button"
-              className={`ghost ${s.drawerClose}`}
-              onClick={closeSavedRequestsPanel}
-              aria-label={t.shell.closeAria}
-            >
-              ×
-            </button>
-          )}
+          <div className={s.fsHeadRight}>
+            {selectedSavedRequest && selectedEntry && (
+              <SimpleTooltip label={t.delete}>
+                <button
+                  type="button"
+                  className={`ghost danger ${s.headIconBtn}`}
+                  aria-label={t.delete}
+                  onClick={handleDeleteSelected}
+                >
+                  <Trash2 size={16} aria-hidden />
+                </button>
+              </SimpleTooltip>
+            )}
+            {!isInline && (
+              <button
+                type="button"
+                className={`ghost ${s.drawerClose}`}
+                onClick={closeSavedRequestsPanel}
+                aria-label={t.shell.closeAria}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={s.fsBody}>
@@ -121,28 +144,6 @@ export function SavedRequestsPanelUI({
               minSize={16}
             >
               <aside className={s.listPanel}>
-                <div className={s.listTools}>
-                  <button
-                    type="button"
-                    className="ghost danger"
-                    disabled={savedRequests.length === 0}
-                    onClick={async () => {
-                      try {
-                        await confirm({
-                          title: t.clearAll,
-                          description: t.clearAllConfirm,
-                          confirmLabel: t.clearAll,
-                        })
-                        await clearSavedRequests()
-                      } catch (e) {
-                        if (e instanceof ConfirmCancelledError) return
-                        showToast(String(e), 'error')
-                      }
-                    }}
-                  >
-                    {t.clearAll}
-                  </button>
-                </div>
                 {savedRequests.length === 0 ? (
                   <p className={`muted ${s.empty}`}>{t.empty}</p>
                 ) : (
@@ -173,8 +174,8 @@ export function SavedRequestsPanelUI({
                 {selectedSavedRequest && selectedEntry ? (
                   <>
                     <div className={s.detailHead}>
-                      <div>
-                        <p className="mono">
+                      <div className={s.detailMeta}>
+                        <p className={`mono ${s.detailUrl}`}>
                           {selectedEntry.method} {selectedEntry.url}
                         </p>
                         <p className="small muted">
@@ -182,27 +183,6 @@ export function SavedRequestsPanelUI({
                             formatDateTime(selectedSavedRequest.savedAt),
                           )}
                         </p>
-                      </div>
-                      <div className={s.detailActions}>
-                        <button
-                          type="button"
-                          className="ghost danger"
-                          onClick={async () => {
-                            try {
-                              await confirm({
-                                title: t.delete,
-                                description: t.deleteConfirm,
-                                confirmLabel: t.delete,
-                              })
-                              await removeSavedRequest(selectedSavedRequest.id)
-                            } catch (e) {
-                              if (e instanceof ConfirmCancelledError) return
-                              showToast(String(e), 'error')
-                            }
-                          }}
-                        >
-                          {t.delete}
-                        </button>
                       </div>
                     </div>
 
@@ -221,9 +201,7 @@ export function SavedRequestsPanelUI({
                       <p className="small muted">
                         {t.originalAt(formatDateTime(selectedEntry.at))}
                       </p>
-                      <pre className={s.pre}>
-                        {headersToText(selectedEntry.requestHeaders)}
-                      </pre>
+                      <HeadersTable headers={selectedEntry.requestHeaders} />
                       {selectedEntry.requestBodyPreview && (
                         <>
                           <h3>{t.body}</h3>
@@ -243,9 +221,7 @@ export function SavedRequestsPanelUI({
                         <p className="mono">HTTP {selectedEntry.responseStatus}</p>
                       )}
                       {selectedEntry.responseHeaders ? (
-                        <pre className={s.pre}>
-                          {headersToText(selectedEntry.responseHeaders)}
-                        </pre>
+                        <HeadersTable headers={selectedEntry.responseHeaders} />
                       ) : (
                         <p className="small muted">{t.noResponse}</p>
                       )}
