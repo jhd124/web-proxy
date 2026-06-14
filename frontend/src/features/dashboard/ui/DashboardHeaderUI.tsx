@@ -17,10 +17,10 @@ import type {
   TrafficFilterGroupKey,
   TrafficFilters,
 } from '../../traffic/trafficFilter'
+import { TooltipButton } from '../../override-editor/ui/TooltipButton'
+import { panelHeaderStyles as ph } from '@/components/panel-header'
 import s from './DashboardHeaderUI.module.css'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { SimpleTooltip } from '@/components/ui/tooltip'
 import { downloadFromUrl } from '@/lib/download'
 import { cn } from '@/lib/utils'
 
@@ -137,23 +137,26 @@ export function DashboardHeaderUI({
               )}
             />
           </div>
-          <SimpleTooltip label={trafficTexts.clear}>
-            <Button type="button" variant="ghost" onClick={clearTraffic}>
-              <Trash />
-            </Button>
-          </SimpleTooltip>
+          <TooltipButton
+            type="button"
+            className={`ghost ${ph.iconBtn}`}
+            tooltip={trafficTexts.clear}
+            aria-label={trafficTexts.clear}
+            onClick={clearTraffic}
+          >
+            <Trash size={16} aria-hidden />
+          </TooltipButton>
           <span className={s.entryBadgeWrap}>
-            <SimpleTooltip label={trafficTexts.filter.buttonTooltip}>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={trafficTexts.filter.buttonAriaLabel}
-                aria-pressed={hasTrafficFilters}
-                onClick={() => setFilterDialogOpen(true)}
-              >
-                <ListFilter />
-              </Button>
-            </SimpleTooltip>
+            <TooltipButton
+              type="button"
+              className={`ghost ${ph.iconBtn}`}
+              tooltip={trafficTexts.filter.buttonTooltip}
+              aria-label={trafficTexts.filter.buttonAriaLabel}
+              aria-pressed={hasTrafficFilters}
+              onClick={() => setFilterDialogOpen(true)}
+            >
+              <ListFilter size={16} aria-hidden />
+            </TooltipButton>
             {hasTrafficFilters && (
               <span
                 className={s.badgeDot}
@@ -181,70 +184,59 @@ export function DashboardHeaderUI({
           </span>
         )}
 
-        <SimpleTooltip label={t.downloadCaTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.downloadCaAriaLabel}
-            disabled={downloading}
-            onClick={() => void downloadMitmCa()}
-          >
-            <KeyRound />
-          </Button>
-        </SimpleTooltip>
-
-        <SimpleTooltip
-          label={
-            capturePaused ? t.resumeCaptureTooltip : t.pauseCaptureTooltip
-          }
+        <TooltipButton
+          type="button"
+          className={`ghost ${ph.iconBtn}`}
+          tooltip={t.downloadCaTooltip}
+          aria-label={t.downloadCaAriaLabel}
+          disabled={downloading}
+          onClick={() => void downloadMitmCa()}
         >
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={
-              capturePaused ? t.resumeCaptureAriaLabel : t.pauseCaptureAriaLabel
-            }
-            disabled={captureToggleSaving}
-            onClick={onCaptureToggleClick}
-          >
-            {capturePaused ? <CirclePlay /> : <CirclePause />}
-          </Button>
-        </SimpleTooltip>
+          <KeyRound size={16} aria-hidden />
+        </TooltipButton>
 
-        <SimpleTooltip label={t.enableWifiProxyTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.enableWifiProxyAriaLabel}
-            disabled={wifiProxySaving}
-            onClick={onEnableWifiProxyClick}
-          >
-            <WifiCog />
-          </Button>
-        </SimpleTooltip>
+        <TooltipButton
+          type="button"
+          className={`ghost ${ph.iconBtn}`}
+          tooltip={capturePaused ? t.resumeCaptureTooltip : t.pauseCaptureTooltip}
+          aria-label={capturePaused ? t.resumeCaptureAriaLabel : t.pauseCaptureAriaLabel}
+          disabled={captureToggleSaving}
+          onClick={onCaptureToggleClick}
+        >
+          {capturePaused ? <CirclePlay size={16} aria-hidden /> : <CirclePause size={16} aria-hidden />}
+        </TooltipButton>
 
-        <SimpleTooltip label={t.exportHarTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.exportHarAriaLabel}
-            disabled={exportHarSaving}
-            onClick={onExportHarClick}
-          >
-            <Download />
-          </Button>
-        </SimpleTooltip>
+        <TooltipButton
+          type="button"
+          className={`ghost ${ph.iconBtn}`}
+          tooltip={t.enableWifiProxyTooltip}
+          aria-label={t.enableWifiProxyAriaLabel}
+          disabled={wifiProxySaving}
+          onClick={onEnableWifiProxyClick}
+        >
+          <WifiCog size={16} aria-hidden />
+        </TooltipButton>
 
-        <SimpleTooltip label={t.openFloatingTrafficTooltip}>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={t.openFloatingTrafficAriaLabel}
-            onClick={onFloatingTrafficEntryClick}
-          >
-            <Pin />
-          </Button>
-        </SimpleTooltip>
+        <TooltipButton
+          type="button"
+          className={`ghost ${ph.iconBtn}`}
+          tooltip={t.exportHarTooltip}
+          aria-label={t.exportHarAriaLabel}
+          disabled={exportHarSaving}
+          onClick={onExportHarClick}
+        >
+          <Download size={16} aria-hidden />
+        </TooltipButton>
+
+        <TooltipButton
+          type="button"
+          className={`ghost ${ph.iconBtn}`}
+          tooltip={t.openFloatingTrafficTooltip}
+          aria-label={t.openFloatingTrafficAriaLabel}
+          onClick={onFloatingTrafficEntryClick}
+        >
+          <Pin size={16} aria-hidden />
+        </TooltipButton>
       </div>
     </header>
   )

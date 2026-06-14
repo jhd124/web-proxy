@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { SimpleTooltip } from '@/components/ui/tooltip'
 import { HostGroupList } from '@/components/host-group-list/HostGroupList'
 import { HeadersTable } from '@/components/headers-table/HeadersTable'
+import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
@@ -101,35 +102,26 @@ export function SavedRequestsPanelUI({
         aria-labelledby="saved-requests-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={s.fsHead}>
-          <div>
-            <h2 id="saved-requests-title">{t.shell.title}</h2>
-          </div>
-          <div className={s.fsHeadRight}>
-            {selectedSavedRequest && selectedEntry && (
+        <PanelHeader
+          id="saved-requests-title"
+          title={t.shell.title}
+          actions={
+            selectedSavedRequest && selectedEntry ? (
               <SimpleTooltip label={t.delete}>
                 <button
                   type="button"
-                  className={`ghost danger ${s.headIconBtn}`}
+                  className={`ghost danger ${ph.iconBtn}`}
                   aria-label={t.delete}
                   onClick={handleDeleteSelected}
                 >
                   <Trash2 size={16} aria-hidden />
                 </button>
               </SimpleTooltip>
-            )}
-            {!isInline && (
-              <button
-                type="button"
-                className={`ghost ${s.drawerClose}`}
-                onClick={closeSavedRequestsPanel}
-                aria-label={t.shell.closeAria}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
+            ) : undefined
+          }
+          onClose={isInline ? undefined : closeSavedRequestsPanel}
+          closeAriaLabel={t.shell.closeAria}
+        />
 
         <div className={s.fsBody}>
           <ResizablePanelGroup

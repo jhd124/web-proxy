@@ -51,53 +51,11 @@
   border: none;
 }
 
-.fsHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-  flex-shrink: 0;
-}
-
-.fsHead h2 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.fsHeadRight {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.headIconBtn {
-  width: 2.2rem;
-  height: 2.2rem;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
 .fsBody {
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.drawerClose {
-  font-size: 1.35rem;
-  line-height: 1;
-  padding: 0.15rem 0.5rem;
 }
 
 .listPanel {

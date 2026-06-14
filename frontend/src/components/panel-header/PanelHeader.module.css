@@ -1,0 +1,60 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  flex-shrink: 0;
+}
+
+.head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.subtitle {
+  margin: 0.15rem 0 0;
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* 统一图标按钮尺寸，各面板均使用此样式 */
+.iconBtn {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 0.15rem 0.5rem;
+}

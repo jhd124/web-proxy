@@ -48,42 +48,10 @@
   border: none;
 }
 
-.fsHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-  flex-shrink: 0;
-}
-
-.fsHead h2 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--text);
-}
-
-.fsHeadRight {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .fsBody {
   position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.drawerClose {
-  font-size: 1.35rem;
-  line-height: 1;
-  padding: 0.15rem 0.5rem;
 }

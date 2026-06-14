@@ -17,21 +17,6 @@
   flex-shrink: 0;
 }
 
-.headActions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.actionIconBtn {
-  width: 1.9rem;
-  height: 1.9rem;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .listScroll {
   flex: 1;
   min-height: 0;

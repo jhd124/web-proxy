@@ -20,6 +20,7 @@ import type { OverrideEditorUIProps } from '../types'
 import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
 import { OverrideFilesUI } from './OverrideFilesUI'
 import { OverrideRequestFormUI } from './OverrideRequestFormUI'
+import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import { TooltipButton } from './TooltipButton'
 import s from './OverrideEditorUI.module.css'
 
@@ -194,8 +195,7 @@ export function OverrideEditorUI({
     <>
       <TooltipButton
         type="button"
-        className={`ghost ${s.saveIconBtn}`}
-        onClick={startNewOverride}
+        className={`ghost ${ph.iconBtn}`}
         aria-label={tf.newRule}
         tooltip={tf.newRule}
       >
@@ -204,7 +204,7 @@ export function OverrideEditorUI({
       {isEditingOverride ? (
         <TooltipButton
           type="button"
-          className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${s.saveIconBtn}`}
+          className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${ph.iconBtn}`}
           onClick={() => saveOverride()}
           aria-label={overrideEditingId ? t.saveChanges : t.saveOverride}
           tooltip={overrideEditingId ? t.saveChanges : t.saveOverride}
@@ -229,7 +229,7 @@ export function OverrideEditorUI({
             )}
           <TooltipButton
             type="button"
-            className={`ghost ${s.saveIconBtn}`}
+            className={`ghost ${ph.iconBtn}`}
             aria-label={t.footAddBreakpoint}
             tooltip={t.footAddBreakpoint}
             onClick={() => {
@@ -255,7 +255,7 @@ export function OverrideEditorUI({
           </TooltipButton>
           <TooltipButton
             type="button"
-            className={`ghost ${s.saveIconBtn}`}
+            className={`ghost ${ph.iconBtn}`}
             disabled={overrideToggleSaving[editingRule.id] === true}
             aria-label={overrideForm.enabled ? tf.disable : tf.enable}
             tooltip={
@@ -282,7 +282,7 @@ export function OverrideEditorUI({
           </TooltipButton>
           <TooltipButton
             type="button"
-            className={`ghost danger ${s.saveIconBtn}`}
+            className={`ghost danger ${ph.iconBtn}`}
             aria-label={tf.deleteRule}
             tooltip={tf.deleteRule}
             onClick={async () => {
@@ -331,24 +331,13 @@ export function OverrideEditorUI({
         aria-labelledby="override-fs-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={s.fsHead}>
-          <div>
-            <h2 id="override-fs-title">{t.title}</h2>
-          </div>
-          <div className={s.fsHeadRight}>
-            <div className={s.headActions}>{actionButtons}</div>
-            {!isInline && (
-              <button
-                type="button"
-                className={`ghost ${s.drawerClose}`}
-                onClick={closeOverrideDrawer}
-                aria-label={t.closeAria}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
+        <PanelHeader
+          id="override-fs-title"
+          title={t.title}
+          actions={actionButtons}
+          onClose={isInline ? undefined : closeOverrideDrawer}
+          closeAriaLabel={t.closeAria}
+        />
         {overrideError && (
           <p className={`small err ${s.fsErr}`}>{overrideError}</p>
         )}

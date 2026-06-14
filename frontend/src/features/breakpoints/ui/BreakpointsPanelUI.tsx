@@ -21,6 +21,7 @@ import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
 import type { BreakpointRule } from '../../../types'
 import { TooltipButton } from '../../override-editor/ui/TooltipButton'
+import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import o from './BreakpointsPanelUI.overlay.module.css'
 import s from './BreakpointsPanelUI.module.css'
 
@@ -143,23 +144,24 @@ export function BreakpointsPanelUI({
     <>
       <TooltipButton
         type="button"
-        className={`ghost ${s.actionIconBtn}`}
+        className={`ghost ${ph.iconBtn}`}
         onClick={startNewBreakpoint}
         aria-label={t.newBreakpoint}
         tooltip={t.newBreakpoint}
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
-      <TooltipButton
-        type="button"
-        className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${s.actionIconBtn}`}
-        disabled={!canSaveBreakpoint}
-        onClick={() => void saveBreakpoint(selectedRequestOrigin)}
-        aria-label={selectedBreakpoint ? t.saveChanges : t.add}
-        tooltip={selectedBreakpoint ? t.saveChanges : t.add}
-      >
-        <Save size={16} aria-hidden />
-      </TooltipButton>
+      {canSaveBreakpoint && (
+        <TooltipButton
+          type="button"
+          className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${ph.iconBtn}`}
+          onClick={() => void saveBreakpoint(selectedRequestOrigin)}
+          aria-label={selectedBreakpoint ? t.saveChanges : t.add}
+          tooltip={selectedBreakpoint ? t.saveChanges : t.add}
+        >
+          <Save size={16} aria-hidden />
+        </TooltipButton>
+      )}
       {selectedBreakpoint ? (
         <>
           {(() => {
@@ -169,7 +171,7 @@ export function BreakpointsPanelUI({
             return (
               <TooltipButton
                 type="button"
-                className={`primary inline-primary ${s.actionIconBtn}`}
+                className={`primary inline-primary ${ph.iconBtn}`}
                 disabled={resumeSaving[pendingRequestId] === true}
                 aria-label={t.continueAllFromBreakpoint}
                 tooltip={t.continueAllFromBreakpoint}
@@ -181,7 +183,7 @@ export function BreakpointsPanelUI({
           })()}
           <TooltipButton
             type="button"
-            className={`ghost ${s.actionIconBtn}`}
+            className={`ghost ${ph.iconBtn}`}
             disabled={breakpointToggleSaving[selectedBreakpoint.id] === true}
             aria-label={selectedBreakpoint.enabled ? t.disable : t.enable}
             tooltip={
@@ -208,7 +210,7 @@ export function BreakpointsPanelUI({
           </TooltipButton>
           <TooltipButton
             type="button"
-            className={`ghost danger ${s.actionIconBtn}`}
+            className={`ghost danger ${ph.iconBtn}`}
             aria-label={t.delete}
             tooltip={t.delete}
             onClick={async () => {
@@ -285,24 +287,13 @@ export function BreakpointsPanelUI({
         aria-labelledby="breakpoint-fs-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={o.fsHead}>
-          <div>
-            <h2 id="breakpoint-fs-title">{sh.title}</h2>
-          </div>
-          <div className={o.fsHeadRight}>
-            <div className={s.headActions}>{actionButtons}</div>
-            {!isInline && (
-              <button
-                type="button"
-                className={`ghost ${o.drawerClose}`}
-                onClick={closeBreakpointsPanel}
-                aria-label={sh.closeAria}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
+        <PanelHeader
+          id="breakpoint-fs-title"
+          title={sh.title}
+          actions={actionButtons}
+          onClose={isInline ? undefined : closeBreakpointsPanel}
+          closeAriaLabel={sh.closeAria}
+        />
         <div className={o.fsBody}>
           <ResizablePanelGroup
             orientation="horizontal"

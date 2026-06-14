@@ -105,15 +105,6 @@
   opacity: 0.55;
 }
 
-.fsHead h2 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--text);
-}
-
 .fsErr {
   margin: 0;
   padding: 0.5rem 1rem;
@@ -127,12 +118,6 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.drawerClose {
-  font-size: 1.35rem;
-  line-height: 1;
-  padding: 0.15rem 0.5rem;
 }
 
 .toolCol {
