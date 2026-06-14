@@ -1,8 +1,6 @@
 export const savedRequestsTexts = {
   shell: {
     title: 'Saved requests',
-    subtitle:
-      'Requests saved from the detail view are kept locally in this browser.',
     closeAria: 'Close saved requests',
   },
   empty: 'No saved requests yet. Select a request and click Save request.',
@@ -12,8 +10,6 @@ export const savedRequestsTexts = {
   originalAt: (value: string) => `Captured ${value}`,
   delete: 'Delete',
   deleteConfirm: 'Delete this saved request?',
-  clearAll: 'Clear all',
-  clearAllConfirm: 'Delete all saved requests?',
   request: 'Request',
   response: 'Response',
   body: 'Body',
