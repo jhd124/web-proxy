@@ -1,8 +1,6 @@
 export const breakpointTexts = {
   shell: {
     title: 'Breakpoints',
-    subtitle:
-      'Pause matching HTTP requests before overrides or upstream fetches. Resume pending requests from the traffic detail view or the overrides editor.',
     closeAria: 'Close',
   },
   defaultFormName: 'Pause API request',
@@ -18,9 +16,19 @@ export const breakpointTexts = {
   originPlaceholder: 'https://example.com',
   pathPlaceholder: '^/api/',
   add: 'Add breakpoint',
+  newBreakpoint: 'New breakpoint',
   noneYet: 'No breakpoints yet.',
+  selectHint: 'Select a breakpoint from the list, or create a new one.',
+  newTitle: 'New breakpoint',
+  detailTitle: 'Breakpoint',
+  toggleHostGroup: (origin: string) => `Show or hide breakpoints for ${origin}`,
+  matchSection: 'Match',
+  anyValue: '∗',
   disabledPill: 'disabled',
   saving: 'Saving…',
+  duplicateIdentity: 'A breakpoint with the same method, origin, and path already exists.',
+  createFailed: (status: number) => `Create failed (HTTP ${status})`,
+  updateFailed: (status: number) => `Update failed (HTTP ${status})`,
   enable: 'Enable',
   disable: 'Disable',
   delete: 'Delete',

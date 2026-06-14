@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { escapeRegex, inferOriginFromHostHint } from '../../../lib/dashboardUtils'
+import { showToast } from '../../../lib/toast'
 import type { BreakpointRule } from '../../../types'
 import { breakpointTexts } from '../texts'
 
@@ -17,6 +18,9 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
   const [breakpointToggleSaving, setBreakpointToggleSaving] = useState<
     Record<string, boolean>
   >({})
+  const [selectedBreakpointId, setSelectedBreakpointId] = useState<
+    string | null
+  >(null)
   const [breakpointForm, setBreakpointForm] = useState<BreakpointFormState>({
     name: t.defaultFormName,
     matchMethod: '',
@@ -24,12 +28,37 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
     matchPathRegex: t.defaultPathRegex,
   })
 
+  const startNewBreakpoint = useCallback(() => {
+    setSelectedBreakpointId(null)
+    setBreakpointForm({
+      name: t.defaultFormName,
+      matchMethod: '',
+      matchOrigin: '',
+      matchPathRegex: t.defaultPathRegex,
+    })
+  }, [t])
+
   const refreshBreakpoints = useCallback(async () => {
     const r = await fetch('/api/breakpoints')
     if (r.ok) setBreakpoints(await r.json())
   }, [])
 
-  const addBreakpoint = useCallback(async () => {
+  const showBreakpointUpsertError = useCallback(
+    (status: number) => {
+      if (status === 409) {
+        showToast(t.duplicateIdentity, 'error')
+        return
+      }
+      showToast(t.createFailed(status), 'error')
+    },
+    [t],
+  )
+
+  const addBreakpoint = useCallback(async (originFallback?: string) => {
+    const normalizedOriginFallback = originFallback?.trim() ?? ''
+    const normalizedFormOrigin = breakpointForm.matchOrigin.trim()
+    const matchOrigin =
+      normalizedFormOrigin.length > 0 ? normalizedFormOrigin : normalizedOriginFallback
     const r = await fetch('/api/breakpoints', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,20 +66,29 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
         name: breakpointForm.name.trim() || t.defaultRuleName,
         enabled: true,
         matchMethod: breakpointForm.matchMethod.trim() || null,
-        matchOrigin: breakpointForm.matchOrigin.trim() || null,
+        matchOrigin: matchOrigin || null,
         matchPathRegex: breakpointForm.matchPathRegex.trim() || null,
       }),
     })
     if (r.ok) {
       await refreshBreakpoints()
       openBreakpointsPanel()
+      return
     }
-  }, [breakpointForm, openBreakpointsPanel, refreshBreakpoints, t])
+    showBreakpointUpsertError(r.status)
+  }, [
+    breakpointForm,
+    openBreakpointsPanel,
+    refreshBreakpoints,
+    showBreakpointUpsertError,
+    t,
+  ])
 
   const removeBreakpoint = useCallback(
     async (id: string) => {
       const r = await fetch(`/api/breakpoints/${id}`, { method: 'DELETE' })
       if (!r.ok) throw new Error(`Delete failed (HTTP ${r.status})`)
+      setSelectedBreakpointId((prev) => (prev === id ? null : prev))
       await refreshBreakpoints()
     },
     [refreshBreakpoints],
@@ -71,15 +109,22 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
             matchPathRegex: rule.matchPathRegex ?? null,
           }),
         })
-        if (!r.ok) throw new Error(`Update failed (HTTP ${r.status})`)
+        if (!r.ok) {
+          if (r.status === 409) {
+            showToast(t.duplicateIdentity, 'error')
+            return
+          }
+          showToast(t.updateFailed(r.status), 'error')
+          return
+        }
         await refreshBreakpoints()
       } catch (e) {
-        window.alert(String(e))
+        showToast(String(e), 'error')
       } finally {
         setBreakpointToggleSaving((prev) => ({ ...prev, [rule.id]: false }))
       }
     },
-    [refreshBreakpoints],
+    [refreshBreakpoints, t],
   )
 
   const addBreakpointFromOverride = useCallback(
@@ -130,9 +175,11 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       })
       if (r.ok) {
         await refreshBreakpoints()
+        return
       }
+      showBreakpointUpsertError(r.status)
     },
-    [breakpoints, openBreakpointsPanel, refreshBreakpoints, t],
+    [breakpoints, openBreakpointsPanel, refreshBreakpoints, showBreakpointUpsertError, t],
   )
 
   return {
@@ -140,6 +187,9 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
     setBreakpoints,
     breakpointForm,
     setBreakpointForm,
+    selectedBreakpointId,
+    setSelectedBreakpointId,
+    startNewBreakpoint,
     refreshBreakpoints,
     addBreakpoint,
     removeBreakpoint,

@@ -8,11 +8,14 @@ import {
 } from '@/components/ui/select'
 import { overrideEditorTexts } from '../texts'
 import type { SetOverrideForm } from '../types'
+import { LabelHint } from './LabelHint'
 import s from './OverrideRequestFormUI.module.css'
 
 const t = overrideEditorTexts.request
 const METHOD_ANY_VALUE = '__ANY__'
 const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+const PROTOCOL_ANY_VALUE = '__ANY_PROTOCOL__'
+const PROTOCOL_OPTIONS = ['http', 'https']
 
 type Props = {
   overrideForm: OverrideFormState
@@ -30,18 +33,15 @@ function KvList({
   onChange,
   onAdd,
   addLabel,
-  help,
 }: {
   ariaLabel: string
   value: [string, string][]
   onChange: (rows: [string, string][]) => void
   onAdd: () => void
   addLabel: string
-  help: string
 }) {
   return (
     <div className={s.kvList} role="group" aria-label={ariaLabel}>
-      <p className={`small muted ${s.kvHelp}`}>{help}</p>
       {value.map((row, i) => (
         <div key={i} className={s.kvRow}>
           <input
@@ -95,7 +95,10 @@ export function OverrideRequestFormUI({
   return (
     <div className={s.form}>
       <label>
-        {t.method}
+        <span className={s.labelRow}>
+          {t.method}
+          <LabelHint hint={t.methodHint} />
+        </span>
         <Select
           value={overrideForm.matchMethod || METHOD_ANY_VALUE}
           onValueChange={(value) =>
@@ -117,22 +120,39 @@ export function OverrideRequestFormUI({
             ))}
           </SelectContent>
         </Select>
-        <span className="tiny muted">{t.methodHint}</span>
       </label>
       <label>
-        {t.protocol}
-        <input
-          className="mono"
-          value={overrideForm.matchProtocol}
-          placeholder="https"
-          onChange={(e) =>
-            setOverrideForm((f) => ({ ...f, matchProtocol: e.target.value }))
+        <span className={s.labelRow}>
+          {t.protocol}
+          <LabelHint hint={t.protocolHint} />
+        </span>
+        <Select
+          value={overrideForm.matchProtocol || PROTOCOL_ANY_VALUE}
+          onValueChange={(value) =>
+            setOverrideForm((f) => ({
+              ...f,
+              matchProtocol: value === PROTOCOL_ANY_VALUE ? '' : value,
+            }))
           }
-        />
-        <span className="tiny muted">{t.protocolHint}</span>
+        >
+          <SelectTrigger className="mono">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={PROTOCOL_ANY_VALUE}>ANY</SelectItem>
+            {PROTOCOL_OPTIONS.map((protocol) => (
+              <SelectItem key={protocol} value={protocol}>
+                {protocol}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
       <label>
-        {t.host}
+        <span className={s.labelRow}>
+          {t.host}
+          <LabelHint hint={t.hostHint} />
+        </span>
         <input
           required
           autoComplete="off"
@@ -141,10 +161,12 @@ export function OverrideRequestFormUI({
             setOverrideForm((f) => ({ ...f, matchHost: e.target.value }))
           }
         />
-        <span className="tiny muted">{t.hostHint}</span>
       </label>
       <label className={s.labelWide}>
-        {t.path}
+        <span className={s.labelRow}>
+          {t.path}
+          <LabelHint hint={t.pathHint} />
+        </span>
         <input
           className="mono"
           value={overrideForm.matchPath}
@@ -152,10 +174,12 @@ export function OverrideRequestFormUI({
             setOverrideForm((f) => ({ ...f, matchPath: e.target.value }))
           }
         />
-        <span className="tiny muted">{t.pathHint}</span>
       </label>
       <div className={s.fieldGroup}>
-        <div className={s.subLabel}>{t.matchHeaders}</div>
+        <div className={`${s.subLabel} ${s.labelRow}`}>
+          {t.matchHeaders}
+          <LabelHint hint={t.matchHeadersHelp} />
+        </div>
         <KvList
           ariaLabel={t.matchHeaders}
           value={overrideForm.matchRequestHeaders}
@@ -169,11 +193,13 @@ export function OverrideRequestFormUI({
             }))
           }
           addLabel={t.addHeaderRow}
-          help={t.matchHeadersHelp}
         />
       </div>
       <div className={s.fieldGroup}>
-        <div className={s.subLabel}>{t.matchQuery}</div>
+        <div className={`${s.subLabel} ${s.labelRow}`}>
+          {t.matchQuery}
+          <LabelHint hint={t.matchQueryHelp} />
+        </div>
         <KvList
           ariaLabel={t.matchQuery}
           value={overrideForm.matchQuery}
@@ -187,11 +213,13 @@ export function OverrideRequestFormUI({
             }))
           }
           addLabel={t.addQueryRow}
-          help={t.matchQueryHelp}
         />
       </div>
       <label className={s.labelWide}>
-        {t.matchBody}
+        <span className={s.labelRow}>
+          {t.matchBody}
+          <LabelHint hint={t.matchBodyHelp} />
+        </span>
         <textarea
           rows={3}
           className="mono"
@@ -201,7 +229,6 @@ export function OverrideRequestFormUI({
             setOverrideForm((f) => ({ ...f, matchRequestBody: e.target.value }))
           }
         />
-        <span className="tiny muted">{t.matchBodyHelp}</span>
       </label>
       <label className={s.streamToggle}>
         <span className={s.streamToggleRow}>
@@ -217,7 +244,10 @@ export function OverrideRequestFormUI({
       </label>
       {overrideForm.mapRemoteEnabled ? (
         <div className={s.fieldGroup}>
-          <div className={s.subLabel}>Map remote rule</div>
+          <div className={`${s.subLabel} ${s.labelRow}`}>
+            Map remote rule
+            <LabelHint hint={t.mapRemoteRuleHint} />
+          </div>
           <label>
             {t.mapRemoteProtocol}
             <input
@@ -250,7 +280,6 @@ export function OverrideRequestFormUI({
                 setOverrideForm((f) => ({ ...f, mapRemotePath: e.target.value }))
               }
             />
-            <span className="tiny muted">{t.mapRemoteRuleHint}</span>
           </label>
         </div>
       ) : null}
@@ -268,7 +297,16 @@ export function OverrideRequestFormUI({
         />
       </label>
       <label className={s.labelWide}>
-        {t.responseHeaders} <code>{t.codeName}</code> {t.perLine}
+        <span className={s.labelRow}>
+          {t.responseHeadersLabel}
+          <LabelHint
+            hint={
+              <>
+                {t.responseHeaders} <code>{t.codeName}</code> {t.perLine}
+              </>
+            }
+          />
+        </span>
         <textarea
           rows={4}
           className="mono"

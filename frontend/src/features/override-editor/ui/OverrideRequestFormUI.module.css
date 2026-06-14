@@ -16,15 +16,16 @@
   font-weight: 600;
 }
 
+.labelRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .kvList {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-}
-
-.kvHelp {
-  margin: 0 0 0.15rem;
-  line-height: 1.35;
 }
 
 .kvRow {

@@ -192,3 +192,77 @@ async fn create_breakpoint_persists_match_method() {
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].match_method.as_deref(), Some("POST"));
 }
+
+#[tokio::test]
+async fn create_breakpoint_conflicts_on_same_method_origin_path() {
+    let state = build_state();
+    let first_body = crate::breakpoints::UpsertBreakpointBody {
+        name: "Pause POST".to_string(),
+        enabled: Some(true),
+        match_method: Some("POST".to_string()),
+        match_origin: Some("https://example.com".to_string()),
+        match_path_regex: Some("^/api".to_string()),
+    };
+    let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(first_body))
+        .await
+        .expect("first breakpoint should be created");
+    assert_eq!(created.0.match_method.as_deref(), Some("POST"));
+
+    // Same identity tuple (method+origin+path), only different case/whitespace.
+    let duplicate_body = crate::breakpoints::UpsertBreakpointBody {
+        name: "Pause duplicate".to_string(),
+        enabled: Some(false),
+        match_method: Some("  post  ".to_string()),
+        match_origin: Some(" HTTPS://EXAMPLE.COM ".to_string()),
+        match_path_regex: Some("^/api".to_string()),
+    };
+    let err =
+        crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(duplicate_body))
+            .await
+            .expect_err("duplicate identity should conflict");
+    assert_eq!(err, StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn update_breakpoint_conflicts_when_identity_collides() {
+    let state = build_state();
+    let first = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause API".to_string(),
+            enabled: Some(true),
+            match_method: Some("GET".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("^/api".to_string()),
+        }),
+    )
+    .await
+    .expect("create first breakpoint");
+    let second = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause Login".to_string(),
+            enabled: Some(true),
+            match_method: Some("POST".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("^/login".to_string()),
+        }),
+    )
+    .await
+    .expect("create second breakpoint");
+
+    let err = crate::breakpoints::update_breakpoint(
+        State(state.clone()),
+        axum::extract::Path(second.0.id),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Conflict target".to_string(),
+            enabled: Some(true),
+            match_method: first.0.match_method.clone(),
+            match_origin: first.0.match_origin.clone(),
+            match_path_regex: first.0.match_path_regex.clone(),
+        }),
+    )
+    .await
+    .expect_err("updating identity to existing one should conflict");
+    assert_eq!(err, StatusCode::CONFLICT);
+}

@@ -7,6 +7,7 @@ import { TrafficVirtualListUI } from './TrafficVirtualListUI'
 import type { TrafficPanelUIProps } from '../types'
 import s from './TrafficPanelUI.module.css'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 
 export function TrafficPanelUI({
   testError,
@@ -42,7 +43,10 @@ export function TrafficPanelUI({
 
   return (
     <ResizablePanelGroup>
-      <ResizablePanel defaultSize={selected ? 62 : 100} minSize={16}>
+      <ResizablePanel
+        defaultSize={selected ? LEFT_LIST_PANEL_DEFAULT_SIZE : 100}
+        minSize={16}
+      >
         <aside className={s.listPanel}>
           {testError && <p className={`small err ${s.testErr}`}>{testError}</p>}
           <TrafficVirtualListUI

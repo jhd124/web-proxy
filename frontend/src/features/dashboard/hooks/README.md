@@ -4,7 +4,7 @@
 
 ## 当前 Hook
 
-- `useDashboard.ts`：工作台整体状态管理。
+- `useDashboard.ts`：工作台整体状态管理（含 traffic→breakpoint 的字段桥接：新增断点时统一携带并回填 origin）。
 - `useAppWebSocket.ts`：应用级 WebSocket 通道与事件处理。
 
 ## 维护要求

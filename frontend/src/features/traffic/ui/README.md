@@ -4,7 +4,7 @@
 
 ## 当前 UI
 
-- `TrafficPanelUI*`：流量主面板。
+- `TrafficPanelUI*`：流量主面板（左侧列表默认宽度与 override / breakpoints / saved 统一，复用 `lib/panelLayout.ts` 常量）。
 - `TrafficVirtualListUI*`：虚拟列表渲染容器。
 - `TrafficFilterDialogUI*`：资源类型/请求方法/状态码筛选弹窗（tag 复选）。
 

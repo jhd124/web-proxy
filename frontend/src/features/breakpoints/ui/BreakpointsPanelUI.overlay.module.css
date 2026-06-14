@@ -68,11 +68,18 @@
   color: var(--text);
 }
 
+.fsHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .fsBody {
   position: relative;
+  display: flex;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .drawerClose {

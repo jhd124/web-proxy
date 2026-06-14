@@ -11,6 +11,7 @@
 - `src/theme/README.md`
 - `src/components/README.md`
 - `src/components/ui/README.md`
+- `src/components/host-group-list/README.md`
 - `src/hooks/README.md`
 - `src/lib/README.md`
 - `src/features/README.md`
@@ -42,6 +43,7 @@
 - `src/`：前端源码主目录。
 - `src/theme/`：主题与设计令牌。
 - `src/components/ui/`：通用基础组件。
+- `src/components/host-group-list/`：按域名分组的可折叠列表组件。
 - `src/hooks/`：共享 Hook。
 - `src/lib/`：工具函数与基础封装。
 - `src/features/`：业务模块集合。

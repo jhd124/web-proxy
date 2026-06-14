@@ -10,6 +10,7 @@ export const overrideEditorTexts = {
     footCancel: 'Cancel',
     saveChanges: 'Save changes',
     saveOverride: 'Save override',
+    emptyEditor: 'Select a rule from the list, or create a new one to start editing.',
   },
   files: {
     newRule: 'New rule',
@@ -32,6 +33,7 @@ export const overrideEditorTexts = {
     disable: 'Disable',
   },
   request: {
+    fieldHintAria: 'Show field help',
     enableRule: 'Enable this override rule',
     matchIdLabel: 'Override id (SHA-256 of match fields)',
     matchIdDrift:
@@ -69,6 +71,7 @@ export const overrideEditorTexts = {
       'Optional forwarding rule. When protocol + host are set, matched requests are forwarded to that target. Use path * to keep the incoming path.',
     status: 'Status',
     responseHeaders: 'Response headers (one',
+    responseHeadersLabel: 'Response headers',
     codeName: 'Name: value',
     perLine: 'per line)',
     streamHint:

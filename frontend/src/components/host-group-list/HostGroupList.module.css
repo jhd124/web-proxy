@@ -1,26 +1,3 @@
-.fileManager {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.fileManagerEmbed {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.fileManagerListIntro {
-  line-height: 1.45;
-  margin: 0.15rem 0 0.25rem;
-}
-
-.fileManagerActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
 .originGroupList {
   display: flex;
   flex-direction: column;
@@ -144,81 +121,11 @@
   background: var(--border);
 }
 
-.ruleGroup {
+.itemGroup {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-}
-
-.itemWrap {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: 6px;
-  background: transparent;
-}
-
-.cardButton {
-  appearance: none;
-  width: 100%;
-  margin: 0;
-  border: none;
-  font: inherit;
-  color: var(--text-secondary);
-  text-align: left;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-
-.cardButton::before {
-  content: "";
-  flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 999px;
-  background: var(--green-500, #22c55e);
-}
-
-.cardButton:hover {
-  background: var(--background-hover);
-  color: var(--text-primary);
-}
-
-.cardButton:focus-visible {
-  outline: 2px solid var(--text-active);
-  outline-offset: 2px;
-}
-
-.cardDisabled {
-  color: var(--text-disabled);
-}
-
-.cardDisabled::before {
-  background: var(--text-disabled);
-}
-
-.head {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.head strong {
-  display: block;
-  font-weight: 400;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.78rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

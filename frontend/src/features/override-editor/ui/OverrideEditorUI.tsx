@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Save, FilePlusCorner } from 'lucide-react'
+import { Save, FilePlusCorner, StepForward, Trash2 } from 'lucide-react'
 import { usePanelRef, type PanelSize } from 'react-resizable-panels'
 import {
   ResizableHandle,
@@ -13,12 +13,14 @@ import {
 } from '../../../lib/dashboardUtils'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
+import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import type { OverrideRule } from '../../../types'
 import { overrideEditorTexts } from '../texts'
 import type { OverrideEditorUIProps } from '../types'
 import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
 import { OverrideFilesUI } from './OverrideFilesUI'
 import { OverrideRequestFormUI } from './OverrideRequestFormUI'
+import { TooltipButton } from './TooltipButton'
 import s from './OverrideEditorUI.module.css'
 
 const t = overrideEditorTexts.shell
@@ -41,7 +43,6 @@ function clamp(n: number, a: number, b: number) {
 }
 
 type ComparableOverridePayload = {
-  enabled: boolean
   matchMethod: string | null
   matchProtocol: string | null
   matchHost: string | null
@@ -69,7 +70,6 @@ function toComparableFromForm(
     ? Math.max(0, Number(form.streamIntervalMs) || 500)
     : null
   return {
-    enabled: form.enabled,
     matchMethod: form.matchMethod.trim() || null,
     matchProtocol: form.matchProtocol || null,
     matchHost: form.matchHost.trim() || null,
@@ -91,7 +91,6 @@ function toComparableFromRule(rule: OverrideRule): ComparableOverridePayload {
   const hasMapRemote =
     !!rule.mapRemoteProtocol?.trim() && !!rule.mapRemoteHost?.trim()
   return {
-    enabled: rule.enabled,
     matchMethod: rule.matchMethod?.trim() || null,
     matchProtocol: rule.matchProtocol || null,
     matchHost: rule.matchHost?.trim() || null,
@@ -122,7 +121,6 @@ export function OverrideEditorUI({
   startNewOverride,
   openOverrideEditorForKey,
   overrideToggleSaving,
-  setOverrideEnabled,
   deleteOverrideRule,
   selected,
   selectedMatchingOverride,
@@ -190,46 +188,50 @@ export function OverrideEditorUI({
     const rulePayload = toComparableFromRule(editingRule)
     return JSON.stringify(formPayload) !== JSON.stringify(rulePayload)
   }, [editingRule, isDefaultOverride, overrideForm])
-  const shouldShowSaveButton = editingRule !== null || !isDefaultOverride
+  const isEditingOverride = editingRule !== null || !isDefaultOverride
 
   const actionButtons = (
     <>
-      <button
+      <TooltipButton
         type="button"
         className={`ghost ${s.saveIconBtn}`}
         onClick={startNewOverride}
         aria-label={tf.newRule}
-        title={tf.newRule}
+        tooltip={tf.newRule}
       >
         <FilePlusCorner size={16} aria-hidden />
-      </button>
-      {shouldShowSaveButton ? (
-        <button
+      </TooltipButton>
+      {isEditingOverride ? (
+        <TooltipButton
           type="button"
           className={`${hasUnsavedChanges ? 'primary' : 'ghost'} ${s.saveIconBtn}`}
-          onClick={saveOverride}
+          onClick={() => saveOverride()}
           aria-label={overrideEditingId ? t.saveChanges : t.saveOverride}
-          title={overrideEditingId ? t.saveChanges : t.saveOverride}
+          tooltip={overrideEditingId ? t.saveChanges : t.saveOverride}
         >
           <Save size={16} aria-hidden />
-        </button>
+        </TooltipButton>
       ) : null}
       {editingRule ? (
         <>
           {selected?.pending &&
             selectedMatchingOverride?.id === overrideEditingId && (
-              <button
+              <TooltipButton
                 type="button"
                 className="primary inline-primary"
                 disabled={resumeSaving[selected.id] === true}
+                aria-label={resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
+                tooltip={resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
                 onClick={() => void resumeRequest(selected.id)}
               >
                 {resumeSaving[selected.id] ? t.footResuming : t.footResumeRequest}
-              </button>
+              </TooltipButton>
             )}
-          <button
+          <TooltipButton
             type="button"
-            className="ghost"
+            className={`ghost ${s.saveIconBtn}`}
+            aria-label={t.footAddBreakpoint}
+            tooltip={t.footAddBreakpoint}
             onClick={() => {
               addBreakpointFromOverride(
                 {
@@ -249,25 +251,40 @@ export function OverrideEditorUI({
               closeOverrideDrawer()
             }}
           >
-            {t.footAddBreakpoint}
-          </button>
-          <button
+            <StepForward size={16} aria-hidden />
+          </TooltipButton>
+          <TooltipButton
             type="button"
-            className="ghost"
+            className={`ghost ${s.saveIconBtn}`}
             disabled={overrideToggleSaving[editingRule.id] === true}
-            onClick={() =>
-              void setOverrideEnabled(editingRule, !editingRule.enabled)
+            aria-label={overrideForm.enabled ? tf.disable : tf.enable}
+            tooltip={
+              overrideToggleSaving[editingRule.id] === true
+                ? tf.saving
+                : overrideForm.enabled
+                  ? tf.disable
+                  : tf.enable
             }
+            onClick={() => {
+              const nextEnabled = !overrideForm.enabled
+              setOverrideForm((f) => ({ ...f, enabled: nextEnabled }))
+              saveOverride({ enabled: nextEnabled })
+            }}
           >
-            {overrideToggleSaving[editingRule.id] === true
-              ? tf.saving
-              : editingRule.enabled
-                ? tf.disable
-                : tf.enable}
-          </button>
-          <button
+            <span
+              className={`${s.stateDot} ${
+                overrideForm.enabled ? s.stateDotDisabled : s.stateDotEnabled
+              } ${
+                overrideToggleSaving[editingRule.id] === true ? s.stateDotSaving : ''
+              }`}
+              aria-hidden
+            />
+          </TooltipButton>
+          <TooltipButton
             type="button"
-            className="ghost danger"
+            className={`ghost danger ${s.saveIconBtn}`}
+            aria-label={tf.deleteRule}
+            tooltip={tf.deleteRule}
             onClick={async () => {
               try {
                 await confirm({
@@ -283,12 +300,18 @@ export function OverrideEditorUI({
               }
             }}
           >
-            {tf.deleteRule}
-          </button>
+            <Trash2 size={16} aria-hidden />
+          </TooltipButton>
           {!isInline && (
-            <button type="button" className="ghost" onClick={closeOverrideDrawer}>
+            <TooltipButton
+              type="button"
+              className="ghost"
+              aria-label={t.footCancel}
+              tooltip={t.footCancel}
+              onClick={closeOverrideDrawer}
+            >
               {t.footCancel}
-            </button>
+            </TooltipButton>
           )}
         </>
       ) : null}
@@ -337,7 +360,7 @@ export function OverrideEditorUI({
           >
             <ResizablePanel
               className="min-h-0 min-w-0"
-              defaultSize={380}
+              defaultSize={LEFT_LIST_PANEL_DEFAULT_SIZE}
               id="override-tools"
               minSize={16}
             >
@@ -362,11 +385,17 @@ export function OverrideEditorUI({
               id="override-monaco"
               minSize={28}
             >
-              <OverrideBodyEditorUI
-                overrideEditingId={overrideEditingId}
-                overrideForm={overrideForm}
-                setOverrideForm={setOverrideForm}
-              />
+              {isEditingOverride ? (
+                <OverrideBodyEditorUI
+                  overrideEditingId={overrideEditingId}
+                  overrideForm={overrideForm}
+                  setOverrideForm={setOverrideForm}
+                />
+              ) : (
+                <div className={s.editorEmpty}>
+                  <p className="muted">{t.emptyEditor}</p>
+                </div>
+              )}
             </ResizablePanel>
             <ResizableHandle
               withHandle

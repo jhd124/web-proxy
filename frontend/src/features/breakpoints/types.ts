@@ -16,7 +16,11 @@ export type BreakpointsPanelUIProps = {
   breakpointForm: BreakpointForm
   setBreakpointForm: SetBreakpointForm
   breakpointEntries: BreakpointRule[]
-  addBreakpoint: () => void
+  selectedBreakpointId: string | null
+  setSelectedBreakpointId: (id: string | null) => void
+  startNewBreakpoint: () => void
+  addBreakpoint: (originFallback?: string) => void
+  selectedRequestOrigin: string
   removeBreakpoint: (id: string) => Promise<void>
   setBreakpointEnabled: (rule: BreakpointRule, enabled: boolean) => void
   breakpointToggleSaving: Record<string, boolean>

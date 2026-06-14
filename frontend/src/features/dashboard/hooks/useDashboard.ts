@@ -8,8 +8,8 @@ import {
   escapeRegex,
   getDefaultOverrideForm,
   headersToText,
+  trafficEntryOrigin,
   urlMatchPartsForForm,
-  urlOrigin,
 } from '../../../lib/dashboardUtils'
 import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
 import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSelect'
@@ -530,7 +530,7 @@ export function useDashboard() {
 
   const addBreakpointFromSelected = useCallback(async () => {
     if (!selected || selected.kind !== 'http') return
-    const matchOrigin = urlOrigin(selected.url)
+    const matchOrigin = trafficEntryOrigin(selected)
     const matchPathRegex = `^${escapeRegex(selected.path)}$`
     const existing = breakpoints.find(
       (rule) =>
@@ -575,7 +575,7 @@ export function useDashboard() {
       const entry = getEntryById(id)
       if (!entry || entry.kind !== 'http') return
       traffic.setSelectedId(id)
-      const matchOrigin = urlOrigin(entry.url)
+      const matchOrigin = trafficEntryOrigin(entry)
       const matchPathRegex = `^${escapeRegex(entry.path)}$`
       const existing = breakpoints.find(
         (rule) =>
@@ -735,6 +735,8 @@ export function useDashboard() {
 
   const breakpointsOpen = activeTab === 'breakpoints'
   const savedRequestsOpen = activeTab === 'saved'
+  const selectedRequestOrigin =
+    selected && selected.kind === 'http' ? trafficEntryOrigin(selected) : ''
 
   return {
     activeTab,
@@ -813,7 +815,11 @@ export function useDashboard() {
     breakpointForm: brk.breakpointForm,
     setBreakpointForm: brk.setBreakpointForm,
     breakpointEntries: brk.breakpoints,
+    selectedBreakpointId: brk.selectedBreakpointId,
+    setSelectedBreakpointId: brk.setSelectedBreakpointId,
+    startNewBreakpoint: brk.startNewBreakpoint,
     addBreakpoint: brk.addBreakpoint,
+    selectedRequestOrigin,
     removeBreakpoint: brk.removeBreakpoint,
     setBreakpointEnabled: brk.setBreakpointEnabled,
     breakpointToggleSaving: brk.breakpointToggleSaving,

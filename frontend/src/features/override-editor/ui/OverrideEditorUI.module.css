@@ -86,6 +86,25 @@
   flex-shrink: 0;
 }
 
+.stateDot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.stateDotEnabled {
+  background: #22c55e;
+}
+
+.stateDotDisabled {
+  background: #ef4444;
+}
+
+.stateDotSaving {
+  opacity: 0.55;
+}
+
 .fsHead h2 {
   margin: 0;
   font-size: 1.05rem;
@@ -130,6 +149,16 @@
   overflow: auto;
   background: #12151c;
   padding: 0.65rem 0.75rem 1rem;
+}
+
+.editorEmpty {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  text-align: center;
 }
 
 .requestOpenFab {

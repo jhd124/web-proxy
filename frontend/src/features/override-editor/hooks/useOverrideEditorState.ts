@@ -223,14 +223,15 @@ export function useOverrideEditorState() {
     [overrideBodyDrafts, refreshOverrides],
   )
 
-  const saveOverride = useCallback(async () => {
+  const saveOverride = useCallback(async (formOverride?: Partial<OverrideFormState>) => {
     setOverrideError(null)
-    if (!overrideForm.matchHost.trim()) {
+    const form = formOverride ? { ...overrideForm, ...formOverride } : overrideForm
+    if (!form.matchHost.trim()) {
       setOverrideError(oreq.hostRequired)
       return
     }
-    const body = overrideForm.body
-    const payload = buildPayloadJson(overrideForm, body)
+    const body = form.body
+    const payload = buildPayloadJson(form, body)
     try {
       if (overrideEditingId) {
         const r = await fetch(

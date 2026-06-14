@@ -6,6 +6,8 @@ export const savedRequestsTexts = {
     closeAria: 'Close saved requests',
   },
   empty: 'No saved requests yet. Select a request and click Save request.',
+  selectHint: 'Select a saved request from the list to view its details.',
+  toggleHostGroup: (host: string) => `Show or hide saved requests for ${host}`,
   savedAt: (value: string) => `Saved ${value}`,
   originalAt: (value: string) => `Captured ${value}`,
   delete: 'Delete',

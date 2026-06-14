@@ -5,6 +5,7 @@
 ## 子目录
 
 - `ui/`：基于 shadcn/radix 封装的通用 UI 组件。
+- `host-group-list/`：以域名（host/origin）分组的可折叠列表通用组件。
 
 ## 维护要求
 

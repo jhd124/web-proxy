@@ -1,0 +1,28 @@
+.hintBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, var(--muted));
+  cursor: help;
+  line-height: 0;
+  border-radius: 999px;
+  transition: color 0.12s ease;
+}
+
+.hintBtn:hover {
+  color: var(--text-primary, var(--text));
+}
+
+.hintBtn:focus-visible {
+  outline: 2px solid var(--text-active);
+  outline-offset: 2px;
+}
+
+.hintContent {
+  max-width: 18rem;
+  line-height: 1.45;
+}

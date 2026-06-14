@@ -6,7 +6,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { Bookmark, Replace, Signpost, Waves } from 'lucide-react'
+import { Bookmark, Replace, StepForward, Waves } from 'lucide-react'
 import type { DashboardViewModel } from '../hooks/useDashboard'
 import { dashboardTexts } from '../texts'
 import root from './DashboardSidebarUI.module.css'
@@ -52,7 +52,7 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
                 )}
                 className={root.navButton}
               >
-                <Signpost />
+                <StepForward />
                 <span>Breakpoint</span>
               </SidebarMenuButton>
               {hasActiveBreakpoints && (

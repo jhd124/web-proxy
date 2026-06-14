@@ -12,7 +12,7 @@
 - `mitm.rs`：MITM 证书与 TLS 相关能力。
 - `overrides.rs`：覆盖规则的增删改查与匹配逻辑。
 - `override_identity.rs`：覆盖规则标识与归一化逻辑。
-- `breakpoints.rs`：断点规则管理与相关接口。
+- `breakpoints.rs`：断点规则管理与相关接口（基于 method+origin+path 生成确定性 id，并保证唯一性）。
 - `saved_requests.rs`：已保存请求管理与持久化接口。
 - `body_format.rs`：请求/响应体格式化能力。
 

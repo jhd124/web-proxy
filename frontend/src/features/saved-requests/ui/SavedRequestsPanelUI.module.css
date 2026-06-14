@@ -67,10 +67,10 @@
 }
 
 .fsBody {
-  display: grid;
-  grid-template-columns: minmax(18rem, 28rem) 1fr;
+  display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .drawerClose {
@@ -81,77 +81,90 @@
 
 .listPanel {
   display: flex;
+  height: 100%;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border-right: 1px solid var(--border);
+  background: #12151c;
 }
 
 .listTools {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.listBody {
+  padding: 0.35rem 0.45rem 0.6rem;
 }
 
-.row {
+.itemButton {
+  appearance: none;
   width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  align-items: center;
   gap: 0.45rem;
-  align-items: baseline;
-  padding: 0.7rem 0.75rem;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
   border: none;
-  border-bottom: 1px solid #1e2430;
+  border-radius: 6px;
   background: transparent;
-  color: inherit;
-  cursor: pointer;
+  color: var(--text-secondary);
+  font: inherit;
   text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
-.row:hover {
-  background: #1a1f2a;
+.itemButton:hover {
+  background: var(--background-hover);
+  color: var(--text-primary);
 }
 
-.rowActive {
+.itemButton:focus-visible {
+  outline: 2px solid var(--text-active);
+  outline-offset: 2px;
+}
+
+.itemButtonActive {
   background: #1e2635;
+  color: var(--text-primary);
 }
 
-.method {
+.itemMethod {
+  flex-shrink: 0;
   font-weight: 700;
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
 }
 
-.url {
+.itemPath {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.76rem;
 }
 
-.status {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.savedAt {
-  grid-column: 2 / -1;
-  margin: 0;
+.itemStatus {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.7rem;
 }
 
 .detail {
+  height: 100%;
   min-width: 0;
   overflow: auto;
   padding: 1rem 1.25rem 2rem;
+  background: var(--bg);
 }
 
 .detailHead {
@@ -196,16 +209,4 @@
 
 .empty {
   padding: 1rem;
-}
-
-@media (max-width: 900px) {
-  .fsBody {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(12rem, 36vh) 1fr;
-  }
-
-  .listPanel {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
 }

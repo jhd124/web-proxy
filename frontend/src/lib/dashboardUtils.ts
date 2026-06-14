@@ -130,6 +130,15 @@ export function urlOrigin(u: string): string {
   }
 }
 
+export function trafficEntryOrigin(entry: Pick<TrafficEntry, 'url' | 'scheme' | 'host'>): string {
+  const parsedOrigin = urlOrigin(entry.url)
+  if (parsedOrigin) return parsedOrigin
+  const scheme = (entry.scheme ?? '').trim()
+  const host = (entry.host ?? '').trim()
+  if (!scheme || !host) return ''
+  return `${scheme}://${host}`
+}
+
 export function inferOriginFromHostHint(
   hostHint: string | null | undefined,
 ): string {

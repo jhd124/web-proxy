@@ -102,7 +102,11 @@ export function DashboardUI(p: DashboardViewModel) {
                   breakpointForm={p.breakpointForm}
                   setBreakpointForm={p.setBreakpointForm}
                   breakpointEntries={p.breakpointEntries}
+                  selectedBreakpointId={p.selectedBreakpointId}
+                  setSelectedBreakpointId={p.setSelectedBreakpointId}
+                  startNewBreakpoint={p.startNewBreakpoint}
                   addBreakpoint={p.addBreakpoint}
+                  selectedRequestOrigin={p.selectedRequestOrigin}
                   removeBreakpoint={p.removeBreakpoint}
                   setBreakpointEnabled={p.setBreakpointEnabled}
                   breakpointToggleSaving={p.breakpointToggleSaving}

@@ -101,6 +101,7 @@ export function OverrideFilesUI({
               {pathGroups.map((group) => {
                 const hostId = `ov-origin-${String(group.host).replace(/\s+/g, '_')}`
                 const contentId = `${hostId}-rules`
+                const hasEnabledRule = group.rules.some((rule) => rule.enabled)
                 return (
                   <section
                     key={group.host}
@@ -119,7 +120,9 @@ export function OverrideFilesUI({
                           aria-controls={contentId}
                         >
                           <ChevronDown
-                            className={s.originChevron}
+                            className={`${s.originChevron} ${
+                              hasEnabledRule ? s.originChevronActive : ''
+                            }`}
                             data-icon="inline-start"
                             aria-hidden
                           />

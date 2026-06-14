@@ -4,7 +4,7 @@
 
 ## 当前 Hook
 
-- `useBreakpointState.ts`：断点列表与交互状态管理。
+- `useBreakpointState.ts`：断点列表与交互状态管理（含选中断点 `selectedBreakpointId`、新建表单与 `startNewBreakpoint` 重置逻辑）；创建/更新命中后端唯一性约束（HTTP 409）时统一使用 toast 提示重复规则（相同 method+origin+path）。新增断点时支持 origin fallback（例如从 traffic 进入 breakpoints 且表单 origin 为空时，自动写入当前选中请求的 origin）。
 
 ## 维护要求
 

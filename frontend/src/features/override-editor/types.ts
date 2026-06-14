@@ -16,7 +16,7 @@ export type AddBreakpointFromOverride = (
 export type OverrideEditorUIProps = {
   closeOverrideDrawer: () => void
   variant?: 'dialog' | 'sidebar' | 'embedded'
-  saveOverride: () => void
+  saveOverride: (formOverride?: Partial<OverrideFormState>) => void
   overrideError: string | null
   requestPanelFocusKey: number
   overrideFileInputRef: RefObject<HTMLInputElement | null>
