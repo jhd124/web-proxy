@@ -172,6 +172,112 @@ fn push_traffic_is_ignored_when_capture_paused() {
 }
 
 #[test]
+fn recompute_fills_and_clears_override_match_id_on_rule_change() {
+    let state = build_state_for_app_tests();
+    let id = Uuid::new_v4();
+    state.push_traffic(sample_traffic_entry(id));
+    // 初始无规则，命中 id 为空。
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.override_match_id.clone()),
+        None,
+    );
+
+    // 新增一条能命中历史条目的 override 后重算，命中 id 被填充。
+    state.overrides.write().insert(0, rule_with("example.com", "/api"));
+    state.recompute_rule_matches();
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.override_match_id.clone()),
+        Some("r".to_string()),
+    );
+
+    // 删除规则后重算，命中 id 被清空。
+    state.overrides.write().clear();
+    state.recompute_rule_matches();
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.override_match_id.clone()),
+        None,
+    );
+}
+
+#[test]
+fn recompute_fills_and_clears_breakpoint_match_id_on_rule_change() {
+    let state = build_state_for_app_tests();
+    let id = Uuid::new_v4();
+    state.push_traffic(sample_traffic_entry(id));
+
+    let breakpoint_id = Uuid::new_v4();
+    state.breakpoints.write().insert(
+        0,
+        BreakpointRule {
+            id: breakpoint_id,
+            name: "bp".to_string(),
+            enabled: true,
+            match_method: None,
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/api".to_string()),
+        },
+    );
+    state.recompute_rule_matches();
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.breakpoint_match_id),
+        Some(breakpoint_id),
+    );
+
+    state.breakpoints.write().clear();
+    state.recompute_rule_matches();
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.breakpoint_match_id),
+        None,
+    );
+}
+
+#[test]
+fn recompute_ignores_connect_entries() {
+    let state = build_state_for_app_tests();
+    let id = Uuid::new_v4();
+    let mut entry = sample_traffic_entry(id);
+    entry.kind = TrafficKind::Connect;
+    state.push_traffic(entry);
+
+    state.overrides.write().insert(0, rule_with("example.com", "/api"));
+    state.recompute_rule_matches();
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.override_match_id.clone()),
+        None,
+    );
+}
+
+#[test]
 fn breakpoint_method_match_is_case_insensitive_and_optional() {
     let rule = BreakpointRule {
         id: Uuid::new_v4(),

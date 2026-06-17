@@ -33,6 +33,7 @@ type Props = {
   popUrlFilterTag: () => void
   clearTraffic: () => void
   trafficFilters: TrafficFilters
+  availableRequesterApps: string[]
   toggleTrafficFilterValue: (group: TrafficFilterGroupKey, value: string) => void
   clearTrafficFilters: () => void
   hasTrafficFilters: boolean
@@ -56,6 +57,7 @@ export function DashboardHeaderUI({
   popUrlFilterTag,
   clearTraffic,
   trafficFilters,
+  availableRequesterApps,
   toggleTrafficFilterValue,
   clearTrafficFilters,
   hasTrafficFilters,
@@ -71,6 +73,10 @@ export function DashboardHeaderUI({
 }: Props) {
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
+  const listenAddressLabel =
+    typeof proxyListenAddress === 'string' && proxyListenAddress.trim().length > 0
+      ? proxyListenAddress
+      : t.missingProxyAddress
   const [downloading, setDownloading] = useState(false)
   const [filterDialogOpen, setFilterDialogOpen] = useState(false)
 
@@ -170,19 +176,18 @@ export function DashboardHeaderUI({
         open={filterDialogOpen}
         onOpenChange={setFilterDialogOpen}
         filters={trafficFilters}
+        requesterAppOptions={availableRequesterApps}
         toggleFilterValue={toggleTrafficFilterValue}
         clearFilters={clearTrafficFilters}
       />
       <div className={s.right}>
-        {proxyListenAddress != null && (
-          <span
-            className={s.listenAddr}
-            aria-label={t.proxyListenAriaLabel(proxyListenAddress)}
-          >
-            <span className={s.listenAddrPrefix}>{t.proxyListenPrefix}</span>{' '}
-            <span className={s.listenAddrHost}>{proxyListenAddress}</span>
-          </span>
-        )}
+        <span
+          className={s.listenAddr}
+          aria-label={t.proxyListenAriaLabel(listenAddressLabel)}
+        >
+          <span className={s.listenAddrPrefix}>{t.proxyListenPrefix}</span>{' '}
+          <span className={s.listenAddrHost}>{listenAddressLabel}</span>
+        </span>
 
         <TooltipButton
           type="button"

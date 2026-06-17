@@ -9,7 +9,7 @@
 - `portal.tsx`：模块组装入口。
 - `texts.ts`、`types.ts`：文案与类型定义。
 - `trafficDisplay.ts`、`trafficEntriesLimit.ts`：展示规则与数量控制。
-- `trafficFilter.ts`：资源类型/方法/状态码的归类与筛选匹配逻辑。
+- `trafficFilter.ts`：资源类型/方法/状态码/发起应用的归类与筛选匹配逻辑（发起应用优先用后端 `appName`，缺失时回退 `User-Agent` 推断）。
 
 ## 维护要求
 

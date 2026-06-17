@@ -2,7 +2,7 @@
   {
     "id": "12d60fbf-f11b-4cf4-8e7f-3a90d9a633db",
     "name": "Pause API request",
-    "enabled": true,
+    "enabled": false,
     "matchMethod": "GET",
     "matchOrigin": "https://www.baidu.com",
     "matchPathRegex": "/"

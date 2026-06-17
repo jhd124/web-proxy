@@ -127,7 +127,7 @@ export function FloatingTrafficUI({
 
         {hasDetail && (
           <>
-            <ResizableHandle withHandle className="h-1.5 shrink-0 bg-border/90" />
+            <ResizableHandle withHandle className="h-1.5 shrink-0 bg-border/40" />
             <ResizablePanel className="min-h-0" defaultSize={38} minSize={12}>
               <FloatingTrafficDetailPanelUI entry={selected} />
             </ResizablePanel>

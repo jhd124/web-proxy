@@ -22,14 +22,17 @@ type Props = {
   overrideForm: OverrideFormState
   setOverrideForm: SetOverrideForm
   overrideEntries: OverrideRule[]
+  overrideEditingId: string | null
   openOverrideEditorForKey: (override: OverrideRule) => void
 }
 
 function RuleItem({
   override,
+  isSelected,
   openOverrideEditorForKey,
 }: {
   override: OverrideRule
+  isSelected: boolean
   openOverrideEditorForKey: (o: OverrideRule) => void
 }) {
   return (
@@ -38,15 +41,14 @@ function RuleItem({
         type="button"
         className={`${s.card} ${s.cardButton} ${
           !override.enabled ? s.cardDisabled : ''
-        }`}
+        } ${isSelected ? s.cardSelected : ''}`}
         onClick={() => openOverrideEditorForKey(override)}
         aria-label={tf.openRule(overrideListLabel(override))}
+        aria-current={isSelected ? 'true' : undefined}
       >
         <div className={s.head}>
-          <strong>
-            {overrideListLabel(override)}{' '}
-          </strong>
-        </div>  
+          <strong>{overrideListLabel(override)}</strong>
+        </div>
       </button>
     </div>
   )
@@ -57,6 +59,7 @@ export function OverrideFilesUI({
   overrideForm,
   setOverrideForm,
   overrideEntries,
+  overrideEditingId,
   openOverrideEditorForKey,
 }: Props) {
   const pathGroups = useMemo(
@@ -149,6 +152,7 @@ export function OverrideFilesUI({
                               <li key={override.id}>
                                 <RuleItem
                                   override={override}
+                                  isSelected={overrideEditingId === override.id}
                                   openOverrideEditorForKey={
                                     openOverrideEditorForKey
                                   }

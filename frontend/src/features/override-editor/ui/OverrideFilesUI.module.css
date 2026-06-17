@@ -195,6 +195,11 @@
   color: var(--text-primary);
 }
 
+.cardSelected {
+  background: #1e2635;
+  color: var(--text-primary);
+}
+
 .cardButton:focus-visible {
   outline: 2px solid var(--text-active);
   outline-offset: 2px;

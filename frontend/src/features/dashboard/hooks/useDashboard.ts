@@ -195,14 +195,16 @@ export function useDashboard() {
           /^\d{1,3}(\.\d{1,3}){3}$/.test(h.proxyListenIpv4)
             ? h.proxyListenIpv4
             : null
-        if (
+        const nextProxyListenAddress =
           ipv4 != null &&
           typeof h.proxyPort === 'number' &&
           Number.isFinite(h.proxyPort) &&
           h.proxyPort > 0 &&
           h.proxyPort <= 65535
-        ) {
-          setProxyListenAddress(`${ipv4}:${h.proxyPort}`)
+            ? `${ipv4}:${h.proxyPort}`
+            : null
+        if (nextProxyListenAddress != null) {
+          setProxyListenAddress(nextProxyListenAddress)
         } else {
           setProxyListenAddress(null)
         }
@@ -358,23 +360,17 @@ export function useDashboard() {
     )
   }, [overrides, selected])
 
+  // 命中规则的计算已下沉到后端：条目自带 overrideMatchId，规则变更后后端会重算并推 snapshot。
+  // 这里只做 O(n) 读取，避免在每条流量更新时整表跑正则匹配。
   const matchedOverrideByEntryId = useMemo(() => {
     const matchedByEntryId = new Map<string, string>()
     for (const entry of filteredEntries) {
-      if (entry.kind !== 'http') continue
       if (entry.overrideMatchId) {
         matchedByEntryId.set(entry.id, entry.overrideMatchId)
-        continue
-      }
-      const matchedOverride = overrides.find(
-        (rule) => rule.enabled && trafficEntryMatchesOverride(entry, rule),
-      )
-      if (matchedOverride) {
-        matchedByEntryId.set(entry.id, matchedOverride.id)
       }
     }
     return matchedByEntryId
-  }, [filteredEntries, overrides])
+  }, [filteredEntries])
 
   const selectedMatchingBreakpoint = useMemo(() => {
     if (!selected || selected.kind !== 'http') return null
@@ -389,23 +385,16 @@ export function useDashboard() {
     )
   }, [breakpoints, selected])
 
+  // 同上：直接读取后端写入的 breakpointMatchId，不在前端整表重算。
   const matchedBreakpointByEntryId = useMemo(() => {
     const matchedByEntryId = new Map<string, string>()
     for (const entry of filteredEntries) {
-      if (entry.kind !== 'http') continue
       if (entry.breakpointMatchId) {
         matchedByEntryId.set(entry.id, entry.breakpointMatchId)
-        continue
-      }
-      const matchedBreakpoint = breakpoints.find(
-        (rule) => rule.enabled && breakpointMatches(rule, entry),
-      )
-      if (matchedBreakpoint) {
-        matchedByEntryId.set(entry.id, matchedBreakpoint.id)
       }
     }
     return matchedByEntryId
-  }, [breakpoints, filteredEntries])
+  }, [filteredEntries])
 
   const pendingRequestIdByBreakpointId = useMemo(() => {
     const pendingByBreakpointId = new Map<string, string>()
@@ -527,17 +516,12 @@ export function useDashboard() {
   const matchedTrafficEntryIds = useMemo(() => {
     const matchedIds = new Set<string>()
     for (const entry of filteredEntries) {
-      if (
-        entry.overrideMatchId ||
-        entry.breakpointMatchId ||
-        matchedOverrideByEntryId.has(entry.id) ||
-        matchedBreakpointByEntryId.has(entry.id)
-      ) {
+      if (entry.overrideMatchId || entry.breakpointMatchId) {
         matchedIds.add(entry.id)
       }
     }
     return matchedIds
-  }, [filteredEntries, matchedBreakpointByEntryId, matchedOverrideByEntryId])
+  }, [filteredEntries])
 
   const addBreakpointFromSelected = useCallback(() => {
     if (!selected || selected.kind !== 'http') return
@@ -734,6 +718,7 @@ export function useDashboard() {
     removeUrlFilterTag: traffic.removeUrlFilterTag,
     popUrlFilterTag: traffic.popUrlFilterTag,
     trafficFilters: traffic.trafficFilters,
+    availableRequesterApps: traffic.availableRequesterApps,
     toggleTrafficFilterValue: traffic.toggleTrafficFilterValue,
     clearTrafficFilters: traffic.clearTrafficFilters,
     hasTrafficFilters: traffic.hasTrafficFilters,

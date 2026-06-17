@@ -22,6 +22,7 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   filters: TrafficFilters
+  requesterAppOptions: string[]
   toggleFilterValue: (group: TrafficFilterGroupKey, value: string) => void
   clearFilters: () => void
 }
@@ -30,6 +31,7 @@ export function TrafficFilterDialogUI({
   open,
   onOpenChange,
   filters,
+  requesterAppOptions,
   toggleFilterValue,
   clearFilters,
 }: Props) {
@@ -52,6 +54,12 @@ export function TrafficFilterDialogUI({
       title: t.groupStatus,
       options: STATUS_CLASS_VALUES,
       labels: t.statusClassLabels,
+    },
+    {
+      key: 'requesterApps',
+      title: t.groupRequesterApp,
+      options: requesterAppOptions,
+      labels: t.requesterAppLabels,
     },
   ]
 

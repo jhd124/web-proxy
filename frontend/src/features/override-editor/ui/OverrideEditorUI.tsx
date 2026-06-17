@@ -196,6 +196,7 @@ export function OverrideEditorUI({
       <TooltipButton
         type="button"
         className={`ghost ${ph.iconBtn}`}
+        onClick={startNewOverride}
         aria-label={tf.newRule}
         tooltip={tf.newRule}
       >
@@ -360,6 +361,7 @@ export function OverrideEditorUI({
                     overrideForm={overrideForm}
                     setOverrideForm={setOverrideForm}
                     overrideEntries={overrideEntries}
+                    overrideEditingId={overrideEditingId}
                     openOverrideEditorForKey={openOverrideEditorForKey}
                   />
                 </div>

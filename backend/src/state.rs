@@ -212,6 +212,41 @@ fn paths_equal(request_path: &str, rule_path: &str) -> bool {
     }
 }
 
+/// 从已记录条目的 url 解析 query 键值对（用于规则变更后的命中重算）。
+fn query_pairs_from_url(url: &str) -> Vec<(String, String)> {
+    url::Url::parse(url)
+        .map(|parsed| parsed.query_pairs().into_owned().collect())
+        .unwrap_or_default()
+}
+
+/// 从条目 url 还原 origin（scheme://host[:port]），与 proxy.rs 的 parse_origin 行为一致。
+fn entry_origin(url: &str) -> String {
+    if let Ok(parsed) = url::Url::parse(url) {
+        let scheme = parsed.scheme();
+        let host = parsed.host_str().unwrap_or("");
+        match parsed.port() {
+            Some(port) => format!("{scheme}://{host}:{port}"),
+            None => format!("{scheme}://{host}"),
+        }
+    } else {
+        String::new()
+    }
+}
+
+/// 把记录的请求头键值对重建为 HeaderMap，供 OverrideRule::matches 复用。
+fn header_map_from_pairs(pairs: &[(String, String)]) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    for (name, value) in pairs {
+        if let (Ok(header_name), Ok(header_value)) = (
+            http::header::HeaderName::from_bytes(name.as_bytes()),
+            http::header::HeaderValue::from_str(value),
+        ) {
+            headers.append(header_name, header_value);
+        }
+    }
+    headers
+}
+
 #[cfg(test)]
 #[path = "state_tests.rs"]
 mod state_tests;
@@ -449,10 +484,66 @@ impl AppState {
 
     pub fn notify_overrides_changed(&self) {
         let _ = self.tx.send(DashboardMessage::OverridesUpdated);
+        self.recompute_rule_matches();
     }
 
     pub fn notify_breakpoints_changed(&self) {
         let _ = self.tx.send(DashboardMessage::BreakpointsUpdated);
+        self.recompute_rule_matches();
+    }
+
+    /// 规则变更后重算历史 HTTP 条目的命中规则 id（潜在命中：第一个 enabled 命中规则）。
+    /// 历史条目只保留 `request_body_preview`，body 类匹配按预览 best-effort，与前端旧逻辑一致。
+    /// 仅在有条目命中变化时广播 Snapshot，避免无谓的全量重渲染。
+    pub fn recompute_rule_matches(&self) {
+        let overrides = self.overrides.read();
+        let breakpoints = self.breakpoints.read();
+        let mut log = self.traffic.write();
+        let mut has_changes = false;
+        for entry in log.iter_mut() {
+            if !matches!(entry.kind, TrafficKind::Http) {
+                continue;
+            }
+            let request_query = query_pairs_from_url(&entry.url);
+            let origin = entry_origin(&entry.url);
+            let request_headers = header_map_from_pairs(&entry.request_headers);
+            let request_body = entry.request_body_preview.as_deref().unwrap_or("");
+            let next_override_match_id = overrides
+                .iter()
+                .find(|rule| {
+                    rule.matches(
+                        &entry.method,
+                        &entry.scheme,
+                        &entry.host,
+                        &entry.path,
+                        &entry.path,
+                        &request_query,
+                        &request_headers,
+                        request_body.as_bytes(),
+                    )
+                })
+                .map(|rule| rule.id.clone());
+            let next_breakpoint_match_id = breakpoints
+                .iter()
+                .find(|rule| rule.matches(&entry.method, &origin, &entry.path))
+                .map(|rule| rule.id);
+            if entry.override_match_id != next_override_match_id {
+                entry.override_match_id = next_override_match_id;
+                has_changes = true;
+            }
+            if entry.breakpoint_match_id != next_breakpoint_match_id {
+                entry.breakpoint_match_id = next_breakpoint_match_id;
+                has_changes = true;
+            }
+        }
+        if !has_changes {
+            return;
+        }
+        let requests = log.clone();
+        drop(log);
+        drop(breakpoints);
+        drop(overrides);
+        let _ = self.tx.send(DashboardMessage::Snapshot { requests });
     }
 
     pub fn notify_proxy_listen_updated(&self, proxy_listen_ipv4: Option<String>, proxy_port: u16) {

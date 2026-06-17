@@ -35,6 +35,7 @@ export interface TrafficFilters {
   resourceTypes: string[]
   methods: string[]
   statusClasses: string[]
+  requesterApps: string[]
 }
 
 export type TrafficFilterGroupKey = keyof TrafficFilters
@@ -43,13 +44,15 @@ export const EMPTY_TRAFFIC_FILTERS: TrafficFilters = {
   resourceTypes: [],
   methods: [],
   statusClasses: [],
+  requesterApps: [],
 }
 
 export function hasActiveTrafficFilters(filters: TrafficFilters): boolean {
   return (
     filters.resourceTypes.length > 0 ||
     filters.methods.length > 0 ||
-    filters.statusClasses.length > 0
+    filters.statusClasses.length > 0 ||
+    filters.requesterApps.length > 0
   )
 }
 
@@ -153,6 +156,31 @@ export function getEntryStatusClass(entry: TrafficEntry): StatusClassValue | nul
   return `${Math.floor(status / 100)}xx` as StatusClassValue
 }
 
+export function getRequesterAppName(entry: TrafficEntry): string {
+  if (entry.appName && entry.appName.trim()) return entry.appName.trim()
+  const userAgent = entry.requestHeaders.find(
+    ([headerName]) => headerName.toLowerCase() === 'user-agent',
+  )?.[1]
+  if (!userAgent) return entry.peer || '—'
+  const normalizedUserAgent = userAgent.toLowerCase()
+  if (normalizedUserAgent.includes('edg/')) return 'Microsoft Edge'
+  if (normalizedUserAgent.includes('chrome/') && !normalizedUserAgent.includes('edg/')) {
+    return 'Google Chrome'
+  }
+  if (normalizedUserAgent.includes('firefox/')) return 'Mozilla Firefox'
+  if (
+    normalizedUserAgent.includes('safari/') &&
+    !normalizedUserAgent.includes('chrome/') &&
+    !normalizedUserAgent.includes('chromium/')
+  ) {
+    return 'Safari'
+  }
+  const firstToken = userAgent.trim().split(/\s+/)[0]
+  if (!firstToken) return entry.peer || '—'
+  const productName = firstToken.split('/')[0]
+  return productName || entry.peer || '—'
+}
+
 export function entryMatchesTrafficFilters(
   entry: TrafficEntry,
   filters: TrafficFilters,
@@ -174,6 +202,13 @@ export function entryMatchesTrafficFilters(
     if (statusClass == null || !filters.statusClasses.includes(statusClass)) {
       return false
     }
+  }
+  if (filters.requesterApps.length > 0) {
+    const requesterAppName = getRequesterAppName(entry).toLowerCase()
+    const hasMatchedRequesterApp = filters.requesterApps.some(
+      (value) => requesterAppName === value.toLowerCase(),
+    )
+    if (!hasMatchedRequesterApp) return false
   }
   return true
 }

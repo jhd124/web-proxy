@@ -1,5 +1,13 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import {
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,6 +18,7 @@ import {
 import { ArrowUpToLine, Focus } from 'lucide-react'
 import type { TrafficEntry } from '../../../types'
 import { trafficTexts as t } from '../texts'
+import { getRequesterAppName } from '../trafficFilter'
 import s from './TrafficVirtualListUI.module.css'
 
 const ROW_HEIGHT_PX = 40
@@ -65,14 +74,32 @@ export function TrafficVirtualListUI({
   className,
   tagTexts,
 }: TrafficVirtualListUIProps): ReactElement {
-  const tags = tagTexts ?? {
-    tagError: t.tagError,
-    tagBypassed: t.tagBypassed,
-    tagPending: t.tagPending,
-  }
-  const displayEntries = useMemo(() => [...entries].reverse(), [entries])
+  const tags = useMemo<TrafficVirtualListTagTexts>(
+    () =>
+      tagTexts ?? {
+        tagError: t.tagError,
+        tagBypassed: t.tagBypassed,
+        tagPending: t.tagPending,
+      },
+    [tagTexts],
+  )
+  // 列表按「最新在上」展示。为避免每次渲染都复制并反转 entries（O(n)），
+  // 这里用倒序索引直接映射：展示索引 d ↔ 源索引 entryCount-1-d。
+  const entryCount = entries.length
+  const getEntryAtDisplayIndex = useCallback(
+    (displayIndex: number) => entries[entryCount - 1 - displayIndex],
+    [entries, entryCount],
+  )
+  const getDisplayIndexById = useCallback(
+    (id: string | null) => {
+      if (!id) return -1
+      const sourceIndex = entries.findIndex((entry) => entry.id === id)
+      return sourceIndex < 0 ? -1 : entryCount - 1 - sourceIndex
+    },
+    [entries, entryCount],
+  )
   const parentRef = useRef<HTMLDivElement>(null)
-  const previousDisplayEntriesRef = useRef<TrafficEntry[]>(displayEntries)
+  const previousEntriesRef = useRef<TrafficEntry[]>(entries)
   const previousScrollTopRef = useRef(0)
   const previousSelectedIdRef = useRef<string | null>(null)
   const [contextMenuState, setContextMenuState] = useState<{
@@ -87,7 +114,7 @@ export function TrafficVirtualListUI({
   const [showBackToTop, setShowBackToTop] = useState(false)
 
   const virtualizer = useVirtualizer({
-    count: displayEntries.length,
+    count: entryCount,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT_PX,
     overscan: 16,
@@ -96,44 +123,57 @@ export function TrafficVirtualListUI({
   useLayoutEffect(() => {
     if (!selectedId) return
     if (selectedId === previousSelectedIdRef.current) return
-    const selectedIndex = displayEntries.findIndex((entry) => entry.id === selectedId)
-    if (selectedIndex < 0) return
-    virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
-  }, [displayEntries, selectedId, virtualizer])
+    const selectedDisplayIndex = getDisplayIndexById(selectedId)
+    if (selectedDisplayIndex < 0) return
+    virtualizer.scrollToIndex(selectedDisplayIndex, { align: 'auto' })
+  }, [getDisplayIndexById, selectedId, virtualizer])
 
   useLayoutEffect(() => {
     previousSelectedIdRef.current = selectedId
   }, [selectedId])
 
+  // 稳定的右键菜单回调，保证 memo 化的行不会因为内联函数而重渲染。
+  const handleRowContextMenu = useCallback(
+    (id: string, x: number, y: number) => {
+      onSelect(id)
+      setContextMenuState({ entryId: id, x, y })
+    },
+    [onSelect],
+  )
+
   useLayoutEffect(() => {
     const parent = parentRef.current
-    const previousDisplayEntries = previousDisplayEntriesRef.current
+    const previousEntries = previousEntriesRef.current
     if (!parent) {
-      previousDisplayEntriesRef.current = displayEntries
+      previousEntriesRef.current = entries
       return
     }
 
     const previousScrollTop = previousScrollTopRef.current
     const isBrowsingHistory = previousScrollTop > TOP_STABLE_THRESHOLD_PX
-    if (isBrowsingHistory && previousDisplayEntries.length > 0) {
-      const previousAnchorIndex = Math.floor(previousScrollTop / ROW_HEIGHT_PX)
-      const previousAnchor = previousDisplayEntries[previousAnchorIndex]
+    if (isBrowsingHistory && previousEntries.length > 0) {
+      const previousAnchorDisplayIndex = Math.floor(previousScrollTop / ROW_HEIGHT_PX)
+      // 倒序展示：展示索引对应源数组的 length-1-索引。
+      const previousAnchor =
+        previousEntries[previousEntries.length - 1 - previousAnchorDisplayIndex]
       if (previousAnchor) {
-        const nextAnchorIndex = displayEntries.findIndex(
+        const nextSourceIndex = entries.findIndex(
           (entry) => entry.id === previousAnchor.id,
         )
-        if (nextAnchorIndex >= 0) {
-          const anchorOffset = previousScrollTop - previousAnchorIndex * ROW_HEIGHT_PX
-          parent.scrollTop = nextAnchorIndex * ROW_HEIGHT_PX + anchorOffset
+        if (nextSourceIndex >= 0) {
+          const nextAnchorDisplayIndex = entries.length - 1 - nextSourceIndex
+          const anchorOffset =
+            previousScrollTop - previousAnchorDisplayIndex * ROW_HEIGHT_PX
+          parent.scrollTop = nextAnchorDisplayIndex * ROW_HEIGHT_PX + anchorOffset
         }
       }
     }
 
-    previousDisplayEntriesRef.current = displayEntries
+    previousEntriesRef.current = entries
     previousScrollTopRef.current = parent.scrollTop
-  }, [displayEntries])
+  }, [entries])
 
-  if (displayEntries.length === 0) {
+  if (entryCount === 0) {
     if (!emptyText) {
       return <div className={className} aria-hidden />
     }
@@ -145,11 +185,9 @@ export function TrafficVirtualListUI({
   const contextMenuEntry =
     activeContextEntryId == null
       ? null
-      : displayEntries.find((entry) => entry.id === activeContextEntryId) ?? null
-  const selectedIndex = selectedId
-    ? displayEntries.findIndex((entry) => entry.id === selectedId)
-    : -1
-  const canFocusSelectedEntry = selectedIndex >= 0
+      : entries.find((entry) => entry.id === activeContextEntryId) ?? null
+  const selectedDisplayIndex = getDisplayIndexById(selectedId)
+  const canFocusSelectedEntry = selectedDisplayIndex >= 0
 
   return (
     <ContextMenu
@@ -173,22 +211,21 @@ export function TrafficVirtualListUI({
             onKeyDown={(event) => {
               if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
               event.preventDefault()
-              if (displayEntries.length === 0) return
+              if (entryCount === 0) return
 
-              const selectedIndex = selectedId
-                ? displayEntries.findIndex((entry) => entry.id === selectedId)
-                : -1
-              if (selectedIndex < 0) {
-                onSelect(displayEntries[0].id)
+              const currentDisplayIndex = getDisplayIndexById(selectedId)
+              if (currentDisplayIndex < 0) {
+                const firstEntry = getEntryAtDisplayIndex(0)
+                if (firstEntry) onSelect(firstEntry.id)
                 return
               }
 
-              const nextIndex =
+              const nextDisplayIndex =
                 event.key === 'ArrowUp'
-                  ? Math.max(selectedIndex - 1, 0)
-                  : Math.min(selectedIndex + 1, displayEntries.length - 1)
-              if (nextIndex === selectedIndex) return
-              const nextEntry = displayEntries[nextIndex]
+                  ? Math.max(currentDisplayIndex - 1, 0)
+                  : Math.min(currentDisplayIndex + 1, entryCount - 1)
+              if (nextDisplayIndex === currentDisplayIndex) return
+              const nextEntry = getEntryAtDisplayIndex(nextDisplayIndex)
               if (!nextEntry) return
               onSelect(nextEntry.id)
             }}
@@ -199,13 +236,8 @@ export function TrafficVirtualListUI({
               aria-label="Traffic"
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
-                const entry = displayEntries[virtualRow.index]
+                const entry = getEntryAtDisplayIndex(virtualRow.index)
                 if (!entry) return null
-
-                const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
-                const contentType = getEntryContentType(entry)
-                const appName = getRequesterAppName(entry)
-                const rowStatusLabel = getRowStatusLabel(entry, tags)
                 const hasMatchedRule = Boolean(
                   entry.overrideMatchId ||
                     entry.breakpointMatchId ||
@@ -213,57 +245,18 @@ export function TrafficVirtualListUI({
                 )
 
                 return (
-                  <li
+                  <TrafficRow
                     key={entry.id}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: virtualRow.size,
-                      transform: `translateY(${virtualRow.start}px)`,
-                      outline: 'none',
-                      outlineWidth: 0,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className={`${s.row} ${selectedId === entry.id ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
-                      style={{ height: virtualRow.size }}
-                      onClick={() => {
-                        onSelect(entry.id)
-                      }}
-                      onContextMenu={(event) => {
-                        onSelect(entry.id)
-                        setContextMenuState({
-                          entryId: entry.id,
-                          x: event.clientX,
-                          y: event.clientY,
-                        })
-                      }}
-                      onDoubleClick={
-                        onEntryDoubleClick
-                          ? () => onEntryDoubleClick(entry.id)
-                          : undefined
-                      }
-                    >
-                      <span className={s.url} title={entry.url}>
-                        {entry.url}
-                      </span>
-                      <span className={s.code} title={rowStatusLabel}>
-                        {httpCodeText}
-                      </span>
-                      <span className={s.method} title={entry.method}>
-                        {entry.method}
-                      </span>
-                      <span className={s.contentType} title={contentType}>
-                        {contentType}
-                      </span>
-                      <span className={s.app} title={appName}>
-                        {appName}
-                      </span>
-                    </button>
-                  </li>
+                    entry={entry}
+                    isSelected={selectedId === entry.id}
+                    hasMatchedRule={hasMatchedRule}
+                    tags={tags}
+                    top={virtualRow.start}
+                    height={virtualRow.size}
+                    onSelect={onSelect}
+                    onContextMenu={handleRowContextMenu}
+                    onEntryDoubleClick={onEntryDoubleClick}
+                  />
                 )
               })}
             </ul>
@@ -287,7 +280,7 @@ export function TrafficVirtualListUI({
                 type="button"
                 className={`${s.floatingAction} ${s.floatingActionVisible}`}
                 onClick={() => {
-                  virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
+                  virtualizer.scrollToIndex(selectedDisplayIndex, { align: 'auto' })
                 }}
                 aria-label={t.focusSelected}
                 title={t.focusSelected}
@@ -383,6 +376,83 @@ export function TrafficVirtualListUI({
   )
 }
 
+type TrafficRowProps = {
+  entry: TrafficEntry
+  isSelected: boolean
+  hasMatchedRule: boolean
+  tags: TrafficVirtualListTagTexts
+  top: number
+  height: number
+  onSelect: (id: string) => void
+  onContextMenu: (id: string, x: number, y: number) => void
+  onEntryDoubleClick?: (id: string) => void
+}
+
+// memo 化的单行：仅当自身 props（entry / 选中态 / 命中态等）变化时才重渲染，
+// 派生值（content-type、appName 等 header 查找）也只在这些情况下重算。
+const TrafficRow = memo(function TrafficRow({
+  entry,
+  isSelected,
+  hasMatchedRule,
+  tags,
+  top,
+  height,
+  onSelect,
+  onContextMenu,
+  onEntryDoubleClick,
+}: TrafficRowProps): ReactElement {
+  const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
+  const contentType = getEntryContentType(entry)
+  const appName = getRequesterAppName(entry)
+  const rowStatusLabel = getRowStatusLabel(entry, tags)
+
+  return (
+    <li
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height,
+        transform: `translateY(${top}px)`,
+        outline: 'none',
+        outlineWidth: 0,
+      }}
+    >
+      <button
+        type="button"
+        className={`${s.row} ${isSelected ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
+        style={{ height }}
+        onClick={() => {
+          onSelect(entry.id)
+        }}
+        onContextMenu={(event) => {
+          onContextMenu(entry.id, event.clientX, event.clientY)
+        }}
+        onDoubleClick={
+          onEntryDoubleClick ? () => onEntryDoubleClick(entry.id) : undefined
+        }
+      >
+        <span className={s.url} title={entry.url}>
+          {entry.url}
+        </span>
+        <span className={s.code} title={rowStatusLabel}>
+          {httpCodeText}
+        </span>
+        <span className={s.method} title={entry.method}>
+          {entry.method}
+        </span>
+        <span className={s.contentType} title={contentType}>
+          {contentType}
+        </span>
+        <span className={s.app} title={appName}>
+          {appName}
+        </span>
+      </button>
+    </li>
+  )
+})
+
 function getEntryContentType(entry: TrafficEntry): string {
   const responseContentType = entry.responseHeaders?.find(
     ([headerName]) => headerName.toLowerCase() === 'content-type',
@@ -421,27 +491,3 @@ function normalizeContentTypeLabel(contentTypeValue: string): string {
   return normalizedSubtype
 }
 
-function getRequesterAppName(entry: TrafficEntry): string {
-  if (entry.appName && entry.appName.trim()) return entry.appName.trim()
-  const userAgent = entry.requestHeaders.find(
-    ([headerName]) => headerName.toLowerCase() === 'user-agent',
-  )?.[1]
-  if (!userAgent) return entry.peer || '—'
-  const normalizedUserAgent = userAgent.toLowerCase()
-  if (normalizedUserAgent.includes('edg/')) return 'Microsoft Edge'
-  if (normalizedUserAgent.includes('chrome/') && !normalizedUserAgent.includes('edg/')) {
-    return 'Google Chrome'
-  }
-  if (normalizedUserAgent.includes('firefox/')) return 'Mozilla Firefox'
-  if (
-    normalizedUserAgent.includes('safari/') &&
-    !normalizedUserAgent.includes('chrome/') &&
-    !normalizedUserAgent.includes('chromium/')
-  ) {
-    return 'Safari'
-  }
-  const firstToken = userAgent.trim().split(/\s+/)[0]
-  if (!firstToken) return entry.peer || '—'
-  const productName = firstToken.split('/')[0]
-  return productName || entry.peer || '—'
-}

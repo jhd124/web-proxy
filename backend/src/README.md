@@ -7,7 +7,7 @@
 - `main.rs`：进程入口，负责加载配置、初始化状态、启动 proxy 与 dashboard 服务。
 - `api.rs`：Dashboard HTTP/WebSocket 路由与 handler，提供健康检查、抓包查询、操作命令等接口。
 - `proxy.rs`：HTTP/HTTPS 代理主流程，包含转发、抓包记录、MITM 处理与流式响应处理。
-- `state.rs`：全局应用状态定义与状态读写接口。
+- `state.rs`：全局应用状态定义与状态读写接口；规则变更后通过 `recompute_rule_matches` 重算历史 HTTP 条目的 `override_match_id`/`breakpoint_match_id`（潜在命中：第一个 enabled 命中规则；body 类匹配按 `request_body_preview` best-effort），有变化时广播 `snapshot`，把命中计算下沉到后端。
 - `ports.rs`：端口解析与默认端口策略。
 - `mitm.rs`：MITM 证书与 TLS 相关能力。
 - `overrides.rs`：覆盖规则的增删改查与匹配逻辑。

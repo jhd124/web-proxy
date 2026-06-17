@@ -4,6 +4,7 @@ import { trimTrafficEntries } from '../trafficEntriesLimit'
 import {
   EMPTY_TRAFFIC_FILTERS,
   entryMatchesTrafficFilters,
+  getRequesterAppName,
   hasActiveTrafficFilters,
   type TrafficFilterGroupKey,
   type TrafficFilters,
@@ -103,6 +104,19 @@ export function useTrafficState() {
   }, [])
 
   const hasTrafficFilters = hasActiveTrafficFilters(trafficFilters)
+  const availableRequesterApps = useMemo(() => {
+    const requesterAppNameByNormalized = new Map<string, string>()
+    for (const entry of entries) {
+      const requesterAppName = getRequesterAppName(entry).trim()
+      if (!requesterAppName || requesterAppName === '—') continue
+      const normalizedRequesterAppName = requesterAppName.toLowerCase()
+      if (requesterAppNameByNormalized.has(normalizedRequesterAppName)) continue
+      requesterAppNameByNormalized.set(normalizedRequesterAppName, requesterAppName)
+    }
+    return [...requesterAppNameByNormalized.values()].sort((left, right) =>
+      left.localeCompare(right, undefined, { sensitivity: 'base' }),
+    )
+  }, [entries])
 
   const filteredEntries = useMemo(() => {
     const hasKeywordFilter = activeFilterKeywords.length > 0
@@ -206,6 +220,7 @@ export function useTrafficState() {
     toggleTrafficFilterValue,
     clearTrafficFilters,
     hasTrafficFilters,
+    availableRequesterApps,
     testError,
     setTestError,
     urlFilterTrimmed,

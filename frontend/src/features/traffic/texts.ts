@@ -9,12 +9,13 @@ export const trafficTexts = {
     activeBadgeAriaLabel: 'Filters active',
     dialogTitle: 'Filters',
     dialogDescription:
-      'Filter traffic by resource type, request method, and response status.',
+      'Filter traffic by resource type, request method, response status, and requester app.',
     clearAll: 'Clear all',
     close: 'Close',
     groupResourceType: 'Resource type',
     groupMethod: 'Request method',
     groupStatus: 'Status code',
+    groupRequesterApp: 'Requester app',
     resourceTypeLabels: {
       document: 'Document',
       js: 'JS',
@@ -43,6 +44,7 @@ export const trafficTexts = {
       '4xx': '4xx',
       '5xx': '5xx',
     } as Record<string, string>,
+    requesterAppLabels: {} as Record<string, string>,
   },
   schemeHttps: 'HTTPS',
   connectTunnel: (url: string) => `${url} (TLS tunnel)`,

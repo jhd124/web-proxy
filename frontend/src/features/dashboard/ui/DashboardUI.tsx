@@ -26,6 +26,7 @@ export function DashboardUI(p: DashboardViewModel) {
                   popUrlFilterTag={p.popUrlFilterTag}
                   clearTraffic={p.clearTraffic}
                   trafficFilters={p.trafficFilters}
+                  availableRequesterApps={p.availableRequesterApps}
                   toggleTrafficFilterValue={p.toggleTrafficFilterValue}
                   clearTrafficFilters={p.clearTrafficFilters}
                   hasTrafficFilters={p.hasTrafficFilters}
