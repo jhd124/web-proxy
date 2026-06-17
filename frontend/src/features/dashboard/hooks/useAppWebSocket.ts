@@ -2,12 +2,12 @@ import type { MutableRefObject } from 'react'
 import { useEffect } from 'react'
 import { wsUrl } from '../../../lib/dashboardUtils'
 import { focusMainWindow } from '../../../lib/focusMainWindow'
-import type { TrafficEntry, WsMessage } from '../../../types'
+import type { TrafficEntrySummary, WsMessage } from '../../../types'
 
 type Ws = 'connecting' | 'open' | 'closed'
 
 export function useAppWebSocket(p: {
-  setEntries: React.Dispatch<React.SetStateAction<TrafficEntry[]>>
+  setEntries: React.Dispatch<React.SetStateAction<TrafficEntrySummary[]>>
   /** Synced to current selected id every render; snapshot uses .current to avoid ws reconnects */
   selectedIdRef: MutableRefObject<string | null>
   setSelectedId: (id: string | null) => void
@@ -36,7 +36,7 @@ export function useAppWebSocket(p: {
 
     // 高频 traffic 消息先按 id 合并到缓冲区，再用 rAF 每帧统一 flush，
     // 把每秒几十次 setEntries 合并到约每帧一次，避免重渲染风暴。
-    const pendingTrafficById = new Map<string, TrafficEntry>()
+    const pendingTrafficById = new Map<string, TrafficEntrySummary>()
     let flushHandle: number | null = null
     const hasRaf = typeof requestAnimationFrame === 'function'
 
@@ -50,8 +50,8 @@ export function useAppWebSocket(p: {
         for (let i = 0; i < prev.length; i += 1) {
           indexById.set(prev[i]!.id, i)
         }
-        let updatedEntries: TrafficEntry[] | null = null
-        const appendedEntries: TrafficEntry[] = []
+        let updatedEntries: TrafficEntrySummary[] | null = null
+        const appendedEntries: TrafficEntrySummary[] = []
         for (const entry of batchedEntries) {
           const existingIndex = indexById.get(entry.id)
           if (existingIndex === undefined) {
@@ -90,7 +90,7 @@ export function useAppWebSocket(p: {
       try {
         const r = await fetch('/api/requests')
         if (!r.ok) return
-        const list = (await r.json()) as TrafficEntry[]
+        const list = (await r.json()) as TrafficEntrySummary[]
         cancelScheduledFlush()
         pendingTrafficById.clear()
         setEntries(list)

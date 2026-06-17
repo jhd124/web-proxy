@@ -93,6 +93,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/health", get(health))
         .route("/api/requests", get(list_requests))
         .route("/api/requests", delete(clear_requests))
+        .route("/api/requests/:id", get(request_detail))
         .route("/api/capture/pause", post(pause_capture))
         .route("/api/capture/resume", post(resume_capture))
         .route("/api/mitm/ca.pem", get(mitm_ca))
@@ -203,14 +204,24 @@ async fn mitm_ca(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 
 async fn list_requests(
     State(state): State<Arc<AppState>>,
-) -> Json<Vec<crate::state::TrafficEntry>> {
-    Json(state.traffic.read().clone())
+) -> Json<Vec<crate::state::TrafficEntrySummary>> {
+    Json(state.traffic_summaries())
+}
+
+async fn request_detail(
+    axum::extract::Path(id): axum::extract::Path<uuid::Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<crate::state::TrafficEntry>, StatusCode> {
+    state
+        .traffic_detail(id)
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn clear_requests(State(state): State<Arc<AppState>>) -> StatusCode {
     state.resume_all_pending_requests();
     state.clear_all_stream_controllers();
-    state.traffic.write().clear();
+    state.clear_traffic_releasing_capacity();
     StatusCode::NO_CONTENT
 }
 
@@ -239,7 +250,13 @@ async fn replay_request(
     axum::extract::Path(id): axum::extract::Path<uuid::Uuid>,
     State(state): State<Arc<AppState>>,
 ) -> StatusCode {
-    let Some(entry) = state.traffic.read().iter().find(|entry| entry.id == id).cloned() else {
+    let Some(entry) = state
+        .traffic
+        .read()
+        .iter()
+        .find(|entry| entry.id == id)
+        .cloned()
+    else {
         return StatusCode::NOT_FOUND;
     };
     if !matches!(entry.kind, crate::state::TrafficKind::Http) {
@@ -328,7 +345,7 @@ async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) ->
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let mut rx = state.tx.subscribe();
-    let initial = state.traffic.read().clone();
+    let initial = state.traffic_summaries();
 
     if let Ok(json) =
         serde_json::to_string(&crate::state::DashboardMessage::Snapshot { requests: initial })

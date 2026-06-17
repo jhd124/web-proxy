@@ -16,7 +16,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { ArrowUpToLine, Focus } from 'lucide-react'
-import type { TrafficEntry } from '../../../types'
+import type { TrafficEntrySummary } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import { getRequesterAppName } from '../trafficFilter'
 import s from './TrafficVirtualListUI.module.css'
@@ -32,7 +32,7 @@ export type TrafficVirtualListTagTexts = {
 }
 
 export type TrafficVirtualListUIProps = {
-  entries: TrafficEntry[]
+  entries: TrafficEntrySummary[]
   matchedEntryIds?: ReadonlySet<string>
   savedEntryIds?: ReadonlySet<string>
   matchedOverrideByEntryId?: ReadonlyMap<string, string>
@@ -99,7 +99,7 @@ export function TrafficVirtualListUI({
     [entries, entryCount],
   )
   const parentRef = useRef<HTMLDivElement>(null)
-  const previousEntriesRef = useRef<TrafficEntry[]>(entries)
+  const previousEntriesRef = useRef<TrafficEntrySummary[]>(entries)
   const previousScrollTopRef = useRef(0)
   const previousSelectedIdRef = useRef<string | null>(null)
   const [contextMenuState, setContextMenuState] = useState<{
@@ -377,7 +377,7 @@ export function TrafficVirtualListUI({
 }
 
 type TrafficRowProps = {
-  entry: TrafficEntry
+  entry: TrafficEntrySummary
   isSelected: boolean
   hasMatchedRule: boolean
   tags: TrafficVirtualListTagTexts
@@ -453,19 +453,15 @@ const TrafficRow = memo(function TrafficRow({
   )
 })
 
-function getEntryContentType(entry: TrafficEntry): string {
-  const responseContentType = entry.responseHeaders?.find(
-    ([headerName]) => headerName.toLowerCase() === 'content-type',
-  )?.[1]
+function getEntryContentType(entry: TrafficEntrySummary): string {
+  const responseContentType = entry.responseContentType
   if (responseContentType) return normalizeContentTypeLabel(responseContentType)
-  const requestContentType = entry.requestHeaders.find(
-    ([headerName]) => headerName.toLowerCase() === 'content-type',
-  )?.[1]
+  const requestContentType = entry.requestContentType
   if (requestContentType) return normalizeContentTypeLabel(requestContentType)
   return '—'
 }
 
-function getRowStatusLabel(entry: TrafficEntry, tags: TrafficVirtualListTagTexts): string {
+function getRowStatusLabel(entry: TrafficEntrySummary, tags: TrafficVirtualListTagTexts): string {
   if (entry.error) return tags.tagError
   if (entry.pending) return tags.tagPending
   if (entry.mitmBypassed) return tags.tagBypassed

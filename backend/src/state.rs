@@ -247,6 +247,60 @@ fn header_map_from_pairs(pairs: &[(String, String)]) -> HeaderMap {
     headers
 }
 
+fn header_value(pairs: &[(String, String)], target: &str) -> Option<String> {
+    pairs
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(target))
+        .map(|(_, value)| value.clone())
+}
+
+fn is_websocket_entry(entry: &TrafficEntry) -> bool {
+    if entry.response_status == Some(101) {
+        return true;
+    }
+    header_value(&entry.request_headers, "upgrade")
+        .map(|value| value.to_ascii_lowercase().contains("websocket"))
+        .unwrap_or(false)
+}
+
+fn requester_app_name(entry: &TrafficEntry) -> String {
+    if let Some(app_name) = entry.app_name.as_deref().map(str::trim) {
+        if !app_name.is_empty() {
+            return app_name.to_string();
+        }
+    }
+    let Some(user_agent) = header_value(&entry.request_headers, "user-agent") else {
+        return if entry.peer.is_empty() {
+            "—".to_string()
+        } else {
+            entry.peer.clone()
+        };
+    };
+    let normalized_user_agent = user_agent.to_ascii_lowercase();
+    if normalized_user_agent.contains("edg/") {
+        return "Microsoft Edge".to_string();
+    }
+    if normalized_user_agent.contains("chrome/") && !normalized_user_agent.contains("edg/") {
+        return "Google Chrome".to_string();
+    }
+    if normalized_user_agent.contains("firefox/") {
+        return "Mozilla Firefox".to_string();
+    }
+    if normalized_user_agent.contains("safari/")
+        && !normalized_user_agent.contains("chrome/")
+        && !normalized_user_agent.contains("chromium/")
+    {
+        return "Safari".to_string();
+    }
+    let first_token = user_agent.trim().split_whitespace().next().unwrap_or("");
+    let product_name = first_token.split('/').next().unwrap_or("");
+    if product_name.is_empty() {
+        entry.peer.clone()
+    } else {
+        product_name.to_string()
+    }
+}
+
 #[cfg(test)]
 #[path = "state_tests.rs"]
 mod state_tests;
@@ -295,9 +349,9 @@ impl BreakpointRule {
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DashboardMessage {
     #[serde(rename = "snapshot")]
-    Snapshot { requests: Vec<TrafficEntry> },
+    Snapshot { requests: Vec<TrafficEntrySummary> },
     #[serde(rename = "traffic")]
-    Traffic { entry: TrafficEntry },
+    Traffic { entry: TrafficEntrySummary },
     #[serde(rename = "overrides_updated")]
     OverridesUpdated,
     #[serde(rename = "breakpoints_updated")]
@@ -356,6 +410,74 @@ pub struct TrafficEntry {
     pub breakpoint_match_id: Option<Uuid>,
     pub stream_controllable: bool,
     pub stream_playing: Option<bool>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrafficEntrySummary {
+    pub id: Uuid,
+    pub at: DateTime<Utc>,
+    pub peer: String,
+    pub app_name: Option<String>,
+    pub method: String,
+    pub url: String,
+    pub scheme: String,
+    pub host: String,
+    pub path: String,
+    pub kind: TrafficKind,
+    #[serde(default)]
+    pub mitm_bypassed: bool,
+    pub response_status: Option<u16>,
+    pub duration_ms: Option<u64>,
+    pub error: Option<String>,
+    #[serde(default)]
+    pub pending: bool,
+    pub breakpoint_name: Option<String>,
+    #[serde(default)]
+    pub override_match_id: Option<String>,
+    pub breakpoint_match_id: Option<Uuid>,
+    pub stream_controllable: bool,
+    pub stream_playing: Option<bool>,
+    pub request_content_type: Option<String>,
+    pub response_content_type: Option<String>,
+    pub requester_app_name: String,
+    pub websocket: bool,
+}
+
+impl From<&TrafficEntry> for TrafficEntrySummary {
+    fn from(entry: &TrafficEntry) -> Self {
+        let request_content_type = header_value(&entry.request_headers, "content-type");
+        let response_content_type = entry
+            .response_headers
+            .as_deref()
+            .and_then(|headers| header_value(headers, "content-type"));
+        Self {
+            id: entry.id,
+            at: entry.at,
+            peer: entry.peer.clone(),
+            app_name: entry.app_name.clone(),
+            method: entry.method.clone(),
+            url: entry.url.clone(),
+            scheme: entry.scheme.clone(),
+            host: entry.host.clone(),
+            path: entry.path.clone(),
+            kind: entry.kind.clone(),
+            mitm_bypassed: entry.mitm_bypassed,
+            response_status: entry.response_status,
+            duration_ms: entry.duration_ms,
+            error: entry.error.clone(),
+            pending: entry.pending,
+            breakpoint_name: entry.breakpoint_name.clone(),
+            override_match_id: entry.override_match_id.clone(),
+            breakpoint_match_id: entry.breakpoint_match_id,
+            stream_controllable: entry.stream_controllable,
+            stream_playing: entry.stream_playing,
+            request_content_type,
+            response_content_type,
+            requester_app_name: requester_app_name(entry),
+            websocket: is_websocket_entry(entry),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -435,9 +557,10 @@ impl AppState {
             let drop = log.len() - self.max_traffic + 1;
             log.drain(0..drop);
         }
-        log.push(entry.clone());
+        let summary = TrafficEntrySummary::from(&entry);
+        log.push(entry);
         drop(log);
-        let _ = self.tx.send(DashboardMessage::Traffic { entry });
+        let _ = self.tx.send(DashboardMessage::Traffic { entry: summary });
     }
 
     pub fn update_traffic(&self, id: Uuid, update: TrafficUpdate) {
@@ -476,10 +599,30 @@ impl AppState {
             if let Some(p) = update.stream_playing {
                 e.stream_playing = Some(p);
             }
-            let entry = e.clone();
+            let entry = TrafficEntrySummary::from(&*e);
             drop(log);
             let _ = self.tx.send(DashboardMessage::Traffic { entry });
         }
+    }
+
+    pub fn traffic_summaries(&self) -> Vec<TrafficEntrySummary> {
+        self.traffic
+            .read()
+            .iter()
+            .map(TrafficEntrySummary::from)
+            .collect()
+    }
+
+    pub fn traffic_detail(&self, id: Uuid) -> Option<TrafficEntry> {
+        self.traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .cloned()
+    }
+
+    pub fn clear_traffic_releasing_capacity(&self) {
+        *self.traffic.write() = Vec::new();
     }
 
     pub fn notify_overrides_changed(&self) {
@@ -539,7 +682,7 @@ impl AppState {
         if !has_changes {
             return;
         }
-        let requests = log.clone();
+        let requests = log.iter().map(TrafficEntrySummary::from).collect();
         drop(log);
         drop(breakpoints);
         drop(overrides);

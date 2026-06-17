@@ -1,4 +1,4 @@
-import type { TrafficEntry } from '../../types'
+import type { TrafficEntry, TrafficEntrySummary } from '../../types'
 
 export type FloatingTrafficViewModel = {
   urlFilter: string
@@ -8,7 +8,7 @@ export type FloatingTrafficViewModel = {
   removeUrlFilterTag: (keyword: string) => void
   popUrlFilterTag: () => void
   clearTraffic: () => Promise<void>
-  filteredEntries: TrafficEntry[]
+  filteredEntries: TrafficEntrySummary[]
   selectedId: string | null
   setSelectedId: (id: string) => void
   selected: TrafficEntry | null

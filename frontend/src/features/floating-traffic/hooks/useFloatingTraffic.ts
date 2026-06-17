@@ -1,5 +1,5 @@
 import { focusMainWindow } from '@/lib/focusMainWindow'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppWebSocket } from '../../dashboard/hooks/useAppWebSocket'
 import { useTrafficState } from '../../traffic/hooks/useTrafficState'
 import { floatingTrafficTexts as t } from '../texts'
@@ -14,11 +14,6 @@ export function useFloatingTraffic() {
   useEffect(() => {
     selectedIdRef.current = traffic.selectedId
   }, [traffic.selectedId])
-
-  const selected = useMemo(
-    () => traffic.entries.find((entry) => entry.id === traffic.selectedId) ?? null,
-    [traffic.entries, traffic.selectedId],
-  )
 
   const refreshFloatingData = useCallback(async () => {
     await Promise.resolve()
@@ -60,7 +55,7 @@ export function useFloatingTraffic() {
     filteredEntries: traffic.filteredEntries,
     selectedId: traffic.selectedId,
     setSelectedId: traffic.setSelectedId,
-    selected,
+    selected: traffic.selected,
     openMainWindowForEntry,
   }
 }

@@ -15,7 +15,7 @@
 - `main.tsx`：应用挂载入口。
 - `App.tsx`：应用根组件。
 - `index.css`：全局样式。
-- `types.ts`：共享类型。
+- `types.ts`：共享类型；流量列表使用 `TrafficEntrySummary` 摘要，完整 `TrafficEntry` 仅在详情、保存、导出等按需场景使用。
 
 ## 维护要求
 

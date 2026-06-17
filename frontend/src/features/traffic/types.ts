@@ -1,8 +1,8 @@
-import type { TrafficEntry } from '../../types'
+import type { TrafficEntry, TrafficEntrySummary } from '../../types'
 
 export type TrafficPanelUIProps = {
   testError: string | null
-  filteredEntries: TrafficEntry[]
+  filteredEntries: TrafficEntrySummary[]
   matchedTrafficEntryIds: ReadonlySet<string>
   savedTrafficEntryIds: ReadonlySet<string>
   matchedOverrideByEntryId: ReadonlyMap<string, string>

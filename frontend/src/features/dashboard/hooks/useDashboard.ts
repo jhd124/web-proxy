@@ -21,6 +21,7 @@ import { showSuccessToast, showToast } from '../../../lib/toast'
 import { trafficTexts } from '../../traffic/texts'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
+import type { TrafficEntry } from '../../../types'
 
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
@@ -270,16 +271,30 @@ export function useDashboard() {
   }, [proxyListenAddress])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
-  const getEntryById = useCallback(
+  const getEntrySummaryById = useCallback(
     (id: string) => entries.find((entry) => entry.id === id) ?? null,
     [entries],
   )
+  const getEntryDetailById = useCallback(
+    async (id: string): Promise<TrafficEntry> => {
+      if (selected?.id === id) return selected
+      const response = await fetch(`/api/requests/${id}`)
+      if (!response.ok) {
+        throw new Error(`Load request detail failed (HTTP ${response.status})`)
+      }
+      return (await response.json()) as TrafficEntry
+    },
+    [selected],
+  )
 
-  const exportFilteredTrafficAsHar = useCallback(() => {
+  const exportFilteredTrafficAsHar = useCallback(async () => {
     if (exportHarSaving) return
     setExportHarSaving(true)
     try {
-      const har = trafficEntriesToHar(filteredEntries)
+      const detailEntries = await Promise.all(
+        filteredEntries.map((entry) => getEntryDetailById(entry.id)),
+      )
+      const har = trafficEntriesToHar(detailEntries)
       const payload = JSON.stringify(har, null, 2)
       const timestamp = new Date().toISOString().replace(/:/g, '-')
       downloadBlob(
@@ -297,7 +312,7 @@ export function useDashboard() {
     } finally {
       setExportHarSaving(false)
     }
-  }, [exportHarSaving, filteredEntries])
+  }, [exportHarSaving, filteredEntries, getEntryDetailById])
 
   const selectedIsSaved = useMemo(
     () => Boolean(selected && isRequestSaved(selected.id)),
@@ -319,33 +334,30 @@ export function useDashboard() {
 
   const saveEntryRequest = useCallback(
     async (id: string) => {
-      const entry = getEntryById(id)
-      if (!entry) return
       traffic.setSelectedId(id)
       try {
+        const entry = await getEntryDetailById(id)
         await saveRequest(entry)
       } catch (e) {
         window.alert(String(e))
       }
     },
-    [getEntryById, saveRequest, traffic],
+    [getEntryDetailById, saveRequest, traffic],
   )
 
   const copyEntryCurl = useCallback(
-    (id: string) => {
-      const entry = getEntryById(id)
-      if (!entry) return
-      const curl = buildCurlCommand(entry)
-      void copyTextToClipboard(curl)
-        .then(() => {
-          showSuccessToast(trafficTexts.copyCurlSuccess)
-        })
-        .catch((error) => {
-          const detail = error instanceof Error ? error.message : String(error)
-          showToast(trafficTexts.copyCurlFailed(detail), 'error')
-        })
+    async (id: string) => {
+      try {
+        const entry = await getEntryDetailById(id)
+        const curl = buildCurlCommand(entry)
+        await copyTextToClipboard(curl)
+        showSuccessToast(trafficTexts.copyCurlSuccess)
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(trafficTexts.copyCurlFailed(detail), 'error')
+      }
     },
-    [getEntryById],
+    [getEntryDetailById],
   )
 
   const selectedMatchingOverride = useMemo(() => {
@@ -544,7 +556,7 @@ export function useDashboard() {
 
   const addBreakpointFromEntry = useCallback(
     async (id: string) => {
-      const entry = getEntryById(id)
+      const entry = getEntrySummaryById(id)
       if (!entry || entry.kind !== 'http') return
       traffic.setSelectedId(id)
       const matchOrigin = trafficEntryOrigin(entry)
@@ -559,7 +571,7 @@ export function useDashboard() {
       openBreakpointsPanel()
     },
     [
-      getEntryById,
+      getEntrySummaryById,
       openBreakpointsPanel,
       setBreakpointForm,
       startNewBreakpoint,
@@ -613,31 +625,37 @@ export function useDashboard() {
   ])
 
   const openEntryOverrideDrawer = useCallback(
-    (id: string) => {
-      const entry = getEntryById(id)
-      if (!entry || entry.kind !== 'http') return
+    async (id: string) => {
+      const summary = getEntrySummaryById(id)
+      if (!summary || summary.kind !== 'http') return
       traffic.setSelectedId(id)
-      setOverrideError(null)
-      const matchParts = urlMatchPartsForForm(entry)
-      setOverrideEditingId(null)
-      setOverrideForm({
-        ...getDefaultOverrideForm(),
-        status: entry.responseStatus ?? 200,
-        body: entry.responseBodyPreview ?? '',
-        headersText: headersToText(entry.responseHeaders ?? undefined),
-        matchMethod: matchParts.matchMethod,
-        matchProtocol: matchParts.matchProtocol,
-        matchHost: matchParts.matchHost,
-        matchPath: matchParts.matchPath,
-        matchQuery: matchParts.matchQuery,
-      })
-      bumpRequestPanel()
-      setOverridesPanel({ state: 'edit', source: 'traffic' })
-      navigateToTab('override')
+      try {
+        const entry = await getEntryDetailById(id)
+        setOverrideError(null)
+        const matchParts = urlMatchPartsForForm(entry)
+        setOverrideEditingId(null)
+        setOverrideForm({
+          ...getDefaultOverrideForm(),
+          status: entry.responseStatus ?? 200,
+          body: entry.responseBodyPreview ?? '',
+          headersText: headersToText(entry.responseHeaders ?? undefined),
+          matchMethod: matchParts.matchMethod,
+          matchProtocol: matchParts.matchProtocol,
+          matchHost: matchParts.matchHost,
+          matchPath: matchParts.matchPath,
+          matchQuery: matchParts.matchQuery,
+        })
+        bumpRequestPanel()
+        setOverridesPanel({ state: 'edit', source: 'traffic' })
+        navigateToTab('override')
+      } catch (error) {
+        window.alert(String(error))
+      }
     },
     [
       bumpRequestPanel,
-      getEntryById,
+      getEntryDetailById,
+      getEntrySummaryById,
       navigateToTab,
       setOverrideEditingId,
       setOverrideError,
@@ -649,7 +667,7 @@ export function useDashboard() {
 
   const replayEntryRequest = useCallback(
     async (id: string) => {
-      const entry = getEntryById(id)
+      const entry = getEntrySummaryById(id)
       if (!entry || entry.kind !== 'http') return
       traffic.setSelectedId(id)
       try {
@@ -665,7 +683,7 @@ export function useDashboard() {
         showToast(trafficTexts.replayRequestFailed(detail), 'error')
       }
     },
-    [getEntryById, traffic],
+    [getEntrySummaryById, traffic],
   )
 
   const openSavedRequestForEntry = useCallback(

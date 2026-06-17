@@ -102,18 +102,68 @@ async fn stream_play_pause_handlers_follow_controller_existence() {
 async fn clear_requests_clears_traffic_pending_and_stream_controllers() {
     let state = build_state();
     let id = Uuid::new_v4();
+    state.traffic.write().reserve(64);
     state.push_traffic(sample_entry(id));
     let _resume_rx = state.register_pending_request(id);
     let _stream_rx = state.register_stream_controller(id, true);
     assert_eq!(state.traffic.read().len(), 1);
+    assert!(state.traffic.read().capacity() > 0);
     assert_eq!(state.pending_requests.lock().len(), 1);
     assert_eq!(state.stream_controllers.lock().len(), 1);
 
     let status = clear_requests(State(state.clone())).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
     assert!(state.traffic.read().is_empty());
+    assert_eq!(state.traffic.read().capacity(), 0);
     assert!(state.pending_requests.lock().is_empty());
     assert!(state.stream_controllers.lock().is_empty());
+}
+
+#[tokio::test]
+async fn list_requests_returns_summaries_and_detail_returns_full_entry() {
+    let state = build_state();
+    let id = Uuid::new_v4();
+    let mut entry = sample_entry(id);
+    entry.request_headers = vec![
+        ("content-type".to_string(), "application/json".to_string()),
+        ("user-agent".to_string(), "curl/8.0".to_string()),
+    ];
+    entry.request_body_preview = Some("{\"ok\":true}".to_string());
+    entry.response_headers = Some(vec![(
+        "content-type".to_string(),
+        "application/json; charset=utf-8".to_string(),
+    )]);
+    entry.response_body_preview = Some("{\"done\":true}".to_string());
+    state.push_traffic(entry);
+
+    let summaries = list_requests(State(state.clone())).await.0;
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].id, id);
+    assert_eq!(
+        summaries[0].request_content_type.as_deref(),
+        Some("application/json")
+    );
+    assert_eq!(
+        summaries[0].response_content_type.as_deref(),
+        Some("application/json; charset=utf-8")
+    );
+    assert_eq!(summaries[0].requester_app_name, "curl");
+
+    let detail = request_detail(axum::extract::Path(id), State(state.clone()))
+        .await
+        .expect("request detail should exist")
+        .0;
+    assert_eq!(
+        detail.request_body_preview.as_deref(),
+        Some("{\"ok\":true}")
+    );
+    assert_eq!(
+        detail.response_body_preview.as_deref(),
+        Some("{\"done\":true}")
+    );
+
+    let missing = request_detail(axum::extract::Path(Uuid::new_v4()), State(state)).await;
+    assert!(matches!(missing, Err(StatusCode::NOT_FOUND)));
 }
 
 #[tokio::test]
@@ -227,9 +277,10 @@ async fn create_breakpoint_conflicts_on_same_method_origin_path() {
         match_origin: Some("https://example.com".to_string()),
         match_path_regex: Some("/api".to_string()),
     };
-    let created = crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(first_body))
-        .await
-        .expect("first breakpoint should be created");
+    let created =
+        crate::breakpoints::create_breakpoint(State(state.clone()), axum::Json(first_body))
+            .await
+            .expect("first breakpoint should be created");
     assert_eq!(created.0.match_method.as_deref(), Some("POST"));
 
     // Same identity tuple (method+origin+path), only different case/whitespace.

@@ -29,6 +29,33 @@ export interface TrafficEntry {
   streamPlaying?: boolean | null
 }
 
+export interface TrafficEntrySummary {
+  id: string
+  at: string
+  peer: string
+  appName?: string | null
+  method: string
+  url: string
+  scheme: string
+  host: string
+  path: string
+  kind: TrafficKind
+  mitmBypassed?: boolean
+  responseStatus?: number | null
+  durationMs?: number | null
+  error?: string | null
+  pending: boolean
+  breakpointName?: string | null
+  overrideMatchId?: string | null
+  breakpointMatchId?: string | null
+  streamControllable: boolean
+  streamPlaying?: boolean | null
+  requestContentType?: string | null
+  responseContentType?: string | null
+  requesterAppName: string
+  websocket: boolean
+}
+
 export interface SavedRequest {
   id: string
   savedAt: string
@@ -87,8 +114,8 @@ export interface OverrideFormState {
 }
 
 export type WsMessage =
-  | { type: 'snapshot'; requests: TrafficEntry[] }
-  | { type: 'traffic'; entry: TrafficEntry }
+  | { type: 'snapshot'; requests: TrafficEntrySummary[] }
+  | { type: 'traffic'; entry: TrafficEntrySummary }
   | { type: 'overrides_updated' }
   | { type: 'breakpoints_updated' }
   | {
