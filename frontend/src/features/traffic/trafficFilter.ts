@@ -1,4 +1,4 @@
-import type { TrafficEntry } from '../../types'
+import type { TrafficEntrySummary } from '../../types'
 
 // 资源类型可选值（用于按响应内容或 URL 后缀归类）
 export const RESOURCE_TYPE_VALUES = [
@@ -40,6 +40,9 @@ export interface TrafficFilters {
 
 export type TrafficFilterGroupKey = keyof TrafficFilters
 
+const FILTER_TOKEN_SPLIT_REGEX = /[\s,]+/
+const DOT_VARIANT_REGEX = /[．。]/g
+
 export const EMPTY_TRAFFIC_FILTERS: TrafficFilters = {
   resourceTypes: [],
   methods: [],
@@ -56,19 +59,52 @@ export function hasActiveTrafficFilters(filters: TrafficFilters): boolean {
   )
 }
 
-function getResponseContentType(entry: TrafficEntry): string {
-  const header = entry.responseHeaders?.find(
-    ([key]) => key.toLowerCase() === 'content-type',
+export function parseTrafficFilterKeywords(raw: string): string[] {
+  const dedupedKeywords = new Set(
+    raw
+      .split(FILTER_TOKEN_SPLIT_REGEX)
+      .map(normalizeTrafficFilterText)
+      .filter((keyword) => keyword.length > 0),
   )
-  return header?.[1]?.toLowerCase() ?? ''
+  return [...dedupedKeywords]
 }
 
-function isWebSocketEntry(entry: TrafficEntry): boolean {
-  if (entry.responseStatus === 101) return true
-  const upgradeHeader = entry.requestHeaders.find(
-    ([key]) => key.toLowerCase() === 'upgrade',
+export function entryMatchesUrlKeywords(
+  entry: TrafficEntrySummary,
+  keywords: readonly string[],
+): boolean {
+  if (keywords.length === 0) return true
+  const urlCandidates = getUrlFilterCandidates(entry.url)
+  return keywords.some((keyword) =>
+    urlCandidates.some((urlCandidate) => urlCandidate.includes(keyword)),
   )
-  return (upgradeHeader?.[1] ?? '').toLowerCase().includes('websocket')
+}
+
+function normalizeTrafficFilterText(value: string): string {
+  return value.trim().normalize('NFKC').replace(DOT_VARIANT_REGEX, '.').toLowerCase()
+}
+
+function getUrlFilterCandidates(url: string): string[] {
+  const normalizedUrl = normalizeTrafficFilterText(url)
+  const decodedUrl = decodeUrlForFilter(url)
+  if (decodedUrl === normalizedUrl) return [normalizedUrl]
+  return [normalizedUrl, decodedUrl]
+}
+
+function decodeUrlForFilter(url: string): string {
+  try {
+    return normalizeTrafficFilterText(decodeURIComponent(url))
+  } catch {
+    return normalizeTrafficFilterText(url)
+  }
+}
+
+function getResponseContentType(entry: TrafficEntrySummary): string {
+  return entry.responseContentType?.toLowerCase() ?? ''
+}
+
+function isWebSocketEntry(entry: TrafficEntrySummary): boolean {
+  return entry.websocket
 }
 
 function classifyByContentType(contentType: string): ResourceTypeValue | null {
@@ -137,7 +173,7 @@ function classifyByExtension(path: string): ResourceTypeValue | null {
   return EXTENSION_TO_RESOURCE_TYPE[extension] ?? null
 }
 
-export function classifyResourceType(entry: TrafficEntry): ResourceTypeValue {
+export function classifyResourceType(entry: TrafficEntrySummary): ResourceTypeValue {
   const byContentType = classifyByContentType(getResponseContentType(entry))
   if (byContentType) return byContentType
   const byExtension = classifyByExtension(entry.path)
@@ -145,44 +181,23 @@ export function classifyResourceType(entry: TrafficEntry): ResourceTypeValue {
   return 'other'
 }
 
-export function getEntryMethodTag(entry: TrafficEntry): string {
+export function getEntryMethodTag(entry: TrafficEntrySummary): string {
   if (isWebSocketEntry(entry)) return 'WEBSOCKET'
   return entry.method.toUpperCase()
 }
 
-export function getEntryStatusClass(entry: TrafficEntry): StatusClassValue | null {
+export function getEntryStatusClass(entry: TrafficEntrySummary): StatusClassValue | null {
   const status = entry.responseStatus
   if (status == null || status < 100 || status >= 600) return null
   return `${Math.floor(status / 100)}xx` as StatusClassValue
 }
 
-export function getRequesterAppName(entry: TrafficEntry): string {
-  if (entry.appName && entry.appName.trim()) return entry.appName.trim()
-  const userAgent = entry.requestHeaders.find(
-    ([headerName]) => headerName.toLowerCase() === 'user-agent',
-  )?.[1]
-  if (!userAgent) return entry.peer || '—'
-  const normalizedUserAgent = userAgent.toLowerCase()
-  if (normalizedUserAgent.includes('edg/')) return 'Microsoft Edge'
-  if (normalizedUserAgent.includes('chrome/') && !normalizedUserAgent.includes('edg/')) {
-    return 'Google Chrome'
-  }
-  if (normalizedUserAgent.includes('firefox/')) return 'Mozilla Firefox'
-  if (
-    normalizedUserAgent.includes('safari/') &&
-    !normalizedUserAgent.includes('chrome/') &&
-    !normalizedUserAgent.includes('chromium/')
-  ) {
-    return 'Safari'
-  }
-  const firstToken = userAgent.trim().split(/\s+/)[0]
-  if (!firstToken) return entry.peer || '—'
-  const productName = firstToken.split('/')[0]
-  return productName || entry.peer || '—'
+export function getRequesterAppName(entry: TrafficEntrySummary): string {
+  return entry.requesterAppName || entry.peer || '—'
 }
 
 export function entryMatchesTrafficFilters(
-  entry: TrafficEntry,
+  entry: TrafficEntrySummary,
   filters: TrafficFilters,
 ): boolean {
   if (

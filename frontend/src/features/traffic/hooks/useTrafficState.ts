@@ -1,31 +1,22 @@
-import { useCallback, useMemo, useState, type SetStateAction } from 'react'
-import type { TrafficEntry } from '../../../types'
+import { useCallback, useEffect, useMemo, useState, type SetStateAction } from 'react'
+import type { TrafficEntry, TrafficEntrySummary } from '../../../types'
 import { trimTrafficEntries } from '../trafficEntriesLimit'
 import {
   EMPTY_TRAFFIC_FILTERS,
+  entryMatchesUrlKeywords,
   entryMatchesTrafficFilters,
   getRequesterAppName,
   hasActiveTrafficFilters,
+  parseTrafficFilterKeywords,
   type TrafficFilterGroupKey,
   type TrafficFilters,
 } from '../trafficFilter'
 
-const FILTER_TOKEN_SPLIT_REGEX = /[\s,]+/
-
-function parseFilterKeywords(raw: string): string[] {
-  const dedupedKeywords = new Set(
-    raw
-      .split(FILTER_TOKEN_SPLIT_REGEX)
-      .map((keyword) => keyword.trim().toLowerCase())
-      .filter((keyword) => keyword.length > 0),
-  )
-  return [...dedupedKeywords]
-}
-
 export function useTrafficState() {
-  const [entries, setEntriesRaw] = useState<TrafficEntry[]>([])
+  const [entries, setEntriesRaw] = useState<TrafficEntrySummary[]>([])
+  const [selectedDetail, setSelectedDetail] = useState<TrafficEntry | null>(null)
 
-  const setEntries = useCallback((action: SetStateAction<TrafficEntry[]>) => {
+  const setEntries = useCallback((action: SetStateAction<TrafficEntrySummary[]>) => {
     setEntriesRaw((prev) => {
       const next = typeof action === 'function' ? action(prev) : action
       return trimTrafficEntries(next)
@@ -43,7 +34,7 @@ export function useTrafficState() {
   )
 
   const urlFilterTrimmed = urlFilter.trim()
-  const inputKeywords = useMemo(() => parseFilterKeywords(urlFilter), [urlFilter])
+  const inputKeywords = useMemo(() => parseTrafficFilterKeywords(urlFilter), [urlFilter])
   const activeFilterKeywords = useMemo(() => {
     const dedupedKeywords = new Set<string>()
     for (const keyword of urlFilterTags) {
@@ -57,12 +48,12 @@ export function useTrafficState() {
 
   const setUrlFilterFromQuery = useCallback((query: string) => {
     setUrlFilter('')
-    setUrlFilterTags(parseFilterKeywords(query))
+    setUrlFilterTags(parseTrafficFilterKeywords(query))
   }, [])
 
   const commitUrlFilterInputAsTag = useCallback(() => {
     if (!urlFilterTrimmed) return
-    const newKeywords = parseFilterKeywords(urlFilterTrimmed)
+    const newKeywords = parseTrafficFilterKeywords(urlFilterTrimmed)
     if (newKeywords.length === 0) return
     setUrlFilterTags((prev) => {
       const dedupedKeywords = new Set(prev)
@@ -123,20 +114,53 @@ export function useTrafficState() {
     if (!hasKeywordFilter && !hasTrafficFilters) return entries
     return entries.filter((entry) => {
       if (hasKeywordFilter) {
-        const urlLowerCase = entry.url.toLowerCase()
-        const matchesKeyword = activeFilterKeywords.some((keyword) =>
-          urlLowerCase.includes(keyword),
-        )
-        if (!matchesKeyword) return false
+        if (!entryMatchesUrlKeywords(entry, activeFilterKeywords)) return false
       }
       return entryMatchesTrafficFilters(entry, trafficFilters)
     })
   }, [activeFilterKeywords, entries, hasTrafficFilters, trafficFilters])
 
   const selected = useMemo(
-    () => entries.find((e) => e.id === selectedId) ?? null,
+    () => (selectedDetail?.id === selectedId ? selectedDetail : null),
+    [selectedDetail, selectedId],
+  )
+  const selectedSummary = useMemo(
+    () => entries.find((entry) => entry.id === selectedId) ?? null,
     [entries, selectedId],
   )
+
+  useEffect(() => {
+    if (!selectedId || !selectedSummary) {
+      setSelectedDetail(null)
+      return
+    }
+    const controller = new AbortController()
+    let isCancelled = false
+    async function loadSelectedDetail() {
+      try {
+        const response = await fetch(`/api/requests/${selectedId}`, {
+          signal: controller.signal,
+        })
+        if (!response.ok || isCancelled) {
+          if (!isCancelled) setSelectedDetail(null)
+          return
+        }
+        const detail = (await response.json()) as TrafficEntry
+        if (!isCancelled) {
+          setSelectedDetail(detail)
+        }
+      } catch (error) {
+        if (!controller.signal.aborted && !isCancelled) {
+          setSelectedDetail(null)
+        }
+      }
+    }
+    void loadSelectedDetail()
+    return () => {
+      isCancelled = true
+      controller.abort()
+    }
+  }, [selectedId, selectedSummary])
 
   const selectedResponseContentType = useMemo(() => {
     if (!selected?.responseHeaders) return ''
@@ -153,6 +177,7 @@ export function useTrafficState() {
     await fetch('/api/requests', { method: 'DELETE' })
     setEntries([])
     setSelectedId(null)
+    setSelectedDetail(null)
   }, [setEntries])
 
   const resumeRequest = useCallback(async (id: string) => {
