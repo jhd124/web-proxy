@@ -21,6 +21,8 @@ import { OverrideBodyEditorUI } from './OverrideBodyEditorUI'
 import { OverrideFilesUI } from './OverrideFilesUI'
 import { OverrideRequestFormUI } from './OverrideRequestFormUI'
 import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
+import { RuleBulkActionsMenu } from './RuleBulkActionsMenu'
+import { RuleEnabledToggleButton } from './RuleEnabledToggleButton'
 import { TooltipButton } from './TooltipButton'
 import s from './OverrideEditorUI.module.css'
 
@@ -122,6 +124,7 @@ export function OverrideEditorUI({
   startNewOverride,
   openOverrideEditorForKey,
   overrideToggleSaving,
+  setOverrideEnabled,
   deleteOverrideRule,
   selected,
   selectedMatchingOverride,
@@ -202,6 +205,17 @@ export function OverrideEditorUI({
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
+      <RuleBulkActionsMenu
+        rules={overrideEntries}
+        toggleSaving={overrideToggleSaving}
+        labels={{
+          menu: tf.moreActions,
+          enableAll: tf.enableAll,
+          disableAll: tf.disableAll,
+          saving: tf.saving,
+        }}
+        setRuleEnabled={setOverrideEnabled}
+      />
       {isEditingOverride ? (
         <TooltipButton
           type="button"
@@ -254,33 +268,17 @@ export function OverrideEditorUI({
           >
             <StepForward size={16} aria-hidden />
           </TooltipButton>
-          <TooltipButton
-            type="button"
-            className={`ghost ${ph.iconBtn}`}
-            disabled={overrideToggleSaving[editingRule.id] === true}
-            aria-label={overrideForm.enabled ? tf.disable : tf.enable}
-            tooltip={
-              overrideToggleSaving[editingRule.id] === true
-                ? tf.saving
-                : overrideForm.enabled
-                  ? tf.disable
-                  : tf.enable
-            }
-            onClick={() => {
-              const nextEnabled = !overrideForm.enabled
+          <RuleEnabledToggleButton
+            enabled={overrideForm.enabled}
+            isSaving={overrideToggleSaving[editingRule.id] === true}
+            enableLabel={tf.enable}
+            disableLabel={tf.disable}
+            savingLabel={tf.saving}
+            onToggle={(nextEnabled: boolean) => {
               setOverrideForm((f) => ({ ...f, enabled: nextEnabled }))
               saveOverride({ enabled: nextEnabled })
             }}
-          >
-            <span
-              className={`${s.stateDot} ${
-                overrideForm.enabled ? s.stateDotDisabled : s.stateDotEnabled
-              } ${
-                overrideToggleSaving[editingRule.id] === true ? s.stateDotSaving : ''
-              }`}
-              aria-hidden
-            />
-          </TooltipButton>
+          />
           <TooltipButton
             type="button"
             className={`ghost danger ${ph.iconBtn}`}

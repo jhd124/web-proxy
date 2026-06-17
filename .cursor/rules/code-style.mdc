@@ -73,3 +73,4 @@ alwaysApply: true
 4. 禁止混用不同命名风格
 5. 禁止保留无用代码和未使用的导入
 6. 禁止在组件 index 中再导出同目录 utils/types 等，使 index 成为 barrel 入口
+7. 禁止使用桶文件

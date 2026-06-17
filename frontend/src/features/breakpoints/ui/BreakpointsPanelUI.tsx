@@ -20,6 +20,8 @@ import { buildBreakpointGroups } from '../breakpointGroups'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
 import type { BreakpointRule } from '../../../types'
+import { RuleBulkActionsMenu } from '../../override-editor/ui/RuleBulkActionsMenu'
+import { RuleEnabledToggleButton } from '../../override-editor/ui/RuleEnabledToggleButton'
 import { TooltipButton } from '../../override-editor/ui/TooltipButton'
 import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import o from './BreakpointsPanelUI.overlay.module.css'
@@ -151,6 +153,17 @@ export function BreakpointsPanelUI({
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
+      <RuleBulkActionsMenu
+        rules={breakpointEntries}
+        toggleSaving={breakpointToggleSaving}
+        labels={{
+          menu: t.moreActions,
+          enableAll: t.enableAll,
+          disableAll: t.disableAll,
+          saving: t.saving,
+        }}
+        setRuleEnabled={setBreakpointEnabled}
+      />
       {canSaveBreakpoint && (
         <TooltipButton
           type="button"
@@ -181,33 +194,16 @@ export function BreakpointsPanelUI({
               </TooltipButton>
             )
           })()}
-          <TooltipButton
-            type="button"
-            className={`ghost ${ph.iconBtn}`}
-            disabled={breakpointToggleSaving[selectedBreakpoint.id] === true}
-            aria-label={selectedBreakpoint.enabled ? t.disable : t.enable}
-            tooltip={
-              breakpointToggleSaving[selectedBreakpoint.id] === true
-                ? t.saving
-                : selectedBreakpoint.enabled
-                  ? t.disable
-                  : t.enable
+          <RuleEnabledToggleButton
+            enabled={selectedBreakpoint.enabled}
+            isSaving={breakpointToggleSaving[selectedBreakpoint.id] === true}
+            enableLabel={t.enable}
+            disableLabel={t.disable}
+            savingLabel={t.saving}
+            onToggle={(nextEnabled: boolean) =>
+              void setBreakpointEnabled(selectedBreakpoint, nextEnabled)
             }
-            onClick={() =>
-              void setBreakpointEnabled(selectedBreakpoint, !selectedBreakpoint.enabled)
-            }
-          >
-            <span
-              className={`${s.stateDot} ${
-                selectedBreakpoint.enabled ? s.stateDotDisabled : s.stateDotEnabled
-              } ${
-                breakpointToggleSaving[selectedBreakpoint.id] === true
-                  ? s.stateDotSaving
-                  : ''
-              }`}
-              aria-hidden
-            />
-          </TooltipButton>
+          />
           <TooltipButton
             type="button"
             className={`ghost danger ${ph.iconBtn}`}

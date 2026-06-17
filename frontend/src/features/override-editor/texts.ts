@@ -31,6 +31,9 @@ export const overrideEditorTexts = {
     saving: 'Saving…',
     enable: 'Enable',
     disable: 'Disable',
+    moreActions: 'More override actions',
+    enableAll: 'Enable all',
+    disableAll: 'Disable all',
   },
   request: {
     fieldHintAria: 'Show field help',

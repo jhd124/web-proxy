@@ -86,25 +86,6 @@
   flex-shrink: 0;
 }
 
-.stateDot {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 9999px;
-  display: inline-block;
-}
-
-.stateDotEnabled {
-  background: #22c55e;
-}
-
-.stateDotDisabled {
-  background: #ef4444;
-}
-
-.stateDotSaving {
-  opacity: 0.55;
-}
-
 .fsErr {
   margin: 0;
   padding: 0.5rem 1rem;

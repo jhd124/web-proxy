@@ -104,10 +104,6 @@
   background: #ef4444;
 }
 
-.stateDotSaving {
-  opacity: 0.6;
-}
-
 .itemName {
   display: block;
   flex: 1;
