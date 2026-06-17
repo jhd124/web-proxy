@@ -10,6 +10,7 @@ export const floatingTrafficTexts = {
   tagBypassed: 'BYPASS',
   tagPending: 'WAIT',
   detailTitle: 'Request detail',
+  loadingDetail: 'Loading request detail…',
   detailUrl: 'URL',
   detailRequestBody: 'Request body',
   detailResponse: 'Response',

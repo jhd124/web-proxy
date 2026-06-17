@@ -59,6 +59,7 @@ export const trafficTexts = {
   tagBypassed: 'BYPS',
   sectionRequest: 'Request',
   sectionResponse: 'Response',
+  loadingDetail: 'Loading request detail…',
   closeDetail: 'Close detail',
   saveRequest: 'Save request',
   requestSaved: 'Saved',

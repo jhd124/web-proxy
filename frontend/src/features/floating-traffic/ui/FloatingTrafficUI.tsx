@@ -29,7 +29,7 @@ export function FloatingTrafficUI({
   setSelectedId,
   openMainWindowForEntry,
 }: FloatingTrafficViewModel) {
-  const hasDetail = selected != null
+  const hasDetail = selectedId != null
 
   return (
     <section className={s.panel}>
