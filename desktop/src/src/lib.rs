@@ -1,9 +1,7 @@
 mod mitm_install;
-mod system_proxy;
 
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -19,9 +17,6 @@ use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
 const FLOATING_TRAFFIC_WINDOW_LABEL: &str = "floating-traffic";
-const SYSTEM_PROXY_REAPPLY_INTERVAL_MS: u64 = 2_000;
-static SYSTEM_PROXY_REAPPLY_WATCHER_STARTED: AtomicBool = AtomicBool::new(false);
-static SYSTEM_PROXY_REAPPLY_PROXY_PORT: AtomicU16 = AtomicU16::new(0);
 
 /// 与 `desktop/src/tauri.conf.json` 的 `build.devUrl` 默认端口一致。
 const DEFAULT_TAURI_DEV_VITE_PORT: u16 = 5173;
@@ -97,38 +92,6 @@ fn dev_workspace_proxy_ports_path() -> Option<PathBuf> {
         .map(|repo_root| repo_root.join("frontend/.proxy-dev-ports.json"))
 }
 
-fn set_system_proxy_reapply_port(proxy_port: u16) {
-    SYSTEM_PROXY_REAPPLY_PROXY_PORT.store(proxy_port, Ordering::SeqCst);
-}
-
-fn spawn_system_proxy_reapply_watcher(app: &AppHandle) {
-    if SYSTEM_PROXY_REAPPLY_WATCHER_STARTED
-        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-        .is_err()
-    {
-        return;
-    }
-    let handle = app.clone();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_millis(SYSTEM_PROXY_REAPPLY_INTERVAL_MS));
-        let proxy_port = SYSTEM_PROXY_REAPPLY_PROXY_PORT.load(Ordering::SeqCst);
-        if proxy_port == 0 {
-            continue;
-        }
-        let Some(st) = handle.try_state::<system_proxy::SystemProxyRestoreState>() else {
-            continue;
-        };
-        let mut guard = match st.0.lock() {
-            Ok(g) => g,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-        let Some(saved) = guard.as_mut() else {
-            continue;
-        };
-        let _ = system_proxy::reapply_local_proxy(proxy_port, saved);
-    });
-}
-
 #[tauri::command]
 async fn focus_main_window(app: AppHandle, request_id: Option<String>) -> Result<(), String> {
     let main = app
@@ -175,41 +138,15 @@ async fn open_floating_traffic_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-async fn enable_system_http_https_proxy(app: AppHandle, proxy_port: u16) -> Result<(), String> {
-    if proxy_port == 0 {
-        return Err("invalid proxy port".to_string());
-    }
-    let saved = system_proxy::apply_local_proxy(proxy_port)
-        .ok_or_else(|| "failed to enable system proxy".to_string())?;
-    let state = app
-        .try_state::<system_proxy::SystemProxyRestoreState>()
-        .ok_or_else(|| "missing system proxy restore state".to_string())?;
-    match state.0.lock() {
-        Ok(mut guard) => {
-            *guard = Some(saved);
-        }
-        Err(poisoned) => {
-            let mut guard = poisoned.into_inner();
-            *guard = Some(saved);
-        }
-    }
-    set_system_proxy_reapply_port(proxy_port);
-    spawn_system_proxy_reapply_watcher(&app);
-    Ok(())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    system_proxy::install_panic_restore_hook();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             mitm_install::install_mitm_ca_system_trust,
             mitm_install::open_mitm_ca_file,
             focus_main_window,
-            open_floating_traffic_window,
-            enable_system_http_https_proxy
+            open_floating_traffic_window
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -219,27 +156,14 @@ pub fn run() {
                         .build(),
                 )?;
                 // 开发模式：与 `make dev` / `dev:tauri-stack` 中的 `proxy-app` 共用 `frontend/.proxy-dev-ports.json`
-                app.manage(system_proxy::SystemProxyRestoreState(Mutex::new(None)));
                 if let Some(ports_path) = dev_workspace_proxy_ports_path() {
-                    let handle = app.handle().clone();
                     std::thread::spawn(move || {
                         for _ in 0..600u32 {
-                            if let Some((proxy_port, dashboard_port)) =
+                            if let Some((_proxy_port, dashboard_port)) =
                                 read_listen_ports_from_file(&ports_path)
                             {
                                 let addr = SocketAddr::from(([127, 0, 0, 1], dashboard_port));
                                 if std::net::TcpStream::connect(addr).is_ok() {
-                                    if let Some(st) =
-                                        handle.try_state::<system_proxy::SystemProxyRestoreState>()
-                                    {
-                                        if let Ok(mut guard) = st.0.lock() {
-                                            *guard = system_proxy::apply_local_proxy(proxy_port);
-                                            if guard.is_some() {
-                                                set_system_proxy_reapply_port(proxy_port);
-                                                spawn_system_proxy_reapply_watcher(&handle);
-                                            }
-                                        }
-                                    }
                                     return;
                                 }
                             }
@@ -271,6 +195,7 @@ pub fn run() {
                 .env("DASHBOARD_DIST", &dist)
                 .env("PROXY_DATA_DIR", &data_dir)
                 .env("MITM", "1")
+                .env("PROXY_AUTO_SYSTEM_PROXY", "1")
                 .spawn()
                 .map_err(|e| anyhow::anyhow!("spawn proxy-app: {e}"))?;
 
@@ -279,14 +204,13 @@ pub fn run() {
             });
 
             app.manage(ProxySidecarChild(Mutex::new(Some(child))));
-            app.manage(system_proxy::SystemProxyRestoreState(Mutex::new(None)));
 
             let ports_path = data_dir.join("listen-ports.json");
             let main = app
                 .get_webview_window("main")
                 .ok_or_else(|| anyhow::anyhow!("missing main webview window"))?;
             for i in 0..600u32 {
-                if let Some((proxy_port, dashboard_port)) = read_listen_ports_from_file(&ports_path)
+                if let Some((_proxy_port, dashboard_port)) = read_listen_ports_from_file(&ports_path)
                 {
                     let addr = SocketAddr::from(([127, 0, 0, 1], dashboard_port));
                     if std::net::TcpStream::connect(addr).is_ok() {
@@ -294,15 +218,6 @@ pub fn run() {
                         main.navigate(Url::parse(&url).map_err(|e| anyhow::anyhow!("url: {e}"))?)
                             .map_err(|e| anyhow::anyhow!("navigate: {e}"))?;
                         log::info!("dashboard at {url} (after {i} wait polls)");
-                        if let Some(st) = app.try_state::<system_proxy::SystemProxyRestoreState>() {
-                            if let Ok(mut guard) = st.0.lock() {
-                                *guard = system_proxy::apply_local_proxy(proxy_port);
-                                if guard.is_some() {
-                                    set_system_proxy_reapply_port(proxy_port);
-                                    spawn_system_proxy_reapply_watcher(app.handle());
-                                }
-                            }
-                        }
                         return Ok(());
                     }
                 }
@@ -317,19 +232,6 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // macOS Cmd+Q 等路径下可能先收到 ExitRequested 再收到 Exit；仅依赖 Exit 时偶发收不到恢复时机。
-            let should_restore_system_proxy =
-                matches!(&event, RunEvent::Exit | RunEvent::ExitRequested { .. });
-            if should_restore_system_proxy {
-                if let Some(proxy_state) = app.try_state::<system_proxy::SystemProxyRestoreState>()
-                {
-                    let saved = match proxy_state.0.lock() {
-                        Ok(mut guard) => guard.take(),
-                        Err(poisoned) => poisoned.into_inner().take(),
-                    };
-                    system_proxy::restore_saved_proxies(saved);
-                }
-            }
             if matches!(&event, RunEvent::Exit) {
                 if let Some(sidecar) = app.try_state::<ProxySidecarChild>() {
                     let _ = sidecar.0.lock().map(|mut guard| {

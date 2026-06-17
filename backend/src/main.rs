@@ -8,6 +8,7 @@ mod ports;
 mod proxy;
 mod saved_requests;
 mod state;
+mod system_proxy;
 
 use anyhow::Context;
 use state::AppState;
@@ -113,6 +114,14 @@ async fn main() -> anyhow::Result<()> {
     let proxy_addr: SocketAddr = (ports::LISTEN_IPV4, proxy_port).into();
     let dashboard_addr: SocketAddr = (ports::LISTEN_IPV4, dashboard_port).into();
 
+    if std::env::var("PROXY_AUTO_SYSTEM_PROXY")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+        && !system_proxy::enable_http_https_proxy(proxy_port)
+    {
+        tracing::warn!("failed to enable system HTTP/HTTPS proxy on startup");
+    }
+
     tokio::spawn(async move {
         if let Err(e) = proxy::run_proxy(proxy_addr, proxy_state).await {
             tracing::error!("proxy server error: {}", e);
@@ -144,6 +153,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     tokio::signal::ctrl_c().await?;
+    system_proxy::restore_from_last_snapshot();
     tokio::time::sleep(Duration::from_millis(0)).await;
     Ok(())
 }

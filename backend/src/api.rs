@@ -96,6 +96,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/requests/:id", get(request_detail))
         .route("/api/capture/pause", post(pause_capture))
         .route("/api/capture/resume", post(resume_capture))
+        .route("/api/system-proxy", post(set_system_proxy))
         .route("/api/mitm/ca.pem", get(mitm_ca))
         .route("/api/mitm/auto-bypass", post(clear_mitm_auto_bypass))
         .route("/api/format-body", post(crate::body_format::format_body))
@@ -233,6 +234,30 @@ async fn pause_capture(State(state): State<Arc<AppState>>) -> StatusCode {
 async fn resume_capture(State(state): State<Arc<AppState>>) -> StatusCode {
     state.set_capture_paused(false);
     StatusCode::NO_CONTENT
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SetSystemProxyBody {
+    enabled: bool,
+    proxy_port: Option<u16>,
+}
+
+async fn set_system_proxy(Json(body): Json<SetSystemProxyBody>) -> StatusCode {
+    if !body.enabled {
+        crate::system_proxy::disable_http_https_proxy(current_proxy_port());
+        return StatusCode::NO_CONTENT;
+    }
+
+    let proxy_port = body.proxy_port.unwrap_or_else(current_proxy_port);
+    if proxy_port == 0 {
+        return StatusCode::BAD_REQUEST;
+    }
+    if crate::system_proxy::enable_http_https_proxy(proxy_port) {
+        StatusCode::NO_CONTENT
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
 }
 
 async fn resume_request(

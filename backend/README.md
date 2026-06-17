@@ -5,6 +5,8 @@
 ## README 索引
 
 - `src/README.md`
+- `src/system_proxy/README.md`
+- `src/system_proxy/network/README.md`
 
 ## 目录结构（简版）
 
@@ -27,6 +29,7 @@
 - `MITM`：是否启用 HTTPS MITM（`1/true` 启用）。
 - `MITM_CA_DIR`：MITM CA 存储目录。
 - `UPSTREAM_HTTP3`：是否启用上游 HTTP/3 客户端。
+- `PROXY_AUTO_SYSTEM_PROXY`：启动后是否自动打开系统 HTTP/HTTPS 代理（`1/true` 启用，桌面 sidecar 使用）。
 
 ## 维护约定（必须遵守）
 

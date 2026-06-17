@@ -29,6 +29,17 @@ const TAB_QUERY_KEY = 'tab'
 
 export type DashboardTab = 'traffic' | 'override' | 'breakpoints' | 'saved'
 
+function getProxyPortFromListenAddress(proxyListenAddress: string | null): number | null {
+  if (!proxyListenAddress) return null
+  const listenAddressParts = proxyListenAddress.split(':')
+  const portPart = listenAddressParts[listenAddressParts.length - 1] ?? ''
+  const proxyPort = Number.parseInt(portPart, 10)
+  if (!Number.isFinite(proxyPort) || proxyPort <= 0 || proxyPort > 65535) {
+    return null
+  }
+  return proxyPort
+}
+
 function readDashboardTabFromUrl(): DashboardTab {
   const rawTab = new URLSearchParams(window.location.search).get(TAB_QUERY_KEY)
   if (
@@ -220,17 +231,56 @@ export function useDashboard() {
     }
   }, [])
 
+  const setSystemHttpHttpsProxyEnabled = useCallback(
+    async (enabled: boolean) => {
+      const proxyPort = enabled ? getProxyPortFromListenAddress(proxyListenAddress) : null
+      if (enabled && proxyPort == null) {
+        throw new Error(dashboardTexts.header.missingProxyAddress)
+      }
+      const response = await fetch('/api/system-proxy', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          enabled,
+          ...(proxyPort == null ? {} : { proxyPort }),
+        }),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+    },
+    [proxyListenAddress],
+  )
+
   const toggleCapturePaused = useCallback(async () => {
     const targetPaused = !capturePaused
     setCaptureToggleSaving(true)
     try {
       const endpoint = targetPaused ? '/api/capture/pause' : '/api/capture/resume'
+      if (!targetPaused) {
+        await setSystemHttpHttpsProxyEnabled(true)
+      }
       const r = await fetch(endpoint, { method: 'POST' })
       if (!r.ok) {
         throw new Error(`HTTP ${r.status}`)
       }
+      if (targetPaused) {
+        try {
+          await setSystemHttpHttpsProxyEnabled(false)
+        } catch (error) {
+          await fetch('/api/capture/resume', { method: 'POST' }).catch(() => {
+            /* ignore rollback failure */
+          })
+          throw error
+        }
+      }
       setCapturePaused(targetPaused)
     } catch (error) {
+      if (!targetPaused) {
+        await setSystemHttpHttpsProxyEnabled(false).catch(() => {
+          /* ignore rollback failure */
+        })
+      }
       const detail = error instanceof Error ? error.message : String(error)
       window.alert(
         targetPaused
@@ -240,35 +290,24 @@ export function useDashboard() {
     } finally {
       setCaptureToggleSaving(false)
     }
-  }, [capturePaused])
+  }, [capturePaused, setSystemHttpHttpsProxyEnabled])
 
   const enableWifiHttpHttpsProxy = useCallback(async () => {
-    if (!isTauri()) {
-      window.alert(dashboardTexts.header.desktopOnlyAction)
-      return
-    }
-    if (!proxyListenAddress) {
-      window.alert(dashboardTexts.header.missingProxyAddress)
-      return
-    }
-    const listenAddressParts = proxyListenAddress.split(':')
-    const portPart = listenAddressParts[listenAddressParts.length - 1] ?? ''
-    const proxyPort = Number.parseInt(portPart, 10)
-    if (!Number.isFinite(proxyPort) || proxyPort <= 0 || proxyPort > 65535) {
+    const proxyPort = getProxyPortFromListenAddress(proxyListenAddress)
+    if (proxyPort == null) {
       window.alert(dashboardTexts.header.missingProxyAddress)
       return
     }
     setWifiProxySaving(true)
     try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('enable_system_http_https_proxy', { proxyPort })
+      await setSystemHttpHttpsProxyEnabled(true)
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       window.alert(dashboardTexts.header.enableWifiProxyFailed(detail))
     } finally {
       setWifiProxySaving(false)
     }
-  }, [proxyListenAddress])
+  }, [proxyListenAddress, setSystemHttpHttpsProxyEnabled])
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
   const getEntrySummaryById = useCallback(

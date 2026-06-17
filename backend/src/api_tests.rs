@@ -69,6 +69,28 @@ async fn pause_and_resume_capture_toggle_state() {
 }
 
 #[tokio::test]
+async fn set_system_proxy_disable_is_no_content() {
+    let status = set_system_proxy(Json(SetSystemProxyBody {
+        enabled: false,
+        proxy_port: None,
+    }))
+    .await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn set_system_proxy_enable_rejects_zero_port() {
+    let status = set_system_proxy(Json(SetSystemProxyBody {
+        enabled: true,
+        proxy_port: Some(0),
+    }))
+    .await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn resume_request_returns_not_found_when_missing_and_no_content_when_exists() {
     let state = build_state();
     let id = Uuid::new_v4();
