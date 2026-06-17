@@ -35,8 +35,9 @@ export function TrafficPanelUI({
   onEntryOpenMatchedOverride,
   onEntryOpenMatchedBreakpoint,
 }: TrafficPanelUIProps) {
+  const hasSelectedEntry = selectedId != null
   // 通过库自带持久化按「当前面板集合」精确记忆并恢复分栏宽度，切换 tab 后保持不变。
-  const panelIds = selected
+  const panelIds = hasSelectedEntry
     ? [TRAFFIC_LIST_PANEL_ID, TRAFFIC_DETAIL_PANEL_ID]
     : [TRAFFIC_LIST_PANEL_ID]
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -90,7 +91,7 @@ export function TrafficPanelUI({
           />
         </aside>
       </ResizablePanel>
-      {selected && (
+      {hasSelectedEntry && (
         <>
           <ResizableHandle withHandle className="w-1.5 shrink-0 bg-border/90" />
           <ResizablePanel
@@ -99,77 +100,97 @@ export function TrafficPanelUI({
             defaultSize={38}
             id={TRAFFIC_DETAIL_PANEL_ID}
           >
-            <main className={s.detail}>
-              <section className={s.block}>
-                <div className={s.blockHead}>
-                  <h2>{t.sectionRequest}</h2>
-                  <div className={s.detailActions}>
-                    <X  onClick={() => setSelectedId(null)} className='cursor-pointer'/>
+            {selected ? (
+              <main className={s.detail}>
+                <section className={s.block}>
+                  <div className={s.blockHead}>
+                    <h2>{t.sectionRequest}</h2>
+                    <div className={s.detailActions}>
+                      <X
+                        onClick={() => setSelectedId(null)}
+                        className="cursor-pointer"
+                      />
+                    </div>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  className={`mono small ${s.requestUrl} ${s.requestUrlButton}`}
-                  onClick={handleCopyRequestUrl}
-                >
-                  {selected.method} {selected.url}
-                </button>
-                <p className="small muted">
-                  {t.clientMeta(
-                    selected.peer ?? '—',
-                    selected.kind,
-                    selected.scheme,
-                    selected.durationMs != null ? `${selected.durationMs} ms` : '…',
-                  )}
-                </p>
-                {selected.pending && (
-                  <p className="small warn-text">
-                    {t.pendingAtBreakpoint(selected.breakpointName ?? null)}
-                  </p>
-                )}
-                {selected.kind === 'connect' && (
+                  <button
+                    type="button"
+                    className={`mono small ${s.requestUrl} ${s.requestUrlButton}`}
+                    onClick={handleCopyRequestUrl}
+                  >
+                    {selected.method} {selected.url}
+                  </button>
                   <p className="small muted">
-                    {getTrafficConnectDetailNote(selected.error, selected.mitmBypassed)}
-                  </p>
-                )}
-                <HeadersTable headers={selected.requestHeaders} />
-                {selected.requestBodyPreview && (
-                  <>
-                    <h3>{t.body}</h3>
-                    <pre className={s.pre}>{selected.requestBodyPreview}</pre>
-                  </>
-                )}
-              </section>
-              <section className={s.block}>
-                <div className={s.blockHead}>
-                  <h2>{t.sectionResponse}</h2>
-                </div>
-                {selected.pending && !selected.responseStatus && !selected.error && (
-                  <p className="small muted">{t.noResponseYet}</p>
-                )}
-                {selected.error && <p className="err">{selected.error}</p>}
-                {selected.responseStatus != null && (
-                  <p className="mono">HTTP {selected.responseStatus}</p>
-                )}
-                {selected.responseHeaders && (
-                  <HeadersTable headers={selected.responseHeaders} />
-                )}
-                {selectedIsEventStream && !selected.responseBodyPreview && (
-                  <p className={`small muted ${s.hintSpaced}`}>
-                    {t.streamBodyNoPreview}
-                  </p>
-                )}
-                {selected.responseBodyPreview && (
-                  <>
-                    <h3>{t.body}</h3>
-                    {selectedIsEventStream && (
-                      <p className="small muted">{t.streamBodyHint}</p>
+                    {t.clientMeta(
+                      selected.peer ?? '—',
+                      selected.kind,
+                      selected.scheme,
+                      selected.durationMs != null ? `${selected.durationMs} ms` : '…',
                     )}
-                    <pre className={`${s.pre} ${s.preBody}`}>{selected.responseBodyPreview}</pre>
-                  </>
-                )}
-              </section>
-            </main>
+                  </p>
+                  {selected.pending && (
+                    <p className="small warn-text">
+                      {t.pendingAtBreakpoint(selected.breakpointName ?? null)}
+                    </p>
+                  )}
+                  {selected.kind === 'connect' && (
+                    <p className="small muted">
+                      {getTrafficConnectDetailNote(selected.error, selected.mitmBypassed)}
+                    </p>
+                  )}
+                  <HeadersTable headers={selected.requestHeaders} />
+                  {selected.requestBodyPreview && (
+                    <>
+                      <h3>{t.body}</h3>
+                      <pre className={s.pre}>{selected.requestBodyPreview}</pre>
+                    </>
+                  )}
+                </section>
+                <section className={s.block}>
+                  <div className={s.blockHead}>
+                    <h2>{t.sectionResponse}</h2>
+                  </div>
+                  {selected.pending && !selected.responseStatus && !selected.error && (
+                    <p className="small muted">{t.noResponseYet}</p>
+                  )}
+                  {selected.error && <p className="err">{selected.error}</p>}
+                  {selected.responseStatus != null && (
+                    <p className="mono">HTTP {selected.responseStatus}</p>
+                  )}
+                  {selected.responseHeaders && (
+                    <HeadersTable headers={selected.responseHeaders} />
+                  )}
+                  {selectedIsEventStream && !selected.responseBodyPreview && (
+                    <p className={`small muted ${s.hintSpaced}`}>
+                      {t.streamBodyNoPreview}
+                    </p>
+                  )}
+                  {selected.responseBodyPreview && (
+                    <>
+                      <h3>{t.body}</h3>
+                      {selectedIsEventStream && (
+                        <p className="small muted">{t.streamBodyHint}</p>
+                      )}
+                      <pre className={`${s.pre} ${s.preBody}`}>{selected.responseBodyPreview}</pre>
+                    </>
+                  )}
+                </section>
+              </main>
+            ) : (
+              <main className={s.detail}>
+                <section className={s.block}>
+                  <div className={s.blockHead}>
+                    <h2>{t.sectionRequest}</h2>
+                    <div className={s.detailActions}>
+                      <X
+                        onClick={() => setSelectedId(null)}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                  <p className="small muted">{t.loadingDetail}</p>
+                </section>
+              </main>
+            )}
           </ResizablePanel>
         </>
       )}

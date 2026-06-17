@@ -17,6 +17,7 @@ alwaysApply: true
 * hooks里承载业务逻辑
 * portal将UI 和 hooks组合成业务组件
 * 组件中的文案放在一个文件里,已键值对方式存放，单独管理
+* apis存放所有的接口请求
 
 ### 组件目录结构
 SomeComponent
@@ -27,6 +28,7 @@ SomeComponent
 |   |- some-hook.ts
 |- portal.ts
 |- texts.ts
+|- apis.ts
 
 ## 自定义 Hook 规范
 
