@@ -153,17 +153,6 @@ export function BreakpointsPanelUI({
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
-      <RuleBulkActionsMenu
-        rules={breakpointEntries}
-        toggleSaving={breakpointToggleSaving}
-        labels={{
-          menu: t.moreActions,
-          enableAll: t.enableAll,
-          disableAll: t.disableAll,
-          saving: t.saving,
-        }}
-        setRuleEnabled={setBreakpointEnabled}
-      />
       {canSaveBreakpoint && (
         <TooltipButton
           type="button"
@@ -228,6 +217,17 @@ export function BreakpointsPanelUI({
           </TooltipButton>
         </>
       ) : null}
+      <RuleBulkActionsMenu
+        rules={breakpointEntries}
+        toggleSaving={breakpointToggleSaving}
+        labels={{
+          menu: t.moreActions,
+          enableAll: t.enableAll,
+          disableAll: t.disableAll,
+          saving: t.saving,
+        }}
+        setRuleEnabled={setBreakpointEnabled}
+      />
     </>
   )
 

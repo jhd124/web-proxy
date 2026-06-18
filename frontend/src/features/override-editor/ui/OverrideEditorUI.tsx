@@ -205,17 +205,6 @@ export function OverrideEditorUI({
       >
         <FilePlusCorner size={16} aria-hidden />
       </TooltipButton>
-      <RuleBulkActionsMenu
-        rules={overrideEntries}
-        toggleSaving={overrideToggleSaving}
-        labels={{
-          menu: tf.moreActions,
-          enableAll: tf.enableAll,
-          disableAll: tf.disableAll,
-          saving: tf.saving,
-        }}
-        setRuleEnabled={setOverrideEnabled}
-      />
       {isEditingOverride ? (
         <TooltipButton
           type="button"
@@ -314,6 +303,17 @@ export function OverrideEditorUI({
           )}
         </>
       ) : null}
+      <RuleBulkActionsMenu
+        rules={overrideEntries}
+        toggleSaving={overrideToggleSaving}
+        labels={{
+          menu: tf.moreActions,
+          enableAll: tf.enableAll,
+          disableAll: tf.disableAll,
+          saving: tf.saving,
+        }}
+        setRuleEnabled={setOverrideEnabled}
+      />
     </>
   )
 
