@@ -7,6 +7,7 @@
 - `dashboard/`：主工作台与全局布局编排。
 - `traffic/`：流量列表展示与交互。
 - `floating-traffic/`：悬浮流量详情视图。
+- `page-search/`：当前页面内容文字检索与高亮。
 - `breakpoints/`：断点管理。
 - `override-editor/`：请求/响应覆盖编辑。
 - `saved-requests/`：已保存请求管理。

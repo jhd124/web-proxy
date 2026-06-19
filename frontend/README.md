@@ -27,6 +27,9 @@
 - `src/features/floating-traffic/README.md`
 - `src/features/floating-traffic/hooks/README.md`
 - `src/features/floating-traffic/ui/README.md`
+- `src/features/page-search/README.md`
+- `src/features/page-search/hooks/README.md`
+- `src/features/page-search/ui/README.md`
 - `src/features/breakpoints/README.md`
 - `src/features/breakpoints/hooks/README.md`
 - `src/features/breakpoints/ui/README.md`

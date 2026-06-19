@@ -4,8 +4,8 @@
 
 ## 当前 UI
 
-- `TrafficPanelUI*`：流量主面板（左侧列表初始宽度使用 `lib/panelLayout.ts` 的 `LEFT_LIST_PANEL_DEFAULT_SIZE`；分栏宽度通过 `react-resizable-panels` 的 `useDefaultLayout`（`localStorage` 持久化、按面板集合分别记忆）精确记住，切换 tab 或重选请求后恢复成同一宽度）；详情区按 `selectedId` 保持展开，完整 `TrafficEntry` 按需加载期间显示占位，避免重选请求时分栏闪烁；URL 与正文预览会高亮当前搜索关键词。
-- `TrafficVirtualListUI*`：虚拟列表渲染容器（按「最新在上」用倒序索引直接映射，不再每次渲染复制并 `reverse` 整个数组；单行抽成 `React.memo` 的 `TrafficRow`，派生值仅在摘要 props 变化时重算；URL 列高亮当前搜索关键词）。
+- `TrafficPanelUI*`：流量主面板（左侧列表初始宽度使用 `lib/panelLayout.ts` 的 `LEFT_LIST_PANEL_DEFAULT_SIZE`；分栏宽度通过 `react-resizable-panels` 的 `useDefaultLayout`（`localStorage` 持久化、按面板集合分别记忆）精确记住，切换 tab 或重选请求后恢复成同一宽度）；详情区按 `selectedId` 保持展开，完整 `TrafficEntry` 按需加载期间显示占位，避免重选请求时分栏闪烁；URL 与正文预览会用 `yellow-700` 高亮当前搜索关键词。
+- `TrafficVirtualListUI*`：虚拟列表渲染容器（按「最新在上」用倒序索引直接映射，不再每次渲染复制并 `reverse` 整个数组；单行抽成 `React.memo` 的 `TrafficRow`，派生值仅在摘要 props 变化时重算；列表显示列用 `yellow-700` 高亮当前搜索关键词，并向页面检索注册全量 entries 的虚拟跳转源）。
 - `HighlightText.tsx`：按当前搜索关键词拆分文本并用 `<mark>` 渲染命中片段，供列表与详情复用。
 - `TrafficFilterDialogUI*`：资源类型/请求方法/状态码/发起应用筛选弹窗（tag 复选；发起应用选项来自当前流量动态去重）。
 

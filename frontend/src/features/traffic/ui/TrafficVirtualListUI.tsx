@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   memo,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -16,6 +17,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { ArrowUpToLine, Focus } from 'lucide-react'
+import { usePageSearchContext } from '../../page-search/pageSearchContext'
 import type { TrafficEntrySummary } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import { getRequesterAppName } from '../trafficFilter'
@@ -25,6 +27,7 @@ import s from './TrafficVirtualListUI.module.css'
 const ROW_HEIGHT_PX = 40
 const TOP_STABLE_THRESHOLD_PX = 8
 const BACK_TO_TOP_THRESHOLD_PX = 160
+const TRAFFIC_PAGE_SEARCH_SOURCE_ID = 'traffic-virtual-list'
 
 export type TrafficVirtualListTagTexts = {
   tagError: string
@@ -115,6 +118,7 @@ export function TrafficVirtualListUI({
     y: 0,
   })
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const { query: pageSearchQuery, registerSearchSource } = usePageSearchContext()
 
   const virtualizer = useVirtualizer({
     count: entryCount,
@@ -122,6 +126,24 @@ export function TrafficVirtualListUI({
     estimateSize: () => ROW_HEIGHT_PX,
     overscan: 16,
   })
+
+  const pageSearchMatches = useMemo(
+    () => getTrafficPageSearchMatches(entries, pageSearchQuery, tags),
+    [entries, pageSearchQuery, tags],
+  )
+
+  useEffect(() => {
+    return registerSearchSource({
+      id: TRAFFIC_PAGE_SEARCH_SOURCE_ID,
+      getMatchCount: () => pageSearchMatches.length,
+      activateMatch: (_query, index) => {
+        const match = pageSearchMatches[index]
+        if (!match) return
+        onSelect(match.entryId)
+        virtualizer.scrollToIndex(match.displayIndex, { align: 'center' })
+      },
+    })
+  }, [onSelect, pageSearchMatches, registerSearchSource, virtualizer])
 
   useLayoutEffect(() => {
     if (!selectedId) return
@@ -201,7 +223,7 @@ export function TrafficVirtualListUI({
       }}
     >
       <ContextMenuTrigger asChild>
-        <div className={s.scrollerWrap}>
+        <div className={s.scrollerWrap} data-page-search-virtual-source>
           <div
             ref={parentRef}
             className={scrollerClass}
@@ -447,21 +469,79 @@ const TrafficRow = memo(function TrafficRow({
           />
         </span>
         <span className={s.code} title={rowStatusLabel}>
-          {httpCodeText}
+          <HighlightText
+            text={httpCodeText}
+            keywords={searchKeywords}
+            markClassName={s.searchHighlight}
+          />
         </span>
         <span className={s.method} title={entry.method}>
-          {entry.method}
+          <HighlightText
+            text={entry.method}
+            keywords={searchKeywords}
+            markClassName={s.searchHighlight}
+          />
         </span>
         <span className={s.contentType} title={contentType}>
-          {contentType}
+          <HighlightText
+            text={contentType}
+            keywords={searchKeywords}
+            markClassName={s.searchHighlight}
+          />
         </span>
         <span className={s.app} title={appName}>
-          {appName}
+          <HighlightText
+            text={appName}
+            keywords={searchKeywords}
+            markClassName={s.searchHighlight}
+          />
         </span>
       </button>
     </li>
   )
 })
+
+type TrafficPageSearchMatch = {
+  entryId: string
+  displayIndex: number
+}
+
+function getTrafficPageSearchMatches(
+  entries: TrafficEntrySummary[],
+  query: string,
+  tags: TrafficVirtualListTagTexts,
+): TrafficPageSearchMatch[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return []
+
+  return entries.reduceRight<TrafficPageSearchMatch[]>((matches, entry, sourceIndex) => {
+    if (!getEntrySearchableText(entry, tags).includes(normalizedQuery)) {
+      return matches
+    }
+
+    matches.push({
+      entryId: entry.id,
+      displayIndex: entries.length - 1 - sourceIndex,
+    })
+    return matches
+  }, [])
+}
+
+function getEntrySearchableText(
+  entry: TrafficEntrySummary,
+  tags: TrafficVirtualListTagTexts,
+): string {
+  return [
+    entry.url,
+    entry.responseStatus != null ? String(entry.responseStatus) : '',
+    entry.method,
+    getEntryContentType(entry),
+    getRequesterAppName(entry),
+    getRowStatusLabel(entry, tags),
+  ]
+    .join(' ')
+    .toLowerCase()
+}
 
 function getEntryContentType(entry: TrafficEntrySummary): string {
   const responseContentType = entry.responseContentType

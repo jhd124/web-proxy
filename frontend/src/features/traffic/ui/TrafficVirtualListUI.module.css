@@ -113,8 +113,8 @@
 
 .searchHighlight {
   border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--text-warning) 34%, transparent);
-  color: inherit;
+  background: var(--yellow-700);
+  color: var(--gray-900);
   font-weight: 700;
   padding: 0 0.08em;
 }
