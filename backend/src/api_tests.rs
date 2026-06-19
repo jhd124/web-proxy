@@ -54,6 +54,40 @@ fn sample_entry(id: Uuid) -> TrafficEntry {
     }
 }
 
+#[test]
+fn parse_non_loopback_ipv4_rejects_local_and_empty_values() {
+    assert_eq!(
+        parse_non_loopback_ipv4("192.168.31.24"),
+        Some("192.168.31.24".parse().unwrap())
+    );
+    assert_eq!(parse_non_loopback_ipv4("127.0.0.1"), None);
+    assert_eq!(parse_non_loopback_ipv4("0.0.0.0"), None);
+    assert_eq!(parse_non_loopback_ipv4("not-an-ip"), None);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn parse_macos_wifi_device_finds_wifi_hardware_port() {
+    let hardware_ports = r#"
+Hardware Port: Thunderbolt Ethernet
+Device: en7
+Ethernet Address: aa:bb:cc:dd:ee:ff
+
+Hardware Port: Wi-Fi
+Device: en0
+Ethernet Address: 11:22:33:44:55:66
+
+Hardware Port: Bluetooth PAN
+Device: en5
+Ethernet Address: 00:11:22:33:44:55
+"#;
+
+    assert_eq!(
+        parse_macos_wifi_device(hardware_ports),
+        Some("en0".to_string())
+    );
+}
+
 #[tokio::test]
 async fn pause_and_resume_capture_toggle_state() {
     let state = build_state();

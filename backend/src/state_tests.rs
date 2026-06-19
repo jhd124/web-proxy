@@ -208,7 +208,10 @@ fn recompute_fills_and_clears_override_match_id_on_rule_change() {
     );
 
     // 新增一条能命中历史条目的 override 后重算，命中 id 被填充。
-    state.overrides.write().insert(0, rule_with("example.com", "/api"));
+    state
+        .overrides
+        .write()
+        .insert(0, rule_with("example.com", "/api"));
     state.recompute_rule_matches();
     assert_eq!(
         state
@@ -284,7 +287,10 @@ fn recompute_ignores_connect_entries() {
     entry.kind = TrafficKind::Connect;
     state.push_traffic(entry);
 
-    state.overrides.write().insert(0, rule_with("example.com", "/api"));
+    state
+        .overrides
+        .write()
+        .insert(0, rule_with("example.com", "/api"));
     state.recompute_rule_matches();
     assert_eq!(
         state

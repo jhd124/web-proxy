@@ -9,6 +9,8 @@ use axum::Router;
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 use std::sync::Arc;
 use tokio::time::{self, Duration};
 use tower_http::cors::{Any, CorsLayer};
@@ -26,7 +28,7 @@ struct Health {
     pub mitm_ca_pem_path: Option<String>,
     /// When true, outbound HTTPS requests prefer an HTTP/3-only reqwest client.
     pub upstream_http3_enabled: bool,
-    /// IPv4 used for outbound traffic (not the proxy bind address). Pair with `proxy_port` for client configuration.
+    /// IPv4 shown to users for configuring another device on the same WiFi.
     pub proxy_listen_ipv4: Option<String>,
     /// 为 true 时暂停新增抓包记录。
     pub capture_paused: bool,
@@ -40,6 +42,69 @@ fn local_ipv4_egress() -> Option<Ipv4Addr> {
         IpAddr::V4(v4) if !v4.is_loopback() && !v4.is_unspecified() => Some(v4),
         _ => None,
     }
+}
+
+fn proxy_advertise_ipv4() -> Option<Ipv4Addr> {
+    local_wifi_ipv4().or_else(local_ipv4_egress)
+}
+
+#[cfg(target_os = "macos")]
+fn local_wifi_ipv4() -> Option<Ipv4Addr> {
+    let output = Command::new("networksetup")
+        .arg("-listallhardwareports")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    let device = parse_macos_wifi_device(&text)?;
+    let output = Command::new("ipconfig")
+        .args(["getifaddr", device.as_str()])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    parse_non_loopback_ipv4(text.trim())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn local_wifi_ipv4() -> Option<Ipv4Addr> {
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn parse_macos_wifi_device(text: &str) -> Option<String> {
+    let mut is_wifi_block = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(port) = line.strip_prefix("Hardware Port:") {
+            let port = port.trim();
+            is_wifi_block = port.eq_ignore_ascii_case("Wi-Fi")
+                || port.eq_ignore_ascii_case("WiFi")
+                || port.eq_ignore_ascii_case("AirPort");
+            continue;
+        }
+        if is_wifi_block {
+            if let Some(device) = line.strip_prefix("Device:") {
+                let device = device.trim();
+                if !device.is_empty() {
+                    return Some(device.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_non_loopback_ipv4(value: &str) -> Option<Ipv4Addr> {
+    let ip = value.trim().parse::<Ipv4Addr>().ok()?;
+    if ip.is_loopback() || ip.is_unspecified() {
+        return None;
+    }
+    Some(ip)
 }
 
 fn current_proxy_port() -> u16 {
@@ -58,10 +123,10 @@ fn current_dashboard_port() -> u16 {
 
 async fn watch_proxy_listen_ipv4(state: Arc<AppState>, proxy_port: u16) {
     let mut ticker = time::interval(Duration::from_secs(2));
-    let mut last_ipv4 = local_ipv4_egress().map(|ip| ip.to_string());
+    let mut last_ipv4 = proxy_advertise_ipv4().map(|ip| ip.to_string());
     loop {
         ticker.tick().await;
-        let current_ipv4 = local_ipv4_egress().map(|ip| ip.to_string());
+        let current_ipv4 = proxy_advertise_ipv4().map(|ip| ip.to_string());
         if current_ipv4 != last_ipv4 {
             state.notify_proxy_listen_updated(current_ipv4.clone(), proxy_port);
             last_ipv4 = current_ipv4;
@@ -171,7 +236,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Health> {
             .as_ref()
             .map(|p| p.to_string_lossy().into_owned()),
         upstream_http3_enabled: state.upstream_http3_enabled,
-        proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
+        proxy_listen_ipv4: proxy_advertise_ipv4().map(|ip| ip.to_string()),
         capture_paused: state.is_capture_paused(),
     })
 }
@@ -378,7 +443,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
         let _ = socket.send(Message::Text(json)).await;
     }
     if let Ok(json) = serde_json::to_string(&crate::state::DashboardMessage::ProxyListenUpdated {
-        proxy_listen_ipv4: local_ipv4_egress().map(|ip| ip.to_string()),
+        proxy_listen_ipv4: proxy_advertise_ipv4().map(|ip| ip.to_string()),
         proxy_port: current_proxy_port(),
     }) {
         let _ = socket.send(Message::Text(json)).await;

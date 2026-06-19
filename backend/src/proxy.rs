@@ -19,9 +19,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
-use tokio::process::Command;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::process::Command;
 use tokio::sync::watch;
 use tokio_rustls::TlsAcceptor as RustlsAcceptor;
 use uuid::Uuid;
@@ -613,7 +613,10 @@ fn find_breakpoint(
     path: &str,
 ) -> Option<crate::state::BreakpointRule> {
     let rules = state.breakpoints.read();
-    rules.iter().find(|r| r.matches(method, origin, path)).cloned()
+    rules
+        .iter()
+        .find(|r| r.matches(method, origin, path))
+        .cloned()
 }
 
 pub async fn run_proxy(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()> {
