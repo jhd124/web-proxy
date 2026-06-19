@@ -19,6 +19,7 @@ export function FloatingTrafficUI({
   urlFilter,
   setUrlFilter,
   urlFilterTags,
+  activeFilterKeywords,
   commitUrlFilterInputAsTag,
   removeUrlFilterTag,
   popUrlFilterTag,
@@ -116,6 +117,7 @@ export function FloatingTrafficUI({
               onReplay={(id) => openMainWindowForEntry(id)}
               onEntryDoubleClick={(id) => void openMainWindowForEntry(id)}
               emptyText={t.empty}
+              searchKeywords={activeFilterKeywords}
               tagTexts={{
                 tagError: t.tagError,
                 tagBypassed: t.tagBypassed,
@@ -129,7 +131,10 @@ export function FloatingTrafficUI({
           <>
             <ResizableHandle withHandle className="h-1.5 shrink-0 bg-border/40" />
             <ResizablePanel className="min-h-0" defaultSize={38} minSize={12}>
-              <FloatingTrafficDetailPanelUI entry={selected} />
+              <FloatingTrafficDetailPanelUI
+                entry={selected}
+                searchKeywords={activeFilterKeywords}
+              />
             </ResizablePanel>
           </>
         )}

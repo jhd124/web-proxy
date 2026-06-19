@@ -52,6 +52,7 @@ export function DashboardUI(p: DashboardViewModel) {
                     setSelectedId={p.setSelectedId}
                     selected={p.selected}
                     selectedIsEventStream={p.selectedIsEventStream}
+                    searchKeywords={p.activeFilterKeywords}
                     onEntryCopyCurl={p.copyEntryCurl}
                     onEntrySaveRequest={p.saveEntryRequest}
                     onEntryOverride={p.openEntryOverrideDrawer}

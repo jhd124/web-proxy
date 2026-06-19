@@ -238,6 +238,7 @@ export function useTrafficState() {
     setUrlFilter,
     setUrlFilterFromQuery,
     urlFilterTags,
+    activeFilterKeywords,
     commitUrlFilterInputAsTag,
     removeUrlFilterTag,
     popUrlFilterTag,

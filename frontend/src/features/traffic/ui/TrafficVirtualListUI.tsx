@@ -19,6 +19,7 @@ import { ArrowUpToLine, Focus } from 'lucide-react'
 import type { TrafficEntrySummary } from '../../../types'
 import { trafficTexts as t } from '../texts'
 import { getRequesterAppName } from '../trafficFilter'
+import { HighlightText } from './HighlightText'
 import s from './TrafficVirtualListUI.module.css'
 
 const ROW_HEIGHT_PX = 40
@@ -51,6 +52,7 @@ export type TrafficVirtualListUIProps = {
   emptyText?: string
   className?: string
   tagTexts?: TrafficVirtualListTagTexts
+  searchKeywords?: readonly string[]
 }
 
 export function TrafficVirtualListUI({
@@ -73,6 +75,7 @@ export function TrafficVirtualListUI({
   emptyText,
   className,
   tagTexts,
+  searchKeywords = [],
 }: TrafficVirtualListUIProps): ReactElement {
   const tags = useMemo<TrafficVirtualListTagTexts>(
     () =>
@@ -256,6 +259,7 @@ export function TrafficVirtualListUI({
                     onSelect={onSelect}
                     onContextMenu={handleRowContextMenu}
                     onEntryDoubleClick={onEntryDoubleClick}
+                    searchKeywords={searchKeywords}
                   />
                 )
               })}
@@ -386,6 +390,7 @@ type TrafficRowProps = {
   onSelect: (id: string) => void
   onContextMenu: (id: string, x: number, y: number) => void
   onEntryDoubleClick?: (id: string) => void
+  searchKeywords: readonly string[]
 }
 
 // memo 化的单行：仅当自身 props（entry / 选中态 / 命中态等）变化时才重渲染，
@@ -400,6 +405,7 @@ const TrafficRow = memo(function TrafficRow({
   onSelect,
   onContextMenu,
   onEntryDoubleClick,
+  searchKeywords,
 }: TrafficRowProps): ReactElement {
   const httpCodeText = entry.responseStatus != null ? String(entry.responseStatus) : '—'
   const contentType = getEntryContentType(entry)
@@ -434,7 +440,11 @@ const TrafficRow = memo(function TrafficRow({
         }
       >
         <span className={s.url} title={entry.url}>
-          {entry.url}
+          <HighlightText
+            text={entry.url}
+            keywords={searchKeywords}
+            markClassName={s.searchHighlight}
+          />
         </span>
         <span className={s.code} title={rowStatusLabel}>
           {httpCodeText}

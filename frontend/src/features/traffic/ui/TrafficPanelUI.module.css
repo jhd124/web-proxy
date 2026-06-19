@@ -99,6 +99,14 @@
   margin-top: 8px;
 }
 
+.searchHighlight {
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--text-warning) 32%, transparent);
+  color: inherit;
+  font-weight: 700;
+  padding: 0 0.08em;
+}
+
 @media (max-width: 800px) {
   .listPanel {
     border-right: none;

@@ -771,6 +771,7 @@ export function useDashboard() {
     urlFilter: traffic.urlFilter,
     setUrlFilter: traffic.setUrlFilter,
     urlFilterTags: traffic.urlFilterTags,
+    activeFilterKeywords: traffic.activeFilterKeywords,
     commitUrlFilterInputAsTag: traffic.commitUrlFilterInputAsTag,
     removeUrlFilterTag: traffic.removeUrlFilterTag,
     popUrlFilterTag: traffic.popUrlFilterTag,

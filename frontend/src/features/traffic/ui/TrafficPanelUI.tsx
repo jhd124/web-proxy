@@ -10,6 +10,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { useDefaultLayout } from 'react-resizable-panels'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { HeadersTable } from '@/components/headers-table/HeadersTable'
+import { HighlightText } from './HighlightText'
 
 const TRAFFIC_LAYOUT_ID = 'traffic-panels-group'
 const TRAFFIC_LIST_PANEL_ID = 'traffic-list'
@@ -26,6 +27,7 @@ export function TrafficPanelUI({
   setSelectedId,
   selected,
   selectedIsEventStream,
+  searchKeywords,
   onEntryCopyCurl,
   onEntrySaveRequest,
   onEntryOverride,
@@ -88,6 +90,7 @@ export function TrafficPanelUI({
             onOpenSavedRequest={onEntryOpenSavedRequest}
             onOpenMatchedOverride={onEntryOpenMatchedOverride}
             onOpenMatchedBreakpoint={onEntryOpenMatchedBreakpoint}
+            searchKeywords={searchKeywords}
           />
         </aside>
       </ResizablePanel>
@@ -117,7 +120,12 @@ export function TrafficPanelUI({
                     className={`mono small ${s.requestUrl} ${s.requestUrlButton}`}
                     onClick={handleCopyRequestUrl}
                   >
-                    {selected.method} {selected.url}
+                    {selected.method}{' '}
+                    <HighlightText
+                      text={selected.url}
+                      keywords={searchKeywords}
+                      markClassName={s.searchHighlight}
+                    />
                   </button>
                   <p className="small muted">
                     {t.clientMeta(
@@ -141,7 +149,13 @@ export function TrafficPanelUI({
                   {selected.requestBodyPreview && (
                     <>
                       <h3>{t.body}</h3>
-                      <pre className={s.pre}>{selected.requestBodyPreview}</pre>
+                      <pre className={s.pre}>
+                        <HighlightText
+                          text={selected.requestBodyPreview}
+                          keywords={searchKeywords}
+                          markClassName={s.searchHighlight}
+                        />
+                      </pre>
                     </>
                   )}
                 </section>
@@ -170,7 +184,13 @@ export function TrafficPanelUI({
                       {selectedIsEventStream && (
                         <p className="small muted">{t.streamBodyHint}</p>
                       )}
-                      <pre className={`${s.pre} ${s.preBody}`}>{selected.responseBodyPreview}</pre>
+                      <pre className={`${s.pre} ${s.preBody}`}>
+                        <HighlightText
+                          text={selected.responseBodyPreview}
+                          keywords={searchKeywords}
+                          markClassName={s.searchHighlight}
+                        />
+                      </pre>
                     </>
                   )}
                 </section>

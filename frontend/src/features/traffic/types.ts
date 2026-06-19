@@ -11,6 +11,7 @@ export type TrafficPanelUIProps = {
   setSelectedId: (id: string | null) => void
   selected: TrafficEntry | null
   selectedIsEventStream: boolean
+  searchKeywords: readonly string[]
   onEntryCopyCurl: (id: string) => void
   onEntrySaveRequest: (id: string) => Promise<void>
   onEntryOverride: (id: string) => void

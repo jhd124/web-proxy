@@ -4,6 +4,7 @@ import {
   entryMatchesUrlKeywords,
   parseTrafficFilterKeywords,
 } from './trafficFilter'
+import { getHighlightedTextParts } from './ui/HighlightText'
 
 function entry(url: string): TrafficEntrySummary {
   return {
@@ -43,5 +44,18 @@ describe('traffic URL keyword filter', () => {
     const trafficEntry = entry('https://static.example.com/assets/v1%2E0/app.js')
 
     expect(entryMatchesUrlKeywords(trafficEntry, keywords)).toBe(true)
+  })
+
+  it('splits visible text into highlighted keyword parts', () => {
+    const keywords = parseTrafficFilterKeywords('example.com .js')
+
+    expect(
+      getHighlightedTextParts('https://static.example.com/assets/app.js', keywords),
+    ).toEqual([
+      { text: 'https://static.', isHighlighted: false },
+      { text: 'example.com', isHighlighted: true },
+      { text: '/assets/app', isHighlighted: false },
+      { text: '.js', isHighlighted: true },
+    ])
   })
 })

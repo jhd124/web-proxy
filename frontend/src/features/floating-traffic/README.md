@@ -1,6 +1,6 @@
 # floating-traffic
 
-`floating-traffic/` 负责悬浮流量详情视图（面板/抽屉）及其状态协调。
+`floating-traffic/` 负责悬浮流量详情视图（面板/抽屉）及其状态协调，复用 traffic 搜索关键词并在列表与详情里高亮命中内容。
 
 ## 子目录与文件
 

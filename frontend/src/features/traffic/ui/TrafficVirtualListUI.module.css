@@ -111,6 +111,14 @@
   color: var(--muted);
 }
 
+.searchHighlight {
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--text-warning) 34%, transparent);
+  color: inherit;
+  font-weight: 700;
+  padding: 0 0.08em;
+}
+
 .actionGroup {
   bottom: 0.9rem;
   display: flex;
