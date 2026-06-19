@@ -128,10 +128,13 @@ async fn clear_requests_clears_traffic_pending_and_stream_controllers() {
     state.push_traffic(sample_entry(id));
     let _resume_rx = state.register_pending_request(id);
     let _stream_rx = state.register_stream_controller(id, true);
+    let preview_buffer = Arc::new(parking_lot::Mutex::new(vec![1, 2, 3]));
+    state.register_stream_preview_buffer(id, preview_buffer.clone());
     assert_eq!(state.traffic.read().len(), 1);
     assert!(state.traffic.read().capacity() > 0);
     assert_eq!(state.pending_requests.lock().len(), 1);
     assert_eq!(state.stream_controllers.lock().len(), 1);
+    assert_eq!(state.stream_preview_buffers.lock().len(), 1);
 
     let status = clear_requests(State(state.clone())).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
@@ -139,6 +142,8 @@ async fn clear_requests_clears_traffic_pending_and_stream_controllers() {
     assert_eq!(state.traffic.read().capacity(), 0);
     assert!(state.pending_requests.lock().is_empty());
     assert!(state.stream_controllers.lock().is_empty());
+    assert!(state.stream_preview_buffers.lock().is_empty());
+    assert!(preview_buffer.lock().is_empty());
 }
 
 #[tokio::test]

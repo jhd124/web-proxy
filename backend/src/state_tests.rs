@@ -172,6 +172,26 @@ fn push_traffic_is_ignored_when_capture_paused() {
 }
 
 #[test]
+fn clear_traffic_advances_generation_and_releases_stream_previews() {
+    let state = build_state_for_app_tests();
+    let id = Uuid::new_v4();
+    let generation = state.traffic_generation();
+    let buffer = Arc::new(Mutex::new(vec![1, 2, 3]));
+
+    state.push_traffic(sample_traffic_entry(id));
+    state.register_stream_preview_buffer(id, buffer.clone());
+    assert!(state.is_current_traffic_generation(generation));
+    assert_eq!(state.stream_preview_buffers.lock().len(), 1);
+
+    state.clear_traffic_releasing_capacity();
+
+    assert!(state.traffic.read().is_empty());
+    assert!(!state.is_current_traffic_generation(generation));
+    assert!(state.stream_preview_buffers.lock().is_empty());
+    assert!(buffer.lock().is_empty());
+}
+
+#[test]
 fn recompute_fills_and_clears_override_match_id_on_rule_change() {
     let state = build_state_for_app_tests();
     let id = Uuid::new_v4();

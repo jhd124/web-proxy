@@ -32,7 +32,7 @@ type SseStream =
 type ProxyBody = Either<Full<Bytes>, StreamBody<SseStream>>;
 
 const BODY_PREVIEW_MAX: usize = 64 * 1024;
-/// Upper bound for how much of an SSE body we retain for the dashboard (memory safety).
+/// Upper bound for how much of an SSE body we retain for the dashboard.
 const SSE_RESPONSE_BODY_MAX: usize = 64 * 1024 * 1024;
 /// Minimize WebSocket spam while still showing SSE content as it arrives.
 const SSE_PREVIEW_EMIT_MIN_BYTES: usize = 2048;
@@ -1365,11 +1365,21 @@ async fn forward_proxied_http(
             },
         );
         let state_c = state.clone();
+        let stream_generation = state.traffic_generation();
         let acc = Arc::new(parking_lot::Mutex::new(Vec::new()));
+        state.register_stream_preview_buffer(entry_id, acc.clone());
         let acc_in = acc.clone();
         let mut last_emit = Instant::now();
         let mut last_emit_len: usize = 0;
         let stream_in = upstream.bytes_stream().inspect_ok(move |chunk| {
+            if !state_c.is_current_traffic_generation(stream_generation) {
+                let mut v = acc_in.lock();
+                if !v.is_empty() {
+                    *v = Vec::new();
+                }
+                last_emit_len = 0;
+                return;
+            }
             {
                 let mut v = acc_in.lock();
                 if v.len() < SSE_RESPONSE_BODY_MAX {
@@ -1417,25 +1427,28 @@ async fn forward_proxied_http(
         let stream = EndFlush {
             inner: stream_in.map_ok(Frame::data),
             on_end: Some(Box::new(move || {
-                let snapshot = acc_tail.lock().clone();
-                if let Some(preview) = preview_bytes_limited(&snapshot, SSE_RESPONSE_BODY_MAX) {
-                    state_tail.update_traffic(
-                        entry_id,
-                        TrafficUpdate {
-                            response_status: None,
-                            response_headers: None,
-                            response_body_preview: Some(preview),
-                            duration_ms: None,
-                            error: None,
-                            pending: None,
-                            breakpoint_name: None,
-                            override_match_id: None,
-                            breakpoint_match_id: None,
-                            stream_controllable: None,
-                            stream_playing: None,
-                        },
-                    );
+                if state_tail.is_current_traffic_generation(stream_generation) {
+                    let snapshot = acc_tail.lock().clone();
+                    if let Some(preview) = preview_bytes_limited(&snapshot, SSE_RESPONSE_BODY_MAX) {
+                        state_tail.update_traffic(
+                            entry_id,
+                            TrafficUpdate {
+                                response_status: None,
+                                response_headers: None,
+                                response_body_preview: Some(preview),
+                                duration_ms: None,
+                                error: None,
+                                pending: None,
+                                breakpoint_name: None,
+                                override_match_id: None,
+                                breakpoint_match_id: None,
+                                stream_controllable: None,
+                                stream_playing: None,
+                            },
+                        );
+                    }
                 }
+                state_tail.clear_stream_preview_buffer(entry_id);
             })),
         };
         let stream: SseStream = Box::pin(stream);

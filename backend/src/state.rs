@@ -4,7 +4,7 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::{broadcast, oneshot, watch};
 use uuid::Uuid;
@@ -502,6 +502,7 @@ pub struct AppState {
     pub breakpoints: Arc<RwLock<Vec<BreakpointRule>>>,
     pub pending_requests: Arc<Mutex<HashMap<Uuid, oneshot::Sender<()>>>>,
     pub stream_controllers: Arc<Mutex<HashMap<Uuid, watch::Sender<bool>>>>,
+    pub stream_preview_buffers: Arc<Mutex<HashMap<Uuid, Arc<Mutex<Vec<u8>>>>>>,
     pub auto_mitm_bypass_hosts: Arc<RwLock<HashSet<String>>>,
     pub override_db_path: PathBuf,
     pub upstream_http_client: reqwest::Client,
@@ -514,6 +515,8 @@ pub struct AppState {
     pub mitm_ca_pem_path: Option<PathBuf>,
     /// 是否由 dashboard 控制暂停抓包。
     pub capture_paused: AtomicBool,
+    /// 清空 traffic 时递增，用于让旧流式连接停止继续累积/写回预览。
+    pub traffic_generation: AtomicU64,
 }
 
 impl AppState {
@@ -536,6 +539,7 @@ impl AppState {
             breakpoints: Arc::new(RwLock::new(breakpoints)),
             pending_requests: Arc::new(Mutex::new(HashMap::new())),
             stream_controllers: Arc::new(Mutex::new(HashMap::new())),
+            stream_preview_buffers: Arc::new(Mutex::new(HashMap::new())),
             auto_mitm_bypass_hosts: Arc::new(RwLock::new(HashSet::new())),
             override_db_path,
             upstream_http_client,
@@ -545,6 +549,7 @@ impl AppState {
             mitm,
             mitm_ca_pem_path,
             capture_paused: AtomicBool::new(false),
+            traffic_generation: AtomicU64::new(0),
         }
     }
 
@@ -623,6 +628,16 @@ impl AppState {
 
     pub fn clear_traffic_releasing_capacity(&self) {
         *self.traffic.write() = Vec::new();
+        self.traffic_generation.fetch_add(1, Ordering::Relaxed);
+        self.clear_all_stream_preview_buffers();
+    }
+
+    pub fn traffic_generation(&self) -> u64 {
+        self.traffic_generation.load(Ordering::Relaxed)
+    }
+
+    pub fn is_current_traffic_generation(&self, generation: u64) -> bool {
+        self.traffic_generation() == generation
     }
 
     pub fn notify_overrides_changed(&self) {
@@ -767,6 +782,21 @@ impl AppState {
 
     pub fn clear_all_stream_controllers(&self) {
         self.stream_controllers.lock().clear();
+    }
+
+    pub fn register_stream_preview_buffer(&self, id: Uuid, buffer: Arc<Mutex<Vec<u8>>>) {
+        self.stream_preview_buffers.lock().insert(id, buffer);
+    }
+
+    pub fn clear_stream_preview_buffer(&self, id: Uuid) {
+        self.stream_preview_buffers.lock().remove(&id);
+    }
+
+    pub fn clear_all_stream_preview_buffers(&self) {
+        let buffers = std::mem::take(&mut *self.stream_preview_buffers.lock());
+        for (_, buffer) in buffers {
+            *buffer.lock() = Vec::new();
+        }
     }
 
     pub fn should_auto_bypass_mitm(&self, host: &str) -> bool {
