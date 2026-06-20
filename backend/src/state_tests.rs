@@ -135,6 +135,19 @@ fn sample_traffic_entry(id: Uuid) -> TrafficEntry {
 }
 
 #[test]
+fn requester_app_name_removes_helper_suffixes() {
+    let mut entry = sample_traffic_entry(Uuid::new_v4());
+    entry.app_name = Some("Google Chrome Helper".to_string());
+    assert_eq!(requester_app_name(&entry), "Google Chrome");
+
+    entry.app_name = Some("Cursor Helper (Plugin)".to_string());
+    assert_eq!(requester_app_name(&entry), "Cursor");
+
+    entry.app_name = Some("Safari".to_string());
+    assert_eq!(requester_app_name(&entry), "Safari");
+}
+
+#[test]
 fn set_stream_playing_updates_entry_and_reports_missing_controller() {
     let state = build_state_for_app_tests();
     let id = Uuid::new_v4();

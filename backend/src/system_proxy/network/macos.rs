@@ -13,7 +13,7 @@ pub fn apply_macos(proxy_port: u16) -> Option<SavedSystemProxies> {
     }
     let mut snapshots = Vec::new();
     for service in &services {
-        let snap = match read_service_proxy_snapshot(service) {
+        let current = match read_service_proxy_snapshot(service) {
             Some(s) => s,
             None => {
                 for rollback in &snapshots {
@@ -23,14 +23,15 @@ pub fn apply_macos(proxy_port: u16) -> Option<SavedSystemProxies> {
                 return None;
             }
         };
-        if !set_localhost_proxy_on_service(service, proxy_port, &snap) {
+        let baseline = restore_baseline_for_localhost_proxy(&current, proxy_port);
+        if !set_localhost_proxy_on_service(service, proxy_port, &baseline) {
             for rollback in &snapshots {
                 restore_service_snapshot(rollback);
             }
             tracing::warn!("system_proxy: failed to enable proxy on {service}");
             return None;
         }
-        snapshots.push(snap);
+        snapshots.push(baseline);
     }
     tracing::info!(
         "system_proxy: HTTP/HTTPS proxy enabled on {} services -> 127.0.0.1:{proxy_port}",
@@ -69,8 +70,9 @@ pub fn reapply_macos_with_saved(proxy_port: u16, saved: &mut SavedSystemProxies)
         {
             existing
         } else {
-            saved.snapshots.push(current.clone());
-            current
+            let baseline = restore_baseline_for_localhost_proxy(&current, proxy_port);
+            saved.snapshots.push(baseline.clone());
+            baseline
         };
         if !set_localhost_proxy_on_service(&service, proxy_port, &baseline) {
             tracing::warn!("system_proxy: skip reapply, cannot set proxy on {service}");
@@ -180,6 +182,24 @@ fn snapshot_points_to_localhost(snap: &ServiceProxySnapshot, proxy_port: u16) ->
     http_ok && https_ok
 }
 
+fn restore_baseline_for_localhost_proxy(
+    current: &ServiceProxySnapshot,
+    proxy_port: u16,
+) -> ServiceProxySnapshot {
+    let mut baseline = current.clone();
+    if current.http_enabled && current.http_server == "127.0.0.1" && current.http_port == proxy_port
+    {
+        baseline.http_enabled = false;
+    }
+    if current.https_enabled
+        && current.https_server == "127.0.0.1"
+        && current.https_port == proxy_port
+    {
+        baseline.https_enabled = false;
+    }
+    baseline
+}
+
 fn read_service_proxy_snapshot(service: &str) -> Option<ServiceProxySnapshot> {
     let http_text = run_networksetup(&["-getwebproxy", service])?;
     let https_text = run_networksetup(&["-getsecurewebproxy", service])?;
@@ -258,4 +278,49 @@ fn restore_service_snapshot(snap: &ServiceProxySnapshot) {
             .status();
     }
     tracing::info!("system_proxy: restored Web proxy state for \"{s}\"");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn restore_baseline_disables_stale_localhost_proxy() {
+        let current = ServiceProxySnapshot {
+            service_name: "Wi-Fi".to_string(),
+            http_enabled: true,
+            http_server: "127.0.0.1".to_string(),
+            http_port: 9090,
+            https_enabled: true,
+            https_server: "127.0.0.1".to_string(),
+            https_port: 9090,
+        };
+
+        let baseline = restore_baseline_for_localhost_proxy(&current, 9090);
+
+        assert!(!baseline.http_enabled);
+        assert!(!baseline.https_enabled);
+        assert_eq!(baseline.http_server, "127.0.0.1");
+        assert_eq!(baseline.https_server, "127.0.0.1");
+    }
+
+    #[test]
+    fn restore_baseline_preserves_user_proxy_on_other_port() {
+        let current = ServiceProxySnapshot {
+            service_name: "Wi-Fi".to_string(),
+            http_enabled: true,
+            http_server: "127.0.0.1".to_string(),
+            http_port: 8888,
+            https_enabled: true,
+            https_server: "proxy.example".to_string(),
+            https_port: 443,
+        };
+
+        let baseline = restore_baseline_for_localhost_proxy(&current, 9090);
+
+        assert!(baseline.http_enabled);
+        assert!(baseline.https_enabled);
+        assert_eq!(baseline.http_port, 8888);
+        assert_eq!(baseline.https_server, "proxy.example");
+    }
 }

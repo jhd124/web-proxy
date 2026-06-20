@@ -17,6 +17,26 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(unix)]
+async fn shutdown_signal() -> anyhow::Result<()> {
+    use tokio::signal::unix::{signal, SignalKind};
+
+    let mut terminate = signal(SignalKind::terminate()).context("install SIGTERM handler")?;
+    tokio::select! {
+        result = tokio::signal::ctrl_c() => {
+            result.context("listen for Ctrl+C")?;
+        }
+        _ = terminate.recv() => {}
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+async fn shutdown_signal() -> anyhow::Result<()> {
+    tokio::signal::ctrl_c().await.context("listen for Ctrl+C")?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -152,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
         }
     );
 
-    tokio::signal::ctrl_c().await?;
+    shutdown_signal().await?;
     system_proxy::restore_from_last_snapshot();
     tokio::time::sleep(Duration::from_millis(0)).await;
     Ok(())

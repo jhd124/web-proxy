@@ -18,8 +18,16 @@ pub fn enable_http_https_proxy(proxy_port: u16) -> bool {
     if proxy_port == 0 {
         return false;
     }
-    if REAPPLY_PROXY_PORT.load(Ordering::SeqCst) == proxy_port && has_saved_proxies() {
-        return true;
+    if REAPPLY_PROXY_PORT.load(Ordering::SeqCst) == proxy_port {
+        let mut guard = match LAST_APPLIED_PROXIES.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        if let Some(saved) = guard.as_mut() {
+            let _ = network::reapply_localhost_http_https_proxy(proxy_port, saved);
+            spawn_reapply_watcher();
+            return true;
+        }
     }
     let Some(saved) = network::apply_localhost_http_https_proxy(proxy_port) else {
         return false;
@@ -93,12 +101,5 @@ fn take_saved_proxies() -> Option<SavedSystemProxies> {
             let mut guard = poisoned.into_inner();
             guard.take()
         }
-    }
-}
-
-fn has_saved_proxies() -> bool {
-    match LAST_APPLIED_PROXIES.lock() {
-        Ok(guard) => guard.is_some(),
-        Err(poisoned) => poisoned.into_inner().is_some(),
     }
 }

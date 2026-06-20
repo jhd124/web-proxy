@@ -58,6 +58,40 @@ fn looks_like_tls_clienthello_matches_tls_record_prefix() {
 }
 
 #[test]
+fn parse_lsof_client_app_name_prefers_client_side_connection() {
+    let peer = "127.0.0.1:62001".parse().unwrap();
+    let stdout = "\
+p100
+cproxy-app
+n127.0.0.1:9090->127.0.0.1:62001
+p200
+cGoogle Chrome
+n127.0.0.1:62001->127.0.0.1:9090
+";
+
+    let app_name = parse_lsof_client_app_name(stdout, peer, 100);
+
+    assert_eq!(app_name.as_deref(), Some("Google Chrome"));
+}
+
+#[test]
+fn parse_lsof_client_app_name_excludes_proxy_process_fallback() {
+    let peer = "127.0.0.1:62002".parse().unwrap();
+    let stdout = "\
+p100
+cproxy-app
+n127.0.0.1:9090->127.0.0.1:62002
+p300
+ccurl
+n127.0.0.1:9090->127.0.0.1:62002
+";
+
+    let app_name = parse_lsof_client_app_name(stdout, peer, 100);
+
+    assert_eq!(app_name.as_deref(), Some("curl"));
+}
+
+#[test]
 fn split_rule_body_by_empty_lines_keeps_empty_middle_chunks() {
     let chunks = split_rule_body_by_empty_lines("a\n\n\n\nb");
     assert_eq!(

@@ -1543,7 +1543,7 @@ async fn resolve_client_app_name(peer: SocketAddr) -> Option<String> {
             "-nP",
             &format!("-iTCP@{endpoint}"),
             "-sTCP:ESTABLISHED",
-            "-Fpc",
+            "-Fpcn",
         ])
         .output()
         .await
@@ -1552,17 +1552,80 @@ async fn resolve_client_app_name(peer: SocketAddr) -> Option<String> {
         return None;
     }
     let stdout = String::from_utf8(output.stdout).ok()?;
-    stdout
-        .lines()
-        .find_map(|line| line.strip_prefix('c'))
-        .map(str::trim)
-        .filter(|name| !name.is_empty())
-        .map(ToString::to_string)
+    parse_lsof_client_app_name(&stdout, peer, std::process::id())
 }
 
 #[cfg(not(target_os = "macos"))]
 async fn resolve_client_app_name(_peer: SocketAddr) -> Option<String> {
     None
+}
+
+#[derive(Default)]
+struct LsofTcpRecord {
+    pid: Option<u32>,
+    command: Option<String>,
+    names: Vec<String>,
+}
+
+fn parse_lsof_client_app_name(stdout: &str, peer: SocketAddr, proxy_pid: u32) -> Option<String> {
+    let records = parse_lsof_tcp_records(stdout);
+    let peer_endpoint = peer.to_string();
+    let peer_local_prefix = format!("{peer_endpoint}->");
+
+    records
+        .iter()
+        .filter(|record| record.pid != Some(proxy_pid))
+        .find(|record| {
+            record
+                .names
+                .iter()
+                .any(|name| name.trim().starts_with(&peer_local_prefix))
+        })
+        .and_then(record_command)
+        .or_else(|| {
+            records
+                .iter()
+                .filter(|record| record.pid != Some(proxy_pid))
+                .find_map(record_command)
+        })
+}
+
+fn parse_lsof_tcp_records(stdout: &str) -> Vec<LsofTcpRecord> {
+    let mut records = Vec::new();
+    let mut current = LsofTcpRecord::default();
+    for line in stdout.lines() {
+        let line = line.trim();
+        if let Some(pid) = line.strip_prefix('p') {
+            if current.pid.is_some() || current.command.is_some() || !current.names.is_empty() {
+                records.push(current);
+                current = LsofTcpRecord::default();
+            }
+            current.pid = pid.trim().parse().ok();
+        } else if let Some(command) = line.strip_prefix('c') {
+            let command = command.trim();
+            if !command.is_empty() {
+                current.command = Some(command.to_string());
+            }
+        } else if let Some(name) = line.strip_prefix('n') {
+            let name = name.trim();
+            if !name.is_empty() {
+                current.names.push(name.to_string());
+            }
+        }
+    }
+    if current.pid.is_some() || current.command.is_some() || !current.names.is_empty() {
+        records.push(current);
+    }
+    records
+}
+
+fn record_command(record: &LsofTcpRecord) -> Option<String> {
+    record
+        .command
+        .as_deref()
+        .map(str::trim)
+        .filter(|command| !command.is_empty())
+        .map(ToString::to_string)
 }
 
 fn is_sse_response(r: &reqwest::Response) -> bool {

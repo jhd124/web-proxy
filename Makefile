@@ -28,16 +28,16 @@ build:
 	cargo build --release -p proxy-app
 
 dev:
-	MITM=1 cargo watch -w backend/src -w backend/Cargo.toml -x "run -p proxy-app"
+	MITM=1 PROXY_AUTO_SYSTEM_PROXY=1 cargo watch -w backend/src -w backend/Cargo.toml -x "run -p proxy-app"
 
 backend:
-	MITM=1 cargo run -p proxy-app
+	MITM=1 PROXY_AUTO_SYSTEM_PROXY=1 cargo run -p proxy-app
 
 frontend:
 	cd frontend && npm run dev
 
 run: build
-	cargo run --release -p proxy-app
+	PROXY_AUTO_SYSTEM_PROXY=1 cargo run --release -p proxy-app
 
 clean:
 	cargo clean

@@ -266,7 +266,7 @@ fn is_websocket_entry(entry: &TrafficEntry) -> bool {
 fn requester_app_name(entry: &TrafficEntry) -> String {
     if let Some(app_name) = entry.app_name.as_deref().map(str::trim) {
         if !app_name.is_empty() {
-            return app_name.to_string();
+            return normalize_requester_app_name(app_name);
         }
     }
     let Some(user_agent) = header_value(&entry.request_headers, "user-agent") else {
@@ -299,6 +299,26 @@ fn requester_app_name(entry: &TrafficEntry) -> String {
     } else {
         product_name.to_string()
     }
+}
+
+fn normalize_requester_app_name(app_name: &str) -> String {
+    let app_name = app_name.trim();
+    let helper_suffixes = [
+        " Helper (Plugin)",
+        " Helper (Renderer)",
+        " Helper (GPU)",
+        " Helper (Alerts)",
+        " Helper",
+    ];
+    for suffix in helper_suffixes {
+        if let Some(base_name) = app_name.strip_suffix(suffix) {
+            let base_name = base_name.trim();
+            if !base_name.is_empty() {
+                return base_name.to_string();
+            }
+        }
+    }
+    app_name.to_string()
 }
 
 #[cfg(test)]
