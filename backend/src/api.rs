@@ -165,6 +165,7 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/mitm/ca.pem", get(mitm_ca))
         .route("/api/mitm/auto-bypass", post(clear_mitm_auto_bypass))
         .route("/api/format-body", post(crate::body_format::format_body))
+        .route("/api/search", get(crate::advanced_search::search))
         .route("/api/overrides", get(crate::overrides::list_overrides))
         .route("/api/overrides", post(crate::overrides::create_override))
         .route("/api/overrides/:id", put(crate::overrides::update_override))

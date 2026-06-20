@@ -129,36 +129,6 @@
   z-index: 3;
 }
 
-.floatingAction {
-  background: var(--background-base);
-  border-radius: 9999px;
-  color: var(--muted);
-  cursor: pointer;
-  display: grid;
-  height: 3rem;
-  opacity: 0;
-  place-items: center;
-  padding: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-  width: 3rem;
-}
-
-.floatingActionVisible {
-  opacity: 0.7;
-  pointer-events: auto;
-}
-
-.floatingActionVisible:hover {
-  background: var(--background-popover);
-  opacity: 1;
-}
-
-.floatingActionIcon {
-  height: 0.95rem;
-  width: 0.95rem;
-}
-
 @container (max-width: 650px) {
   .row {
     grid-template-columns: minmax(210px, 1fr) minmax(var(--http-code-width), 0.2fr) minmax(48px, 0.2fr) 80px;

@@ -1,3 +1,4 @@
+mod advanced_search;
 mod api;
 mod body_format;
 mod breakpoints;

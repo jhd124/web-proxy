@@ -13,5 +13,5 @@ export type FloatingTrafficViewModel = {
   selectedId: string | null
   setSelectedId: (id: string) => void
   selected: TrafficEntry | null
-  openMainWindowForEntry: (id: string) => Promise<void>
+  openMainWindowForEntry: (id?: string | null) => Promise<void>
 }

@@ -1,6 +1,6 @@
 # dashboard
 
-`dashboard/` 负责主工作台页面结构、导航区域与全局状态协调。
+`dashboard/` 负责主工作台页面结构、导航区域与全局状态协调，并为应用级高级搜索注册 traffic/override/breakpoint/saved 的结果打开动作。
 
 ## 子目录与文件
 

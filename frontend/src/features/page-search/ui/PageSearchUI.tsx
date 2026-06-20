@@ -1,12 +1,18 @@
 import type { ReactElement } from 'react'
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PackageOpen, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SimpleTooltip } from '@/components/ui/tooltip'
+import { advancedSearchTexts } from '../../advanced-search/texts'
 import type { PageSearchViewModel } from '../hooks/usePageSearch'
 import { pageSearchTexts } from '../texts'
 import root from './PageSearchUI.module.css'
 
-export function PageSearchUI(p: PageSearchViewModel): ReactElement {
+type PageSearchUIProps = PageSearchViewModel & {
+  onAdvancedSearchClick: () => void
+}
+
+export function PageSearchUI(p: PageSearchUIProps): ReactElement {
   const normalizedQuery = p.query.trim()
   const statusText = getStatusText({
     isSupported: p.isSupported,
@@ -14,12 +20,13 @@ export function PageSearchUI(p: PageSearchViewModel): ReactElement {
     activeMatchNumber: p.activeMatchNumber,
   })
 
-  if (!p.isVisible) {
-    return <></>
-  }
-
   return (
-    <div ref={p.searchRootRef} className={root.container} data-page-search-root>
+    <div
+      ref={p.searchRootRef}
+      className={root.container}
+      hidden={!p.isSearchBoxVisible}
+      data-page-search-root
+    >
       <label className="sr-only" htmlFor="page-search-input">
         {pageSearchTexts.label}
       </label>
@@ -38,6 +45,18 @@ export function PageSearchUI(p: PageSearchViewModel): ReactElement {
           }}
         />
         <div className={root.controlGroup}>
+          <SimpleTooltip label={advancedSearchTexts.buttonTooltip}>
+            <Button
+              className={root.iconButton}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={advancedSearchTexts.buttonAriaLabel}
+              onClick={p.onAdvancedSearchClick}
+            >
+              <PackageOpen data-icon="inline-start" />
+            </Button>
+          </SimpleTooltip>
           <Button
             className={root.iconButton}
             type="button"

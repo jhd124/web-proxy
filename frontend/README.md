@@ -21,6 +21,9 @@
 - `src/features/dashboard/README.md`
 - `src/features/dashboard/hooks/README.md`
 - `src/features/dashboard/ui/README.md`
+- `src/features/advanced-search/README.md`
+- `src/features/advanced-search/hooks/README.md`
+- `src/features/advanced-search/ui/README.md`
 - `src/features/traffic/README.md`
 - `src/features/traffic/hooks/README.md`
 - `src/features/traffic/ui/README.md`

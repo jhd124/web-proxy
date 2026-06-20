@@ -5,6 +5,7 @@
 ## 当前模块
 
 - `dashboard/`：主工作台与全局布局编排。
+- `advanced-search/`：应用级高级文本搜索底栏与结果跳转协调。
 - `traffic/`：流量列表展示与交互。
 - `floating-traffic/`：悬浮流量详情视图。
 - `page-search/`：当前页面内容文字检索与高亮。

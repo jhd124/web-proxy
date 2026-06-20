@@ -4,7 +4,7 @@
 
 ## 组件范围
 
-- 通用交互组件：`button`、`input`、`select`、`tooltip`、`popover`、`sheet`、`sidebar` 等。
+- 通用交互组件：`button`、`FloatingActionButton`、`input`、`select`、`tooltip`、`popover`、`sheet`、`sidebar` 等。
 - 结构与容器组件：`scroll-area`、`resizable`、`separator`、`collapsible` 等。
 - 反馈组件：`sonner`、`confirm-modal`、`skeleton` 等。
 

@@ -20,9 +20,13 @@ export type PageSearchViewModel = {
   activeMatchNumber: number | null
   isSupported: boolean
   isVisible: boolean
+  isSearchBoxVisible: boolean
   canNavigateSearchResults: boolean
   goToPreviousMatch: () => void
   goToNextMatch: () => void
+  hideSearchBox: () => void
+  showSearchBox: (query?: string) => void
+  highlightQuery: (query: string) => void
   closeSearch: () => void
   registerSearchSource: (source: PageSearchSource) => () => void
   inputRef: RefObject<HTMLInputElement | null>
@@ -37,6 +41,7 @@ export function usePageSearch(): PageSearchViewModel {
   const [activeMatchIndex, setActiveMatchIndex] = useState<number | null>(null)
   const [isSupported, setIsSupported] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  const [isSearchBoxVisible, setIsSearchBoxVisible] = useState(false)
   const [focusRequestId, setFocusRequestId] = useState(0)
   const [searchSources, setSearchSources] = useState<ReadonlyMap<string, PageSearchSource>>(
     () => new Map(),
@@ -59,12 +64,13 @@ export function usePageSearch(): PageSearchViewModel {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!event.metaKey || event.key.toLowerCase() !== 'f') {
+      if (!event.metaKey || event.shiftKey || event.key.toLowerCase() !== 'f') {
         return
       }
 
       event.preventDefault()
       setIsVisible(true)
+      setIsSearchBoxVisible(true)
       setFocusRequestId((currentId) => currentId + 1)
     }
 
@@ -76,7 +82,7 @@ export function usePageSearch(): PageSearchViewModel {
   }, [])
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!isSearchBoxVisible) {
       return
     }
 
@@ -88,7 +94,7 @@ export function usePageSearch(): PageSearchViewModel {
     return () => {
       window.cancelAnimationFrame(animationFrameId)
     }
-  }, [focusRequestId, isVisible])
+  }, [focusRequestId, isSearchBoxVisible])
 
   const clearActiveMatchIndex = useCallback(() => {
     setActiveMatchIndex(null)
@@ -189,7 +195,29 @@ export function usePageSearch(): PageSearchViewModel {
 
   const closeSearch = () => {
     setIsVisible(false)
+    setIsSearchBoxVisible(false)
     setQuery('')
+    setActiveMatchIndex(null)
+  }
+
+  const hideSearchBox = () => {
+    setIsSearchBoxVisible(false)
+  }
+
+  const showSearchBox = (nextQuery?: string) => {
+    const normalizedNextQuery = nextQuery?.trim() ?? ''
+    if (normalizedNextQuery) {
+      setQuery(normalizedNextQuery)
+    }
+    setIsVisible(true)
+    setIsSearchBoxVisible(true)
+    setFocusRequestId((currentId) => currentId + 1)
+  }
+
+  const highlightQuery = (nextQuery: string) => {
+    setQuery(nextQuery)
+    setIsVisible(nextQuery.trim().length > 0)
+    setIsSearchBoxVisible(false)
     setActiveMatchIndex(null)
   }
 
@@ -200,9 +228,13 @@ export function usePageSearch(): PageSearchViewModel {
     activeMatchNumber: activeMatchIndex === null ? null : activeMatchIndex + 1,
     isSupported,
     isVisible,
+    isSearchBoxVisible,
     canNavigateSearchResults,
     goToPreviousMatch,
     goToNextMatch,
+    hideSearchBox,
+    showSearchBox,
+    highlightQuery,
     closeSearch,
     registerSearchSource,
     inputRef,

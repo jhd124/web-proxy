@@ -12,6 +12,7 @@ fn build_state() -> Arc<AppState> {
         "proxy-app-test-overrides-{}.sqlite",
         Uuid::new_v4()
     ));
+    crate::saved_requests::init(&db_path).expect("init saved requests table");
     Arc::new(AppState::new(
         128,
         None,
@@ -23,6 +24,18 @@ fn build_state() -> Arc<AppState> {
         None,
         false,
     ))
+}
+
+fn search_group_count(
+    response: &crate::advanced_search::AdvancedSearchResponse,
+    label: &str,
+) -> usize {
+    response
+        .groups
+        .iter()
+        .find(|group| group.label == label)
+        .map(|group| group.matches.len())
+        .unwrap_or_default()
 }
 
 fn sample_entry(id: Uuid) -> TrafficEntry {
@@ -225,6 +238,148 @@ async fn list_requests_returns_summaries_and_detail_returns_full_entry() {
 
     let missing = request_detail(axum::extract::Path(Uuid::new_v4()), State(state)).await;
     assert!(matches!(missing, Err(StatusCode::NOT_FOUND)));
+}
+
+#[tokio::test]
+async fn advanced_search_matches_traffic_details() {
+    let state = build_state();
+    let id = Uuid::new_v4();
+    let mut entry = sample_entry(id);
+    entry.url = "https://example.com/search".to_string();
+    entry.request_headers = vec![("x-request-id".to_string(), "needle-header".to_string())];
+    entry.request_body_preview = Some("{\"token\":\"needle-body\"}".to_string());
+    state.push_traffic(entry);
+
+    let response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "needle-body".to_string(),
+        }),
+        State(state),
+    )
+    .await
+    .expect("search should succeed")
+    .0;
+
+    assert_eq!(search_group_count(&response, "traffic"), 1);
+    assert_eq!(response.total, 1);
+    let traffic_group = response
+        .groups
+        .iter()
+        .find(|group| group.label == "traffic")
+        .expect("traffic group exists");
+    assert_eq!(traffic_group.matches[0].id, id.to_string());
+    assert_eq!(traffic_group.matches[0].field, "request body");
+}
+
+#[tokio::test]
+async fn advanced_search_matches_override_breakpoint_and_saved() {
+    let state = build_state();
+    state.overrides.write().push(OverrideRule {
+        id: "override-id".to_string(),
+        enabled: true,
+        match_method: Some("POST".to_string()),
+        match_protocol: Some("https".to_string()),
+        match_host: Some("override.example.com".to_string()),
+        match_path: Some("/from-override".to_string()),
+        match_request_headers: vec![("x-mode".to_string(), "override-needle".to_string())],
+        match_query: Vec::new(),
+        match_request_body: None,
+        status: 201,
+        headers: Vec::new(),
+        body: "override body".to_string(),
+        map_remote_protocol: None,
+        map_remote_host: None,
+        map_remote_path: None,
+        stream_interval_ms: None,
+    });
+    state.breakpoints.write().push(BreakpointRule {
+        id: Uuid::new_v4(),
+        name: "breakpoint needle".to_string(),
+        enabled: true,
+        match_method: Some("GET".to_string()),
+        match_origin: Some("https://breakpoint.example.com".to_string()),
+        match_path_regex: Some("/breakpoint".to_string()),
+    });
+    let mut saved_entry = sample_entry(Uuid::new_v4());
+    saved_entry.url = "https://saved.example.com/search".to_string();
+    saved_entry.response_body_preview = Some("saved needle body".to_string());
+    let _saved = crate::saved_requests::save_request(State(state.clone()), axum::Json(saved_entry))
+        .await
+        .expect("save request should succeed");
+
+    let override_response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "override-needle".to_string(),
+        }),
+        State(state.clone()),
+    )
+    .await
+    .expect("override search should succeed")
+    .0;
+    assert_eq!(search_group_count(&override_response, "override"), 1);
+
+    let breakpoint_response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "breakpoint needle".to_string(),
+        }),
+        State(state.clone()),
+    )
+    .await
+    .expect("breakpoint search should succeed")
+    .0;
+    assert!(search_group_count(&breakpoint_response, "breakpoint") >= 1);
+
+    let saved_response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "saved needle".to_string(),
+        }),
+        State(state),
+    )
+    .await
+    .expect("saved search should succeed")
+    .0;
+    assert!(search_group_count(&saved_response, "saved") >= 1);
+}
+
+#[tokio::test]
+async fn advanced_search_empty_query_returns_empty_groups() {
+    let response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "  ".to_string(),
+        }),
+        State(build_state()),
+    )
+    .await
+    .expect("empty search should succeed")
+    .0;
+
+    assert_eq!(response.total, 0);
+    assert_eq!(response.groups.len(), 4);
+    assert!(response.groups.iter().all(|group| group.matches.is_empty()));
+}
+
+#[tokio::test]
+async fn advanced_search_keeps_up_to_four_thousand_matches_per_group() {
+    let state = build_state();
+    let mut entries = Vec::new();
+    for index in 0..4_001 {
+        let mut entry = sample_entry(Uuid::new_v4());
+        entry.url = format!("https://example.com/needle/{index}");
+        entries.push(entry);
+    }
+    *state.traffic.write() = entries;
+
+    let response = crate::advanced_search::search(
+        axum::extract::Query(crate::advanced_search::AdvancedSearchQuery {
+            q: "needle".to_string(),
+        }),
+        State(state),
+    )
+    .await
+    .expect("search should succeed")
+    .0;
+
+    assert_eq!(search_group_count(&response, "traffic"), 4_000);
 }
 
 #[tokio::test]

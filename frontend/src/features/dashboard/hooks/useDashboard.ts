@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBreakpointState } from '../../breakpoints/hooks/useBreakpointState'
+import { useAdvancedSearchContext } from '../../advanced-search/advancedSearchContext'
 import { useOverrideEditorState } from '../../override-editor/hooks/useOverrideEditorState'
 import { useSavedRequests } from '../../saved-requests/hooks/useSavedRequests'
 import { useTrafficState } from '../../traffic/hooks/useTrafficState'
@@ -155,9 +156,18 @@ export function useDashboard() {
     refreshOverrides,
   } = ovr
   const brk = useBreakpointState({ openBreakpointsPanel })
-  const { breakpoints, setBreakpointForm, refreshBreakpoints, startNewBreakpoint } = brk
+  const {
+    breakpoints,
+    setBreakpointForm,
+    refreshBreakpoints,
+    startNewBreakpoint,
+    setSelectedBreakpointId,
+  } = brk
+  const { registerOpenHandler: registerAdvancedSearchOpenHandler } =
+    useAdvancedSearchContext()
 
   const selectedIdRef = useRef<string | null>(null)
+  const setTrafficSelectedId = traffic.setSelectedId
 
   useEffect(() => {
     selectedIdRef.current = traffic.selectedId
@@ -733,6 +743,46 @@ export function useDashboard() {
     },
     [navigateToTab, savedTrafficEntryIds, setSelectedSavedRequestId],
   )
+
+  useEffect(() => {
+    return registerAdvancedSearchOpenHandler((target) => {
+      if (target.entityType === 'traffic') {
+        navigateToTab('traffic')
+        setTrafficSelectedId(target.id)
+        return
+      }
+      if (target.entityType === 'override') {
+        const matchedOverride = overrides.find((rule) => rule.id === target.id)
+        if (!matchedOverride) return
+        setOverrideError(null)
+        setOverridesPanel({ state: 'edit', source: 'nav' })
+        openOverrideEditorForKey(matchedOverride)
+        navigateToTab('override')
+        return
+      }
+      if (target.entityType === 'breakpoint') {
+        setSelectedBreakpointId(target.id)
+        setHighlightedBreakpointId(target.id)
+        openBreakpointsPanel()
+        return
+      }
+      if (target.entityType === 'saved') {
+        setSelectedSavedRequestId(target.id)
+        navigateToTab('saved')
+      }
+    })
+  }, [
+    navigateToTab,
+    openBreakpointsPanel,
+    openOverrideEditorForKey,
+    overrides,
+    registerAdvancedSearchOpenHandler,
+    setOverrideError,
+    setOverridesPanel,
+    setSelectedBreakpointId,
+    setSelectedSavedRequestId,
+    setTrafficSelectedId,
+  ])
 
   const onOverridesNavClick = useCallback(() => {
     ovr.onOverridesNavClick()

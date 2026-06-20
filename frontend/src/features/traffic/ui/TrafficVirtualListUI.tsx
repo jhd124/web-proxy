@@ -16,6 +16,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton'
 import { ArrowUpToLine, Focus } from 'lucide-react'
 import { usePageSearchContext } from '../../page-search/pageSearchContext'
 import type { TrafficEntrySummary } from '../../../types'
@@ -289,30 +290,24 @@ export function TrafficVirtualListUI({
           </div>
           <div className={s.actionGroup}>
             {showBackToTop ? (
-              <button
-                type="button"
-                className={`${s.floatingAction} ${s.floatingActionVisible}`}
+              <FloatingActionButton
                 onClick={() => {
                   parentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
                 }}
                 aria-label={t.backToTop}
                 title={t.backToTop}
-              >
-                <ArrowUpToLine className={s.floatingActionIcon} aria-hidden />
-              </button>
+                icon={<ArrowUpToLine aria-hidden />}
+              />
             ) : null}
             {canFocusSelectedEntry ? (
-              <button
-                type="button"
-                className={`${s.floatingAction} ${s.floatingActionVisible}`}
+              <FloatingActionButton
                 onClick={() => {
                   virtualizer.scrollToIndex(selectedDisplayIndex, { align: 'auto' })
                 }}
                 aria-label={t.focusSelected}
                 title={t.focusSelected}
-              >
-                <Focus className={s.floatingActionIcon} aria-hidden />
-              </button>
+                icon={<Focus aria-hidden />}
+              />
             ) : null}
           </div>
         </div>

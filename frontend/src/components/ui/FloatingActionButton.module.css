@@ -1,0 +1,35 @@
+.button {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--background-base);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  place-items: center;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.buttonVisible {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+.buttonVisible:hover {
+  background: var(--background-popover);
+  opacity: 1;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+}
+
+.icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}

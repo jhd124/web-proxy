@@ -1,5 +1,6 @@
 import { focusMainWindow } from '@/lib/focusMainWindow'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAdvancedSearchContext } from '../../advanced-search/advancedSearchContext'
 import { useAppWebSocket } from '../../dashboard/hooks/useAppWebSocket'
 import { useTrafficState } from '../../traffic/hooks/useTrafficState'
 import { floatingTrafficTexts as t } from '../texts'
@@ -9,6 +10,8 @@ export function useFloatingTraffic() {
     'connecting',
   )
   const traffic = useTrafficState()
+  const { registerOpenHandler: registerAdvancedSearchOpenHandler } =
+    useAdvancedSearchContext()
   const selectedIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -33,7 +36,7 @@ export function useFloatingTraffic() {
     refreshBreakpoints: refreshFloatingData,
   })
 
-  const openMainWindowForEntry = useCallback(async (id: string) => {
+  const openMainWindowForEntry = useCallback(async (id?: string | null) => {
     try {
       await focusMainWindow(id)
     } catch (error) {
@@ -42,6 +45,16 @@ export function useFloatingTraffic() {
       )
     }
   }, [])
+
+  useEffect(() => {
+    return registerAdvancedSearchOpenHandler((target) => {
+      if (target.entityType === 'traffic' || target.entityType === 'saved') {
+        void openMainWindowForEntry(target.id)
+        return
+      }
+      void openMainWindowForEntry()
+    })
+  }, [openMainWindowForEntry, registerAdvancedSearchOpenHandler])
 
   return {
     wsStatus,

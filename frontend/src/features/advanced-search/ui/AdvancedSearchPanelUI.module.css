@@ -1,0 +1,224 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+
+.resizeGroup {
+  height: 100vh;
+  pointer-events: none;
+}
+
+.spacer {
+  pointer-events: none;
+}
+
+.handle {
+  height: 0.35rem;
+  background: color-mix(in srgb, var(--border) 72%, transparent);
+  pointer-events: auto;
+}
+
+.panel {
+  min-height: 0;
+  pointer-events: auto;
+}
+
+.shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background-popover) 96%, transparent);
+  box-shadow: 0 -1rem 2rem rgb(0 0 0 / 18%);
+  backdrop-filter: blur(10px);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: var(--text-weight-emphasized);
+}
+
+.status {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.searchForm {
+  position: relative;
+  min-width: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 0.7rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.searchInput {
+  padding-right: 4.35rem;
+  padding-left: 2.05rem;
+  border-color: var(--border);
+  background: var(--background-base);
+}
+
+.searchButton {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  height: 1.8rem;
+  transform: translateY(-50%);
+}
+
+.body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem 0.85rem 1rem;
+}
+
+.minimizedButtonWrap {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 36;
+  pointer-events: auto;
+}
+
+.message {
+  margin: 1rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.groups {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: var(--text-weight-emphasized);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.groupCount {
+  min-width: 1.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--background-hover);
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.matchList {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--background-card);
+}
+
+.matchRow {
+  display: grid;
+  grid-template-columns: minmax(12rem, 28rem) minmax(16rem, 1fr);
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.matchRow:last-child {
+  border-bottom: 0;
+}
+
+.matchRow:hover {
+  background: var(--background-hover);
+}
+
+.matchMeta {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.matchTitle {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: var(--text-weight-emphasized);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matchField {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.matchSnippet {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchHighlight {
+  border-radius: 0.2rem;
+  background: var(--search-highlight-background);
+  color: var(--search-highlight-foreground);
+}
+
+@media (max-width: 760px) {
+  .header {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .searchForm {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .matchRow {
+    grid-template-columns: 1fr;
+  }
+}

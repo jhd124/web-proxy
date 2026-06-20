@@ -1,0 +1,23 @@
+export const advancedSearchTexts = {
+  buttonTooltip: '高级搜索',
+  buttonAriaLabel: '打开高级搜索',
+  title: '高级搜索',
+  close: '关闭高级搜索',
+  minimize: '最小化高级搜索',
+  restore: '展开高级搜索',
+  searchButton: '搜索',
+  placeholder: '搜索 URL、headers、body、override、breakpoint、saved',
+  loading: '搜索中...',
+  emptyQuery: '输入关键词后搜索 traffic、override、breakpoint 和 saved',
+  readyToSearch: '按 Enter 或点击搜索按钮开始搜索',
+  noMatches: '没有匹配结果',
+  error: (detail: string) => `搜索失败：${detail}`,
+  totalMatches: (count: number) => `${count} 个匹配`,
+  groupLabels: {
+    traffic: 'Traffic',
+    override: 'Override',
+    breakpoint: 'Breakpoint',
+    saved: 'Saved',
+  },
+  openResult: (title: string) => `打开 ${title}`,
+} as const

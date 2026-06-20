@@ -24,7 +24,7 @@ pub fn init(path: &StdPath) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_all(path: &StdPath) -> anyhow::Result<Vec<SavedRequest>> {
+pub(crate) fn load_all(path: &StdPath) -> anyhow::Result<Vec<SavedRequest>> {
     let conn = Connection::open(path)?;
     let mut stmt = conn.prepare(
         r#"
