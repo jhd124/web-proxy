@@ -4,7 +4,7 @@
 
 ## 当前内容
 
-- `token.css`：设计令牌定义（颜色、间距、圆角等）。
+- `token.css`：设计令牌定义（颜色、间距、圆角等），其中 `--search-highlight-background` / `--search-highlight-foreground` 统一页面检索与关键词命中的高亮颜色。
 - `theme.css`：主题层变量与样式映射。
 
 ## 维护要求

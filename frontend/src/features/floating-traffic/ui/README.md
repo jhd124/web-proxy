@@ -5,7 +5,7 @@
 ## 当前 UI
 
 - `FloatingTrafficUI*`：悬浮容器。现代简约风格，吸顶毛玻璃头部（`backdrop-filter` 半透明模糊）+ 柔和渐变底，搜索区为玻璃药丸容器，标签为圆角药丸；列表接收轻量流量摘要并高亮当前搜索关键词。
-- `FloatingTrafficDetailPanelUI*`：详情侧板。半透明玻璃卡片，代码块统一使用主题 token 渲染（适配明暗主题）；按 `selectedId` 保持展开，完整请求详情按需加载期间显示占位；URL 与正文预览会高亮当前搜索关键词。
+- `FloatingTrafficDetailPanelUI*`：详情侧板。半透明玻璃卡片，代码块统一使用主题 token 渲染（适配明暗主题）；按 `selectedId` 保持展开，完整请求详情按需加载期间显示占位；URL 与正文预览会用全局搜索高亮 token 标记当前搜索关键词。
 - `FloatingTrafficDetailDrawerUI.tsx`：详情抽屉。
 
 ## 样式约定

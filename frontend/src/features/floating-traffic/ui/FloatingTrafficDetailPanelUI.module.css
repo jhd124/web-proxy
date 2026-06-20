@@ -54,8 +54,8 @@
 
 .searchHighlight {
   border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--text-warning) 34%, transparent);
-  color: inherit;
+  background: var(--search-highlight-background);
+  color: var(--search-highlight-foreground);
   font-weight: 700;
   padding: 0 0.08em;
 }

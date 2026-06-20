@@ -9,7 +9,7 @@
 - `portal.tsx`：模块组装入口。
 - `texts.ts`：模块文案。
 - `pageSearchContext.tsx`：跨模块共享页面检索状态，供 traffic 等虚拟渲染区域复用关键词并注册可跳转结果源。
-- `pageSearchHighlight.ts`：CSS Custom Highlight API 适配与文本 Range 收集工具。
+- `pageSearchHighlight.ts`：CSS Custom Highlight API 适配与文本 Range 收集工具，高亮颜色使用全局搜索高亮 token。
 - `pageSearchNavigation.ts`：普通 DOM 结果与虚拟结果源之间的跳转、计数和滚动工具。
 
 ## 维护要求

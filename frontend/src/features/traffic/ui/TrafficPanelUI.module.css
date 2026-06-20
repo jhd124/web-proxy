@@ -101,8 +101,8 @@
 
 .searchHighlight {
   border-radius: 0.2rem;
-  background: var(--yellow-700);
-  color: var(--gray-900);
+  background: var(--search-highlight-background);
+  color: var(--search-highlight-foreground);
   font-weight: 700;
   padding: 0 0.08em;
 }

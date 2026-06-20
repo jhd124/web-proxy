@@ -90,15 +90,15 @@ export function attachPageSearchHighlightStyle(): () => void {
   styleElement.id = PAGE_SEARCH_STYLE_ELEMENT_ID
   styleElement.textContent = `
 ::highlight(${PAGE_SEARCH_HIGHLIGHT_NAME}) {
-  background: var(--yellow-700);
-  color: var(--gray-900);
+  background: var(--search-highlight-background);
+  color: var(--search-highlight-foreground);
 }
 
 ::highlight(${PAGE_SEARCH_ACTIVE_HIGHLIGHT_NAME}) {
-  background: var(--yellow-700);
-  color: var(--gray-900);
+  background: var(--search-highlight-background);
+  color: var(--search-highlight-foreground);
   text-decoration: underline;
-  text-decoration-color: var(--gray-900);
+  text-decoration-color: var(--search-highlight-foreground);
   text-decoration-thickness: 2px;
 }
 `
