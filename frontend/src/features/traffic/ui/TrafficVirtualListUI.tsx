@@ -93,17 +93,24 @@ export function TrafficVirtualListUI({
   // 列表按「最新在上」展示。为避免每次渲染都复制并反转 entries（O(n)），
   // 这里用倒序索引直接映射：展示索引 d ↔ 源索引 entryCount-1-d。
   const entryCount = entries.length
+  const entryIndex = useMemo(() => {
+    const entryById = new Map<string, TrafficEntrySummary>()
+    const sourceIndexById = new Map<string, number>()
+    const displayIndexById = new Map<string, number>()
+    entries.forEach((entry, sourceIndex) => {
+      entryById.set(entry.id, entry)
+      sourceIndexById.set(entry.id, sourceIndex)
+      displayIndexById.set(entry.id, entryCount - 1 - sourceIndex)
+    })
+    return { entryById, sourceIndexById, displayIndexById }
+  }, [entries, entryCount])
   const getEntryAtDisplayIndex = useCallback(
     (displayIndex: number) => entries[entryCount - 1 - displayIndex],
     [entries, entryCount],
   )
   const getDisplayIndexById = useCallback(
-    (id: string | null) => {
-      if (!id) return -1
-      const sourceIndex = entries.findIndex((entry) => entry.id === id)
-      return sourceIndex < 0 ? -1 : entryCount - 1 - sourceIndex
-    },
-    [entries, entryCount],
+    (id: string | null) => (id ? entryIndex.displayIndexById.get(id) ?? -1 : -1),
+    [entryIndex],
   )
   const parentRef = useRef<HTMLDivElement>(null)
   const previousEntriesRef = useRef<TrafficEntrySummary[]>(entries)
@@ -128,8 +135,15 @@ export function TrafficVirtualListUI({
     overscan: 16,
   })
 
+  const pageSearchCacheRef = useRef<TrafficPageSearchCache | null>(null)
   const pageSearchMatches = useMemo(
-    () => getTrafficPageSearchMatches(entries, pageSearchQuery, tags),
+    () =>
+      getCachedTrafficPageSearchMatches(
+        pageSearchCacheRef,
+        entries,
+        pageSearchQuery,
+        tags,
+      ),
     [entries, pageSearchQuery, tags],
   )
 
@@ -183,10 +197,8 @@ export function TrafficVirtualListUI({
       const previousAnchor =
         previousEntries[previousEntries.length - 1 - previousAnchorDisplayIndex]
       if (previousAnchor) {
-        const nextSourceIndex = entries.findIndex(
-          (entry) => entry.id === previousAnchor.id,
-        )
-        if (nextSourceIndex >= 0) {
+        const nextSourceIndex = entryIndex.sourceIndexById.get(previousAnchor.id)
+        if (nextSourceIndex !== undefined) {
           const nextAnchorDisplayIndex = entries.length - 1 - nextSourceIndex
           const anchorOffset =
             previousScrollTop - previousAnchorDisplayIndex * ROW_HEIGHT_PX
@@ -197,7 +209,7 @@ export function TrafficVirtualListUI({
 
     previousEntriesRef.current = entries
     previousScrollTopRef.current = parent.scrollTop
-  }, [entries])
+  }, [entries, entryIndex])
 
   if (entryCount === 0) {
     if (!emptyText) {
@@ -211,7 +223,7 @@ export function TrafficVirtualListUI({
   const contextMenuEntry =
     activeContextEntryId == null
       ? null
-      : entries.find((entry) => entry.id === activeContextEntryId) ?? null
+      : entryIndex.entryById.get(activeContextEntryId) ?? null
   const selectedDisplayIndex = getDisplayIndexById(selectedId)
   const canFocusSelectedEntry = selectedDisplayIndex >= 0
 
@@ -501,31 +513,99 @@ type TrafficPageSearchMatch = {
   displayIndex: number
 }
 
-function getTrafficPageSearchMatches(
+type TrafficPageSearchCache = {
+  entries: TrafficEntrySummary[]
+  normalizedQuery: string
+  tagKey: string
+  matches: TrafficPageSearchMatch[]
+}
+
+function getCachedTrafficPageSearchMatches(
+  cacheRef: { current: TrafficPageSearchCache | null },
   entries: TrafficEntrySummary[],
   query: string,
   tags: TrafficVirtualListTagTexts,
 ): TrafficPageSearchMatch[] {
   const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) return []
+  if (!normalizedQuery) {
+    cacheRef.current = {
+      entries,
+      normalizedQuery,
+      tagKey: getTagKey(tags),
+      matches: [],
+    }
+    return []
+  }
 
-  return entries.reduceRight<TrafficPageSearchMatch[]>((matches, entry, sourceIndex) => {
+  const tagKey = getTagKey(tags)
+  const cached = cacheRef.current
+  if (
+    cached &&
+    cached.normalizedQuery === normalizedQuery &&
+    cached.tagKey === tagKey &&
+    isAppendOnlyEntries(cached.entries, entries)
+  ) {
+    const appendedCount = entries.length - cached.entries.length
+    if (appendedCount === 0) {
+      return cached.matches
+    }
+    const shiftedMatches = cached.matches.map((match) => ({
+      ...match,
+      displayIndex: match.displayIndex + appendedCount,
+    }))
+    const appendedMatches = getTrafficPageSearchMatchesForRange(
+      entries,
+      normalizedQuery,
+      tags,
+      cached.entries.length,
+      entries.length,
+    )
+    const matches = appendedMatches.concat(shiftedMatches)
+    cacheRef.current = { entries, normalizedQuery, tagKey, matches }
+    return matches
+  }
+
+  const matches = getTrafficPageSearchMatchesForRange(
+    entries,
+    normalizedQuery,
+    tags,
+    0,
+    entries.length,
+  )
+  cacheRef.current = { entries, normalizedQuery, tagKey, matches }
+  return matches
+}
+
+function getTrafficPageSearchMatchesForRange(
+  entries: TrafficEntrySummary[],
+  normalizedQuery: string,
+  tags: TrafficVirtualListTagTexts,
+  startIndex: number,
+  endIndex: number,
+): TrafficPageSearchMatch[] {
+  const matches: TrafficPageSearchMatch[] = []
+  for (let sourceIndex = endIndex - 1; sourceIndex >= startIndex; sourceIndex -= 1) {
+    const entry = entries[sourceIndex]
+    if (!entry) continue
     if (!getEntrySearchableText(entry, tags).includes(normalizedQuery)) {
-      return matches
+      continue
     }
 
     matches.push({
       entryId: entry.id,
       displayIndex: entries.length - 1 - sourceIndex,
     })
-    return matches
-  }, [])
+  }
+  return matches
 }
 
 function getEntrySearchableText(
   entry: TrafficEntrySummary,
   tags: TrafficVirtualListTagTexts,
 ): string {
+  if (entry.searchText) {
+    return `${entry.searchText} ${getRowStatusLabel(entry, tags).toLowerCase()}`
+  }
   return [
     entry.url,
     entry.responseStatus != null ? String(entry.responseStatus) : '',
@@ -536,6 +616,21 @@ function getEntrySearchableText(
   ]
     .join(' ')
     .toLowerCase()
+}
+
+function isAppendOnlyEntries(
+  previousEntries: TrafficEntrySummary[],
+  nextEntries: TrafficEntrySummary[],
+): boolean {
+  if (previousEntries.length > nextEntries.length) return false
+  for (let index = 0; index < previousEntries.length; index += 1) {
+    if (previousEntries[index] !== nextEntries[index]) return false
+  }
+  return true
+}
+
+function getTagKey(tags: TrafficVirtualListTagTexts): string {
+  return `${tags.tagError}\n${tags.tagBypassed}\n${tags.tagPending}`
 }
 
 function getEntryContentType(entry: TrafficEntrySummary): string {

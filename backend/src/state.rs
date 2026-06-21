@@ -9,6 +9,8 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, oneshot, watch};
 use uuid::Uuid;
 
+const FILTER_DOT_VARIANTS: [char; 2] = ['．', '。'];
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OverrideRule {
@@ -263,6 +265,216 @@ fn is_websocket_entry(entry: &TrafficEntry) -> bool {
         .unwrap_or(false)
 }
 
+fn normalize_filter_text(value: &str) -> String {
+    value
+        .trim()
+        .chars()
+        .map(|ch| {
+            if FILTER_DOT_VARIANTS.contains(&ch) {
+                '.'
+            } else {
+                ch
+            }
+        })
+        .collect::<String>()
+        .to_lowercase()
+}
+
+fn percent_decode_url_for_filter(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (
+                (bytes[index + 1] as char).to_digit(16),
+                (bytes[index + 2] as char).to_digit(16),
+            ) {
+                decoded.push(((high << 4) + low) as u8);
+                index += 3;
+                continue;
+            }
+        }
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8(decoded).unwrap_or_else(|_| value.to_string())
+}
+
+fn url_filter_text(url: &str) -> String {
+    let normalized_url = normalize_filter_text(url);
+    let decoded_url = normalize_filter_text(&percent_decode_url_for_filter(url));
+    if decoded_url == normalized_url {
+        normalized_url
+    } else {
+        format!("{normalized_url} {decoded_url}")
+    }
+}
+
+fn response_content_type(entry: &TrafficEntry) -> String {
+    entry
+        .response_headers
+        .as_deref()
+        .and_then(|headers| header_value(headers, "content-type"))
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn classify_content_type(content_type: &str) -> Option<&'static str> {
+    if content_type.is_empty() {
+        return None;
+    }
+    if content_type.contains("text/html") {
+        return Some("document");
+    }
+    if content_type.contains("javascript") || content_type.contains("ecmascript") {
+        return Some("js");
+    }
+    if content_type.contains("text/css") {
+        return Some("css");
+    }
+    if content_type.contains("application/wasm") {
+        return Some("wasm");
+    }
+    if content_type.contains("application/json") || content_type.contains("+json") {
+        return Some("json");
+    }
+    if content_type.starts_with("image/") {
+        return Some("image");
+    }
+    if content_type.starts_with("video/") || content_type.starts_with("audio/") {
+        return Some("video");
+    }
+    if content_type.starts_with("font/") || content_type.contains("font") {
+        return Some("font");
+    }
+    None
+}
+
+fn classify_extension(path: &str) -> Option<&'static str> {
+    let path_without_query = path.split(['?', '#']).next().unwrap_or_default();
+    let last_segment = path_without_query.rsplit('/').next().unwrap_or_default();
+    let extension = last_segment.rsplit_once('.')?.1.to_lowercase();
+    match extension.as_str() {
+        "html" | "htm" => Some("document"),
+        "js" | "mjs" | "cjs" | "jsx" | "ts" | "tsx" => Some("js"),
+        "css" => Some("css"),
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "ico" | "bmp" | "avif" => Some("image"),
+        "mp4" | "webm" | "ogg" | "mov" | "avi" | "mkv" | "mp3" | "wav" | "flac" | "m4a" => {
+            Some("video")
+        }
+        "woff" | "woff2" | "ttf" | "otf" | "eot" => Some("font"),
+        "wasm" => Some("wasm"),
+        "json" => Some("json"),
+        _ => None,
+    }
+}
+
+fn classify_resource_type(entry: &TrafficEntry) -> String {
+    classify_content_type(&response_content_type(entry))
+        .or_else(|| classify_extension(&entry.path))
+        .unwrap_or("other")
+        .to_string()
+}
+
+fn method_tag(entry: &TrafficEntry) -> String {
+    if is_websocket_entry(entry) {
+        "WEBSOCKET".to_string()
+    } else {
+        entry.method.to_uppercase()
+    }
+}
+
+fn status_class(entry: &TrafficEntry) -> Option<String> {
+    let status = entry.response_status?;
+    if !(100..600).contains(&status) {
+        return None;
+    }
+    Some(format!("{}xx", status / 100))
+}
+
+fn normalize_content_type_label(content_type_value: &str) -> String {
+    let media_type = content_type_value
+        .to_lowercase()
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if media_type.is_empty() {
+        return "—".to_string();
+    }
+    let subtype_part = media_type
+        .split_once('/')
+        .map(|(_, subtype)| subtype)
+        .unwrap_or(&media_type);
+    if subtype_part.is_empty() {
+        return media_type;
+    }
+    let normalized_subtype = subtype_part
+        .rsplit_once('+')
+        .map(|(_, suffix)| suffix)
+        .unwrap_or(subtype_part);
+    match normalized_subtype {
+        "x-javascript" | "ecmascript" => "javascript".to_string(),
+        "xhtml+xml" => "html".to_string(),
+        value => value.to_string(),
+    }
+}
+
+fn summary_content_type_label(
+    request_content_type: Option<&str>,
+    response_content_type: Option<&str>,
+) -> String {
+    if let Some(content_type) = response_content_type.filter(|value| !value.is_empty()) {
+        return normalize_content_type_label(content_type);
+    }
+    if let Some(content_type) = request_content_type.filter(|value| !value.is_empty()) {
+        return normalize_content_type_label(content_type);
+    }
+    "—".to_string()
+}
+
+fn summary_status_text(entry: &TrafficEntry) -> String {
+    if entry.error.is_some() {
+        return "err error".to_string();
+    }
+    if entry.pending {
+        return "pending wait pend".to_string();
+    }
+    if entry.mitm_bypassed {
+        return "bypass byps bypassed".to_string();
+    }
+    entry
+        .response_status
+        .map(|status| format!("http {status}"))
+        .unwrap_or_else(|| "http".to_string())
+}
+
+fn summary_search_text(
+    entry: &TrafficEntry,
+    request_content_type: Option<&str>,
+    response_content_type: Option<&str>,
+    requester_app_name: &str,
+) -> String {
+    let response_status = entry
+        .response_status
+        .map(|status| status.to_string())
+        .unwrap_or_default();
+    let content_type = summary_content_type_label(request_content_type, response_content_type);
+    let status_text = summary_status_text(entry);
+    [
+        entry.url.as_str(),
+        response_status.as_str(),
+        entry.method.as_str(),
+        content_type.as_str(),
+        requester_app_name,
+        status_text.as_str(),
+    ]
+    .join(" ")
+    .to_lowercase()
+}
+
 fn requester_app_name(entry: &TrafficEntry) -> String {
     if let Some(app_name) = entry.app_name.as_deref().map(str::trim) {
         if !app_name.is_empty() {
@@ -462,6 +674,11 @@ pub struct TrafficEntrySummary {
     pub response_content_type: Option<String>,
     pub requester_app_name: String,
     pub websocket: bool,
+    pub resource_type: String,
+    pub method_tag: String,
+    pub status_class: Option<String>,
+    pub url_filter_text: String,
+    pub search_text: String,
 }
 
 impl From<&TrafficEntry> for TrafficEntrySummary {
@@ -471,6 +688,18 @@ impl From<&TrafficEntry> for TrafficEntrySummary {
             .response_headers
             .as_deref()
             .and_then(|headers| header_value(headers, "content-type"));
+        let requester_app_name = requester_app_name(entry);
+        let websocket = is_websocket_entry(entry);
+        let resource_type = classify_resource_type(entry);
+        let method_tag = method_tag(entry);
+        let status_class = status_class(entry);
+        let url_filter_text = url_filter_text(&entry.url);
+        let search_text = summary_search_text(
+            entry,
+            request_content_type.as_deref(),
+            response_content_type.as_deref(),
+            &requester_app_name,
+        );
         Self {
             id: entry.id,
             at: entry.at,
@@ -494,8 +723,13 @@ impl From<&TrafficEntry> for TrafficEntrySummary {
             stream_playing: entry.stream_playing,
             request_content_type,
             response_content_type,
-            requester_app_name: requester_app_name(entry),
-            websocket: is_websocket_entry(entry),
+            requester_app_name,
+            websocket,
+            resource_type,
+            method_tag,
+            status_class,
+            url_filter_text,
+            search_text,
         }
     }
 }

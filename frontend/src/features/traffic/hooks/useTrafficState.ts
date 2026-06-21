@@ -95,6 +95,13 @@ export function useTrafficState() {
   }, [])
 
   const hasTrafficFilters = hasActiveTrafficFilters(trafficFilters)
+  const entryById = useMemo(() => {
+    const indexedEntries = new Map<string, TrafficEntrySummary>()
+    for (const entry of entries) {
+      indexedEntries.set(entry.id, entry)
+    }
+    return indexedEntries
+  }, [entries])
   const availableRequesterApps = useMemo(() => {
     const requesterAppNameByNormalized = new Map<string, string>()
     for (const entry of entries) {
@@ -125,8 +132,8 @@ export function useTrafficState() {
     [selectedDetail, selectedId],
   )
   const selectedSummary = useMemo(
-    () => entries.find((entry) => entry.id === selectedId) ?? null,
-    [entries, selectedId],
+    () => (selectedId ? entryById.get(selectedId) ?? null : null),
+    [entryById, selectedId],
   )
 
   useEffect(() => {
@@ -231,6 +238,7 @@ export function useTrafficState() {
 
   return {
     entries,
+    entryById,
     setEntries,
     selectedId,
     setSelectedId,

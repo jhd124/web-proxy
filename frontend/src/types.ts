@@ -54,6 +54,11 @@ export interface TrafficEntrySummary {
   responseContentType?: string | null
   requesterAppName: string
   websocket: boolean
+  resourceType?: string
+  methodTag?: string
+  statusClass?: string | null
+  urlFilterText?: string
+  searchText?: string
 }
 
 export interface SavedRequest {

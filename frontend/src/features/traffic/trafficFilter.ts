@@ -74,6 +74,13 @@ export function entryMatchesUrlKeywords(
   keywords: readonly string[],
 ): boolean {
   if (keywords.length === 0) return true
+  const urlFilterText = entry.urlFilterText
+  if (urlFilterText) {
+    const hasBackendTextMatch = keywords.some((keyword) =>
+      urlFilterText.includes(keyword),
+    )
+    if (hasBackendTextMatch) return true
+  }
   const urlCandidates = getUrlFilterCandidates(entry.url)
   return keywords.some((keyword) =>
     urlCandidates.some((urlCandidate) => urlCandidate.includes(keyword)),
@@ -174,6 +181,7 @@ function classifyByExtension(path: string): ResourceTypeValue | null {
 }
 
 export function classifyResourceType(entry: TrafficEntrySummary): ResourceTypeValue {
+  if (isResourceTypeValue(entry.resourceType)) return entry.resourceType
   const byContentType = classifyByContentType(getResponseContentType(entry))
   if (byContentType) return byContentType
   const byExtension = classifyByExtension(entry.path)
@@ -182,11 +190,13 @@ export function classifyResourceType(entry: TrafficEntrySummary): ResourceTypeVa
 }
 
 export function getEntryMethodTag(entry: TrafficEntrySummary): string {
+  if (entry.methodTag) return entry.methodTag
   if (isWebSocketEntry(entry)) return 'WEBSOCKET'
   return entry.method.toUpperCase()
 }
 
 export function getEntryStatusClass(entry: TrafficEntrySummary): StatusClassValue | null {
+  if (isStatusClassValue(entry.statusClass)) return entry.statusClass
   const status = entry.responseStatus
   if (status == null || status < 100 || status >= 600) return null
   return `${Math.floor(status / 100)}xx` as StatusClassValue
@@ -226,4 +236,14 @@ export function entryMatchesTrafficFilters(
     if (!hasMatchedRequesterApp) return false
   }
   return true
+}
+
+function isResourceTypeValue(value: string | undefined): value is ResourceTypeValue {
+  return RESOURCE_TYPE_VALUES.includes(value as ResourceTypeValue)
+}
+
+function isStatusClassValue(
+  value: string | null | undefined,
+): value is StatusClassValue {
+  return STATUS_CLASS_VALUES.includes(value as StatusClassValue)
 }

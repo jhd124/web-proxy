@@ -207,6 +207,7 @@ async fn list_requests_returns_summaries_and_detail_returns_full_entry() {
         "content-type".to_string(),
         "application/json; charset=utf-8".to_string(),
     )]);
+    entry.response_status = Some(200);
     entry.response_body_preview = Some("{\"done\":true}".to_string());
     state.push_traffic(entry);
 
@@ -222,6 +223,13 @@ async fn list_requests_returns_summaries_and_detail_returns_full_entry() {
         Some("application/json; charset=utf-8")
     );
     assert_eq!(summaries[0].requester_app_name, "curl");
+    assert_eq!(summaries[0].resource_type, "json");
+    assert_eq!(summaries[0].method_tag, "GET");
+    assert_eq!(summaries[0].status_class.as_deref(), Some("2xx"));
+    assert!(summaries[0]
+        .url_filter_text
+        .contains("https://example.com/api"));
+    assert!(summaries[0].search_text.contains("json"));
 
     let detail = request_detail(axum::extract::Path(id), State(state.clone()))
         .await

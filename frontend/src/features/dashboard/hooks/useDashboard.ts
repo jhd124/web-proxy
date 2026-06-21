@@ -321,8 +321,8 @@ export function useDashboard() {
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
   const getEntrySummaryById = useCallback(
-    (id: string) => entries.find((entry) => entry.id === id) ?? null,
-    [entries],
+    (id: string) => traffic.entryById.get(id) ?? null,
+    [traffic.entryById],
   )
   const getEntryDetailById = useCallback(
     async (id: string): Promise<TrafficEntry> => {

@@ -46,6 +46,16 @@ describe('traffic URL keyword filter', () => {
     expect(entryMatchesUrlKeywords(trafficEntry, keywords)).toBe(true)
   })
 
+  it('uses backend URL filter text when present', () => {
+    const keywords = parseTrafficFilterKeywords('decoded-value')
+    const trafficEntry = {
+      ...entry('https://static.example.com/assets/raw-value.js'),
+      urlFilterText: 'https://static.example.com/assets/raw-value.js decoded-value',
+    }
+
+    expect(entryMatchesUrlKeywords(trafficEntry, keywords)).toBe(true)
+  })
+
   it('splits visible text into highlighted keyword parts', () => {
     const keywords = parseTrafficFilterKeywords('example.com .js')
 
