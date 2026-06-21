@@ -1,6 +1,7 @@
 import { BreakpointsPanelPortal } from '../../breakpoints/portal'
 import { OverrideEditorPortal } from '../../override-editor/portal'
 import { SavedRequestsPanelPortal } from '../../saved-requests/portal'
+import { SettingsPanelPortal } from '../../settings/portal'
 import { TrafficPanelPortal } from '../../traffic/portal'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import type { DashboardViewModel } from '../hooks/useDashboard'
@@ -133,6 +134,11 @@ export function DashboardUI(p: DashboardViewModel) {
                   removeSavedRequest={p.removeSavedRequest}
                   clearSavedRequests={p.clearSavedRequests}
                 />
+              </div>
+            )}
+            {p.activeTab === 'settings' && (
+              <div className={root.tabPanel}>
+                <SettingsPanelPortal />
               </div>
             )}
           </div>

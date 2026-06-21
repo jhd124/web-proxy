@@ -45,6 +45,8 @@
 - `src/features/saved-requests/README.md`
 - `src/features/saved-requests/hooks/README.md`
 - `src/features/saved-requests/ui/README.md`
+- `src/features/settings/README.md`
+- `src/features/settings/ui/README.md`
 
 ## 当前目录快照（简版）
 

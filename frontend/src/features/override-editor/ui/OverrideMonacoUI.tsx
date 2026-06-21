@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { OverrideFormState } from '../../../types'
+import { useTheme } from '../../../hooks/useTheme'
 import { useTextContextActions } from '../../text-actions/hooks/useTextContextActions'
 import { textActionTexts } from '../../text-actions/texts'
 import type { SetOverrideForm } from '../types'
@@ -18,6 +19,8 @@ export function OverrideMonacoUI({
   setOverrideForm,
   editorLanguage,
 }: Props) {
+  const { mode } = useTheme()
+  const isDark = mode === 'dark'
   const textActions = useTextContextActions()
   const textActionsRef = useRef(textActions)
 
@@ -81,7 +84,7 @@ export function OverrideMonacoUI({
     <Editor
       key={`${String(overrideEditingId ?? 'new')}:${editorLanguage}`}
       height="100%"
-      theme="vs-dark"
+      theme={isDark ? 'vs-dark' : 'vs'}
       language={editorLanguage}
       value={overrideForm.body || ''}
       onChange={(v) => setOverrideForm((f) => ({ ...f, body: v ?? '' }))}

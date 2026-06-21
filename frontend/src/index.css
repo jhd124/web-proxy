@@ -14,12 +14,10 @@
   --scrollbar-thumb-hover: rgba(60, 60, 67, 0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --scrollbar-track: transparent;
-    --scrollbar-thumb: rgba(235, 235, 245, 0.36);
-    --scrollbar-thumb-hover: rgba(235, 235, 245, 0.56);
-  }
+:root[data-theme='dark'] {
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(235, 235, 245, 0.36);
+  --scrollbar-thumb-hover: rgba(235, 235, 245, 0.56);
 }
 
 html,

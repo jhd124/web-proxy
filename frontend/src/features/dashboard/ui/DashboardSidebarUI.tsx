@@ -1,12 +1,14 @@
 import {
   Sidebar,
+  SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { Bookmark, Replace, StepForward, Waves } from 'lucide-react'
+import { Bookmark, Replace, Settings, StepForward, Waves } from 'lucide-react'
 import type { DashboardViewModel } from '../hooks/useDashboard'
 import { dashboardTexts } from '../texts'
 import root from './DashboardSidebarUI.module.css'
@@ -106,6 +108,21 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <SidebarContent />
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === 'settings'}
+              onClick={viewModel.openSettingsPanel}
+              tooltip="Settings"
+            >
+              <Settings />
+              <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

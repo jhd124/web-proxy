@@ -28,7 +28,12 @@ const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
 const TAB_QUERY_KEY = 'tab'
 
-export type DashboardTab = 'traffic' | 'override' | 'breakpoints' | 'saved'
+export type DashboardTab =
+  | 'traffic'
+  | 'override'
+  | 'breakpoints'
+  | 'saved'
+  | 'settings'
 
 function getProxyPortFromListenAddress(proxyListenAddress: string | null): number | null {
   if (!proxyListenAddress) return null
@@ -47,7 +52,8 @@ function readDashboardTabFromUrl(): DashboardTab {
     rawTab === 'traffic' ||
     rawTab === 'override' ||
     rawTab === 'breakpoints' ||
-    rawTab === 'saved'
+    rawTab === 'saved' ||
+    rawTab === 'settings'
   ) {
     return rawTab
   }
@@ -89,6 +95,9 @@ export function useDashboard() {
   }, [navigateToTab])
   const openSavedRequestsPanel = useCallback(() => {
     navigateToTab('saved')
+  }, [navigateToTab])
+  const openSettingsPanel = useCallback(() => {
+    navigateToTab('settings')
   }, [navigateToTab])
   const closeSavedRequestsPanel = useCallback(() => {
     navigateToTab('traffic')
@@ -815,6 +824,7 @@ export function useDashboard() {
     savedRequestsOpen,
     closeBreakpointsPanel,
     openSavedRequestsPanel,
+    openSettingsPanel,
     openFloatingTrafficWindow,
     closeSavedRequestsPanel,
     onOverridesNavClick,

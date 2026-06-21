@@ -13,6 +13,7 @@
 - `breakpoints/`：断点管理。
 - `override-editor/`：请求/响应覆盖编辑。
 - `saved-requests/`：已保存请求管理。
+- `settings/`：设置页，含深/浅 UI 主题切换。
 
 ## 模块约定
 
