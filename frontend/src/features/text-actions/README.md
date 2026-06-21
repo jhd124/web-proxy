@@ -1,6 +1,6 @@
 # text-actions
 
-`text-actions/` 负责跨模块复用的文本右键动作，包括页面搜索、全局搜索、Decode/Format 弹窗和浏览器搜索。
+`text-actions/` 负责跨模块复用的文本右键动作，包括页面搜索、全局搜索、Decode/Format 弹窗和浏览器搜索；浏览器动作在选中内容为 URL（或带路径域名）时直接打开该地址，否则用默认搜索引擎查询，桌面端通过 Tauri `open_external_url` 命令调用系统浏览器。
 
 ## 子目录与文件
 

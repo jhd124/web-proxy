@@ -138,6 +138,17 @@ async fn open_floating_traffic_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+#[allow(deprecated)]
+async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url).map_err(|e| e.to_string())?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err("only http(s) URLs can be opened".to_string());
+    }
+
+    app.shell().open(url, None).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -146,7 +157,8 @@ pub fn run() {
             mitm_install::install_mitm_ca_system_trust,
             mitm_install::open_mitm_ca_file,
             focus_main_window,
-            open_floating_traffic_window
+            open_floating_traffic_window,
+            open_external_url
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

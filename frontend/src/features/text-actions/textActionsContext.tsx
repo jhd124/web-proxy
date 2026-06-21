@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import { copyTextToClipboard } from '@/lib/clipboard'
 import { showSuccessToast, showToast } from '@/lib/toast'
+import { isTauri } from '@/lib/tauriEnv'
 import { useAdvancedSearchContext } from '../advanced-search/advancedSearchContext'
 import { usePageSearchContext } from '../page-search/pageSearchContext'
 import { decodeAndFormatText, type DecodeFormatResult } from './decodeFormat'
@@ -53,11 +54,10 @@ export function TextActionsProvider({
     (text: string) => {
       const query = normalizeActionText(text)
       if (!query) return
-      window.open(
-        `${textActionTexts.browserSearchEngine}${encodeURIComponent(query)}`,
-        '_blank',
-        'noopener,noreferrer',
-      )
+      void openInBrowser(resolveBrowserTarget(query)).catch((error: unknown) => {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(textActionTexts.decodeFormat.browserSearchFailed(detail), 'error')
+      })
     },
     [normalizeActionText],
   )
@@ -95,4 +95,44 @@ export function TextActionsProvider({
       />
     </TextActionsContext.Provider>
   )
+}
+
+// 选中内容若是 URL 或带路径的域名，直接用浏览器打开；否则用默认搜索引擎查询。
+function resolveBrowserTarget(query: string): string {
+  const directUrl = toDirectUrl(query)
+  if (directUrl) return directUrl
+  return `${textActionTexts.browserSearchEngine}${encodeURIComponent(query)}`
+}
+
+function toDirectUrl(query: string): string | null {
+  if (/\s/.test(query)) return null
+
+  try {
+    const parsed = new URL(query)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href
+    }
+    return null
+  } catch {
+    // 无协议的域名（如 example.com/path）补全为 https 后再校验。
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#].*)?$/i.test(query)) return null
+    try {
+      return new URL(`https://${query}`).href
+    } catch {
+      return null
+    }
+  }
+}
+
+async function openInBrowser(url: string): Promise<void> {
+  if (isTauri()) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('open_external_url', { url })
+    return
+  }
+
+  const openedWindow = window.open(url, '_blank', 'noopener,noreferrer')
+  if (!openedWindow) {
+    throw new Error('window.open returned null')
+  }
 }

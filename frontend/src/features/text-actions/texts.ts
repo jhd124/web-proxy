@@ -16,6 +16,7 @@ export const textActionTexts = {
     empty: '没有可处理的文本',
     copySuccess: '已复制结果',
     copyFailed: (detail: string) => `复制失败：${detail}`,
+    browserSearchFailed: (detail: string) => `浏览器搜索失败：${detail}`,
     kindLabels: {
       base64: 'Base64',
       json: 'JSON',
