@@ -8,6 +8,7 @@ import root from './features/dashboard/ui/DashboardUI.module.css'
 import { FloatingTrafficPortal } from './features/floating-traffic/portal'
 import { PageSearchProvider } from './features/page-search/pageSearchContext'
 import { PageSearchPortal } from './features/page-search/portal'
+import { TextActionsProvider } from './features/text-actions/textActionsContext'
 
 function App() {
   const view = new URLSearchParams(window.location.search).get('view')
@@ -16,11 +17,13 @@ function App() {
     <Suspense fallback={<div className={root.app} />}>
       <PageSearchProvider>
         <AdvancedSearchProvider>
-          {view === 'floating-traffic' ? <FloatingTrafficPortal /> : <DashboardPortal />}
-          <AdvancedSearchPortal />
-          <PageSearchPortal />
-          <ConfirmModalHost />
-          <Toaster position="bottom-right" />
+          <TextActionsProvider>
+            {view === 'floating-traffic' ? <FloatingTrafficPortal /> : <DashboardPortal />}
+            <AdvancedSearchPortal />
+            <PageSearchPortal />
+            <ConfirmModalHost />
+            <Toaster position="bottom-right" />
+          </TextActionsProvider>
         </AdvancedSearchProvider>
       </PageSearchProvider>
     </Suspense>

@@ -24,6 +24,9 @@
 - `src/features/advanced-search/README.md`
 - `src/features/advanced-search/hooks/README.md`
 - `src/features/advanced-search/ui/README.md`
+- `src/features/text-actions/README.md`
+- `src/features/text-actions/hooks/README.md`
+- `src/features/text-actions/ui/README.md`
 - `src/features/traffic/README.md`
 - `src/features/traffic/hooks/README.md`
 - `src/features/traffic/ui/README.md`

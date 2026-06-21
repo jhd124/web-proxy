@@ -14,6 +14,7 @@ import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { ConfirmCancelledError, confirm } from '../../../lib/confirm'
 import { showToast } from '../../../lib/toast'
 import type { SavedRequest } from '../../../types'
+import { TextContextMenuUI } from '../../text-actions/ui/TextContextMenuUI'
 import { buildSavedRequestGroups } from '../savedRequestGroups'
 import { savedRequestsTexts as t } from '../texts'
 import type { SavedRequestsPanelUIProps } from '../types'
@@ -167,9 +168,11 @@ export function SavedRequestsPanelUI({
                   <>
                     <div className={s.detailHead}>
                       <div className={s.detailMeta}>
-                        <p className={`mono ${s.detailUrl}`}>
-                          {selectedEntry.method} {selectedEntry.url}
-                        </p>
+                        <TextContextMenuUI fallbackText={selectedEntry.url}>
+                          <p className={`mono ${s.detailUrl}`}>
+                            {selectedEntry.method} {selectedEntry.url}
+                          </p>
+                        </TextContextMenuUI>
                         <p className="small muted">
                           {t.savedAt(
                             formatDateTime(selectedSavedRequest.savedAt),
@@ -193,13 +196,19 @@ export function SavedRequestsPanelUI({
                       <p className="small muted">
                         {t.originalAt(formatDateTime(selectedEntry.at))}
                       </p>
-                      <HeadersTable headers={selectedEntry.requestHeaders} />
+                      <TextContextMenuUI fallbackText={formatHeadersForAction(selectedEntry.requestHeaders)}>
+                        <div>
+                          <HeadersTable headers={selectedEntry.requestHeaders} />
+                        </div>
+                      </TextContextMenuUI>
                       {selectedEntry.requestBodyPreview && (
                         <>
                           <h3>{t.body}</h3>
-                          <pre className={s.pre}>
-                            {selectedEntry.requestBodyPreview}
-                          </pre>
+                          <TextContextMenuUI fallbackText={selectedEntry.requestBodyPreview}>
+                            <pre className={s.pre}>
+                              {selectedEntry.requestBodyPreview}
+                            </pre>
+                          </TextContextMenuUI>
                         </>
                       )}
                     </section>
@@ -213,16 +222,22 @@ export function SavedRequestsPanelUI({
                         <p className="mono">HTTP {selectedEntry.responseStatus}</p>
                       )}
                       {selectedEntry.responseHeaders ? (
-                        <HeadersTable headers={selectedEntry.responseHeaders} />
+                        <TextContextMenuUI fallbackText={formatHeadersForAction(selectedEntry.responseHeaders)}>
+                          <div>
+                            <HeadersTable headers={selectedEntry.responseHeaders} />
+                          </div>
+                        </TextContextMenuUI>
                       ) : (
                         <p className="small muted">{t.noResponse}</p>
                       )}
                       {selectedEntry.responseBodyPreview && (
                         <>
                           <h3>{t.body}</h3>
-                          <pre className={s.pre}>
-                            {selectedEntry.responseBodyPreview}
-                          </pre>
+                          <TextContextMenuUI fallbackText={selectedEntry.responseBodyPreview}>
+                            <pre className={s.pre}>
+                              {selectedEntry.responseBodyPreview}
+                            </pre>
+                          </TextContextMenuUI>
                         </>
                       )}
                     </section>
@@ -237,4 +252,8 @@ export function SavedRequestsPanelUI({
       </div>
     </div>
   )
+}
+
+function formatHeadersForAction(headers: [string, string][]): string {
+  return JSON.stringify(Object.fromEntries(headers), null, 2)
 }

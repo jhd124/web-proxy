@@ -27,6 +27,7 @@ export type AdvancedSearchTarget = {
 
 export type AdvancedSearchOpenOptions = {
   query?: string
+  submit?: boolean
 }
 
 export type AdvancedSearchOpenHandler = (target: AdvancedSearchTarget) => void

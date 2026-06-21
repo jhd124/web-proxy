@@ -1,6 +1,6 @@
 import { copyTextToClipboard } from '@/lib/clipboard'
 import { showSuccessToast, showToast } from '@/lib/toast'
-import { X } from 'lucide-react'
+import { Copy, X } from 'lucide-react'
 import { trafficTexts as t } from '../texts'
 import { getTrafficConnectDetailNote } from '../trafficDisplay'
 import { TrafficVirtualListUI } from './TrafficVirtualListUI'
@@ -10,6 +10,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { useDefaultLayout } from 'react-resizable-panels'
 import { LEFT_LIST_PANEL_DEFAULT_SIZE } from '@/lib/panelLayout'
 import { HeadersTable } from '@/components/headers-table/HeadersTable'
+import { TextContextMenuUI } from '../../text-actions/ui/TextContextMenuUI'
 import { HighlightText } from './HighlightText'
 
 const TRAFFIC_LAYOUT_ID = 'traffic-panels-group'
@@ -115,18 +116,26 @@ export function TrafficPanelUI({
                       />
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className={`mono small ${s.requestUrl} ${s.requestUrlButton}`}
-                    onClick={handleCopyRequestUrl}
-                  >
-                    {selected.method}{' '}
-                    <HighlightText
-                      text={selected.url}
-                      keywords={searchKeywords}
-                      markClassName={s.searchHighlight}
-                    />
-                  </button>
+                  <TextContextMenuUI fallbackText={selected.url}>
+                    <div className={`mono small ${s.requestUrl}`}>
+                      <span className={s.requestUrlText}>
+                        {selected.method}{' '}
+                        <HighlightText
+                          text={selected.url}
+                          keywords={searchKeywords}
+                          markClassName={s.searchHighlight}
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        className={s.copyUrlButton}
+                        aria-label={t.copyUrl}
+                        onClick={handleCopyRequestUrl}
+                      >
+                        <Copy size={14} aria-hidden />
+                      </button>
+                    </div>
+                  </TextContextMenuUI>
                   <p className="small muted">
                     {t.clientMeta(
                       selected.peer ?? '—',
@@ -145,17 +154,23 @@ export function TrafficPanelUI({
                       {getTrafficConnectDetailNote(selected.error, selected.mitmBypassed)}
                     </p>
                   )}
-                  <HeadersTable headers={selected.requestHeaders} />
+                  <TextContextMenuUI fallbackText={formatHeadersForAction(selected.requestHeaders)}>
+                    <div>
+                      <HeadersTable headers={selected.requestHeaders} />
+                    </div>
+                  </TextContextMenuUI>
                   {selected.requestBodyPreview && (
                     <>
                       <h3>{t.body}</h3>
-                      <pre className={s.pre}>
-                        <HighlightText
-                          text={selected.requestBodyPreview}
-                          keywords={searchKeywords}
-                          markClassName={s.searchHighlight}
-                        />
-                      </pre>
+                      <TextContextMenuUI fallbackText={selected.requestBodyPreview}>
+                        <pre className={s.pre}>
+                          <HighlightText
+                            text={selected.requestBodyPreview}
+                            keywords={searchKeywords}
+                            markClassName={s.searchHighlight}
+                          />
+                        </pre>
+                      </TextContextMenuUI>
                     </>
                   )}
                 </section>
@@ -171,7 +186,11 @@ export function TrafficPanelUI({
                     <p className="mono">HTTP {selected.responseStatus}</p>
                   )}
                   {selected.responseHeaders && (
-                    <HeadersTable headers={selected.responseHeaders} />
+                    <TextContextMenuUI fallbackText={formatHeadersForAction(selected.responseHeaders)}>
+                      <div>
+                        <HeadersTable headers={selected.responseHeaders} />
+                      </div>
+                    </TextContextMenuUI>
                   )}
                   {selectedIsEventStream && !selected.responseBodyPreview && (
                     <p className={`small muted ${s.hintSpaced}`}>
@@ -184,13 +203,15 @@ export function TrafficPanelUI({
                       {selectedIsEventStream && (
                         <p className="small muted">{t.streamBodyHint}</p>
                       )}
-                      <pre className={`${s.pre} ${s.preBody}`}>
-                        <HighlightText
-                          text={selected.responseBodyPreview}
-                          keywords={searchKeywords}
-                          markClassName={s.searchHighlight}
-                        />
-                      </pre>
+                      <TextContextMenuUI fallbackText={selected.responseBodyPreview}>
+                        <pre className={`${s.pre} ${s.preBody}`}>
+                          <HighlightText
+                            text={selected.responseBodyPreview}
+                            keywords={searchKeywords}
+                            markClassName={s.searchHighlight}
+                          />
+                        </pre>
+                      </TextContextMenuUI>
                     </>
                   )}
                 </section>
@@ -216,4 +237,8 @@ export function TrafficPanelUI({
       )}
     </ResizablePanelGroup>
   )
+}
+
+function formatHeadersForAction(headers: [string, string][]): string {
+  return JSON.stringify(Object.fromEntries(headers), null, 2)
 }

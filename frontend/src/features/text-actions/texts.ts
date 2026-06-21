@@ -1,0 +1,29 @@
+export const textActionTexts = {
+  menu: {
+    search: '搜索',
+    globalSearch: '全局搜索',
+    decodeFormat: 'Decode/Format',
+    browserSearch: '用浏览器搜索',
+  },
+  decodeFormat: {
+    title: 'Decode/Format',
+    description: '自动识别选中文本并展示解码或格式化结果。',
+    source: '原文',
+    result: '结果',
+    detectedAs: (label: string) => `识别为：${label}`,
+    copyResult: '复制结果',
+    close: '关闭',
+    empty: '没有可处理的文本',
+    copySuccess: '已复制结果',
+    copyFailed: (detail: string) => `复制失败：${detail}`,
+    kindLabels: {
+      base64: 'Base64',
+      json: 'JSON',
+      jwt: 'JWT',
+      unknown: '未识别格式',
+      url: '带参数 URL',
+      urlComponent: 'Encoded URL Component',
+    },
+  },
+  browserSearchEngine: 'https://www.google.com/search?q=',
+} as const

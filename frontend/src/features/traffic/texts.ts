@@ -66,6 +66,7 @@ export const trafficTexts = {
   copyCurl: 'Copy cURL',
   copyCurlSuccess: 'Copied cURL',
   copyCurlFailed: (detail: string) => `Could not copy cURL: ${detail}`,
+  copyUrl: 'Copy URL',
   copyUrlSuccess: 'Copied URL',
   copyUrlFailed: (detail: string) => `Could not copy URL: ${detail}`,
   rowMenuOpen: 'Actions',

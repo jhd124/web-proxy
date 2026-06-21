@@ -83,6 +83,51 @@ export function useAdvancedSearch(config?: { onOpen?: () => void }): AdvancedSea
     [resetResults],
   )
 
+  const runSearch = useCallback(
+    (searchQuery: string) => {
+      searchControllerRef.current?.abort()
+      if (!searchQuery) {
+        resetResults()
+        return
+      }
+
+      const controller = new AbortController()
+      searchControllerRef.current = controller
+      setIsLoading(true)
+      setError(null)
+      setSearchedQuery(searchQuery)
+
+      void fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
+          return (await response.json()) as AdvancedSearchResponse
+        })
+        .then((payload) => {
+          setGroups(payload.groups)
+          setTotal(payload.total)
+        })
+        .catch((searchError: unknown) => {
+          if (controller.signal.aborted) return
+          setGroups(EMPTY_GROUPS)
+          setTotal(0)
+          setError(searchError instanceof Error ? searchError.message : String(searchError))
+        })
+        .finally(() => {
+          if (searchControllerRef.current === controller) {
+            searchControllerRef.current = null
+          }
+          if (!controller.signal.aborted) {
+            setIsLoading(false)
+          }
+        })
+    },
+    [resetResults],
+  )
+
   const openAdvancedSearch = useCallback((options?: AdvancedSearchOpenOptions) => {
     config?.onOpen?.()
     searchControllerRef.current?.abort()
@@ -98,7 +143,10 @@ export function useAdvancedSearch(config?: { onOpen?: () => void }): AdvancedSea
     setError(null)
     setIsOpen(true)
     setIsMinimized(false)
-  }, [config])
+    if (options?.submit && nextQuery.length > 0) {
+      runSearch(nextQuery)
+    }
+  }, [config, runSearch])
 
   const closeAdvancedSearch = useCallback(() => {
     searchControllerRef.current?.abort()
@@ -117,47 +165,8 @@ export function useAdvancedSearch(config?: { onOpen?: () => void }): AdvancedSea
   }, [])
 
   const submitSearch = useCallback(() => {
-    const searchQuery = query.trim()
-    searchControllerRef.current?.abort()
-    if (!searchQuery) {
-      resetResults()
-      return
-    }
-
-    const controller = new AbortController()
-    searchControllerRef.current = controller
-    setIsLoading(true)
-    setError(null)
-    setSearchedQuery(searchQuery)
-
-    void fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        return (await response.json()) as AdvancedSearchResponse
-      })
-      .then((payload) => {
-        setGroups(payload.groups)
-        setTotal(payload.total)
-      })
-      .catch((searchError: unknown) => {
-        if (controller.signal.aborted) return
-        setGroups(EMPTY_GROUPS)
-        setTotal(0)
-        setError(searchError instanceof Error ? searchError.message : String(searchError))
-      })
-      .finally(() => {
-        if (searchControllerRef.current === controller) {
-          searchControllerRef.current = null
-        }
-        if (!controller.signal.aborted) {
-          setIsLoading(false)
-        }
-      })
-  }, [query, resetResults])
+    runSearch(query.trim())
+  }, [query, runSearch])
 
   const registerOpenHandler = useCallback((handler: AdvancedSearchOpenHandler) => {
     openHandlerRef.current = handler

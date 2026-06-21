@@ -13,7 +13,7 @@
 ## 关键文件
 
 - `main.tsx`：应用挂载入口。
-- `App.tsx`：应用根组件，挂载主视图、全局高级搜索、悬浮页面检索、确认弹窗与 toast host。
+- `App.tsx`：应用根组件，挂载主视图、全局搜索、文本右键动作、悬浮页面检索、确认弹窗与 toast host。
 - `index.css`：全局样式。
 - `types.ts`：共享类型；流量列表使用 `TrafficEntrySummary` 摘要，完整 `TrafficEntry` 仅在详情、保存、导出等按需场景使用。
 
