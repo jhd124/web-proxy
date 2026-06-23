@@ -10,7 +10,7 @@
 - 主要依赖：`@tanstack/react-virtual`（虚拟列表）、`@monaco-editor/react`（规则编辑器）、`sonner`（toast）。
 - 宿主模式：
   - 浏览器模式（纯 Web）；
-  - Tauri 桌面模式（通过 `@tauri-apps/api` 调原生命令）。
+  - Electron 桌面模式（通过 `window.proxyDesktop` preload API 调用桌面能力）。
 
 ## 2. 总体架构模式
 
@@ -122,7 +122,7 @@
 
 1. 流量列表有上限裁剪（`trimTrafficEntries`），避免无限增长。
 2. 大量操作仍在使用 `window.alert`，项目已有 `src/lib/toast.ts` 可逐步迁移到 toast 反馈。
-3. 通过 `isTauri()` 做环境分支，避免 Web 模式直接调用桌面 API。
+3. 通过 `desktopHost` 做环境分支，避免 Web 模式直接调用桌面 API。
 4. UI action 通过 WS 下发，可触发聚焦主窗、选中请求、设置过滤条件等跨窗行为。
 
 ## 7. Agent 改动注意事项

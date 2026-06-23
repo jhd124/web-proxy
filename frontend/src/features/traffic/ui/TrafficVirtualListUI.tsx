@@ -51,7 +51,6 @@ export type TrafficVirtualListUIProps = {
   onOpenMatchedOverride: (id: string) => void
   onAddBreakpoint: (id: string) => Promise<void>
   onOpenMatchedBreakpoint: (id: string) => void
-  onReplay: (id: string) => Promise<void>
   onEntryDoubleClick?: (id: string) => void
   emptyText?: string
   className?: string
@@ -74,7 +73,6 @@ export function TrafficVirtualListUI({
   onOpenMatchedOverride,
   onAddBreakpoint,
   onOpenMatchedBreakpoint,
-  onReplay,
   onEntryDoubleClick,
   emptyText,
   className,
@@ -393,16 +391,6 @@ export function TrafficVirtualListUI({
             matchedBreakpointByEntryId?.has(contextMenuEntry.id))
             ? t.rowMenuViewMatchedBreakpoint
             : t.rowMenuAddBreakpoint}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
-          onSelect={() => {
-            if (!contextMenuEntry) return
-            void onReplay(contextMenuEntry.id)
-          }}
-        >
-          {t.rowMenuReplay}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

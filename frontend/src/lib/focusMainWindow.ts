@@ -1,15 +1,14 @@
-import { isTauri } from './tauriEnv'
+import { getDesktopHost } from './desktopHost'
 
 export const TRAFFIC_SELECT_BROADCAST = 'proxy-traffic-select'
-export const TRAFFIC_SELECT_TAURI_EVENT = 'traffic-select'
 
 /** 将主窗口置于前台，并可选同步选中流量条目。 */
 export async function focusMainWindow(requestId?: string | null): Promise<void> {
   const id = requestId ?? undefined
+  const desktopHost = getDesktopHost()
 
-  if (isTauri()) {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('focus_main_window', { requestId: id ?? null })
+  if (desktopHost) {
+    await desktopHost.focusMainWindow(id ?? null)
     return
   }
 

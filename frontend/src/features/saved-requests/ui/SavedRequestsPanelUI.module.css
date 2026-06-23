@@ -35,7 +35,7 @@
   min-width: 0;
   min-height: 0;
   flex: 1;
-  background: var(--bg);
+  background: var(--background-base);
   border: 1px solid var(--border);
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
 }
@@ -64,7 +64,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #12151c;
+  background: var(--surface-panel);
 }
 
 .listTools {
@@ -110,7 +110,7 @@
 }
 
 .itemButtonActive {
-  background: #1e2635;
+  background: var(--surface-selected);
   color: var(--text-primary);
 }
 
@@ -135,7 +135,7 @@
   min-width: 0;
   overflow: auto;
   padding: 1rem 1.25rem 2rem;
-  background: var(--bg);
+  background: var(--background-base);
 }
 
 .detailHead {
@@ -165,13 +165,13 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .pre {
   margin: 0.5rem 0 0;
   padding: 0.75rem;
-  background: #12151c;
+  background: var(--surface-panel);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: auto;

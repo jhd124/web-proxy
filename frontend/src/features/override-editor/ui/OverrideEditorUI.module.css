@@ -34,7 +34,7 @@
   max-width: 100%;
   min-width: 0;
   min-height: 0;
-  background: var(--bg);
+  background: var(--background-base);
   border: 1px solid var(--border);
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
 }
@@ -57,7 +57,7 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
+  background: var(--background-card);
   flex-shrink: 0;
 }
 
@@ -106,14 +106,14 @@
   height: 100%;
   min-height: 0;
   flex-direction: column;
-  background: #12151c;
+  background: var(--surface-panel);
 }
 
 .requestCol {
   height: 100%;
   min-height: 0;
   overflow: auto;
-  background: #12151c;
+  background: var(--surface-panel);
   padding: 0.65rem 0.75rem 1rem;
 }
 
@@ -143,15 +143,15 @@
   text-align: center;
   line-height: 1.1;
   border: 1px solid var(--border);
-  background: #171b24f2;
+  background: var(--surface-floating);
   border-radius: 0.4rem 0 0 0.4rem;
   padding: 0.4rem 0.28rem 0.45rem;
   box-shadow: 0 2px 8px #0004;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .requestOpenFab:hover {
-  border-color: #4a6b8a;
+  border-color: var(--text-active);
 }
 
 .requestOpenFab:active {
@@ -167,7 +167,7 @@
 .requestOpenFabHint {
   display: block;
   margin: 0.2rem 0 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.58rem;
   font-style: normal;
   line-height: 1.15;

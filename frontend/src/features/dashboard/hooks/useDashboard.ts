@@ -13,7 +13,7 @@ import {
 } from '../../../lib/dashboardUtils'
 import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
 import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSelect'
-import { isTauri } from '../../../lib/tauriEnv'
+import { getDesktopHost } from '../../../lib/desktopHost'
 import { downloadBlob } from '../../../lib/download'
 import { trafficEntriesToHar } from '../../../lib/har'
 import { copyTextToClipboard } from '../../../lib/clipboard'
@@ -32,6 +32,7 @@ export type DashboardTab =
   | 'traffic'
   | 'override'
   | 'breakpoints'
+  | 'request-composer'
   | 'saved'
   | 'settings'
 
@@ -52,6 +53,7 @@ function readDashboardTabFromUrl(): DashboardTab {
     rawTab === 'traffic' ||
     rawTab === 'override' ||
     rawTab === 'breakpoints' ||
+    rawTab === 'request-composer' ||
     rawTab === 'saved' ||
     rawTab === 'settings'
   ) {
@@ -96,6 +98,9 @@ export function useDashboard() {
   const openSavedRequestsPanel = useCallback(() => {
     navigateToTab('saved')
   }, [navigateToTab])
+  const openRequestComposerPanel = useCallback(() => {
+    navigateToTab('request-composer')
+  }, [navigateToTab])
   const openSettingsPanel = useCallback(() => {
     navigateToTab('settings')
   }, [navigateToTab])
@@ -107,8 +112,9 @@ export function useDashboard() {
       FLOATING_TRAFFIC_VIEW_PATH,
       window.location.href,
     ).toString()
+    const desktopHost = getDesktopHost()
 
-    if (!isTauri()) {
+    if (!desktopHost) {
       window.open(
         floatingUrl,
         FLOATING_TRAFFIC_WINDOW_LABEL,
@@ -118,8 +124,7 @@ export function useDashboard() {
     }
 
     try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_floating_traffic_window')
+      await desktopHost.openFloatingTrafficWindow()
     } catch (error) {
       window.alert(
         dashboardTexts.header.openFloatingTrafficFailed(
@@ -723,27 +728,6 @@ export function useDashboard() {
     ],
   )
 
-  const replayEntryRequest = useCallback(
-    async (id: string) => {
-      const entry = getEntrySummaryById(id)
-      if (!entry || entry.kind !== 'http') return
-      traffic.setSelectedId(id)
-      try {
-        const response = await fetch(`/api/requests/${entry.id}/replay`, {
-          method: 'POST',
-        })
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        showSuccessToast(trafficTexts.replayRequestSuccess)
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error)
-        showToast(trafficTexts.replayRequestFailed(detail), 'error')
-      }
-    },
-    [getEntrySummaryById, traffic],
-  )
-
   const openSavedRequestForEntry = useCallback(
     (id: string) => {
       if (!savedTrafficEntryIds.has(id)) return
@@ -824,6 +808,7 @@ export function useDashboard() {
     savedRequestsOpen,
     closeBreakpointsPanel,
     openSavedRequestsPanel,
+    openRequestComposerPanel,
     openSettingsPanel,
     openFloatingTrafficWindow,
     closeSavedRequestsPanel,
@@ -908,7 +893,6 @@ export function useDashboard() {
     saveEntryRequest,
     openEntryOverrideDrawer,
     addBreakpointFromEntry,
-    replayEntryRequest,
     openSavedRequestForEntry,
     savedRequests,
     selectedSavedRequestId,

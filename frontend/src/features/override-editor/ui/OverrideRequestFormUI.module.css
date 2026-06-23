@@ -12,7 +12,7 @@
 
 .subLabel {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -51,7 +51,7 @@
   flex-direction: column;
   gap: 0.3rem;
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .form input,
@@ -60,8 +60,8 @@
   padding: 0.4rem 0.5rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: #0f1218;
-  color: var(--text);
+  background: var(--surface-inset);
+  color: var(--text-primary);
   font-size: 0.82rem;
   font-family: inherit;
 }
@@ -99,7 +99,7 @@
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .streamPreviewSection input[type='number'] {
@@ -107,8 +107,8 @@
   padding: 0.45rem 0.55rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: #0f1218;
-  color: var(--text);
+  background: var(--surface-inset);
+  color: var(--text-primary);
 }
 
 .streamPreviewControls {

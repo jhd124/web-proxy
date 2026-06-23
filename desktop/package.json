@@ -1,15 +1,75 @@
 {
   "name": "proxy",
   "private": true,
+  "version": "0.1.0",
+  "description": "Proxy desktop app",
+  "author": "Proxy contributors",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev:tauri-stack": "concurrently -k -n proxy,ui -c blue,green \"cd .. && MITM=1 PROXY_AUTO_SYSTEM_PROXY=1 cargo run -p proxy-app\" \"cd ../frontend && npm run dev\"",
-    "tauri": "tauri",
-    "tauri:prebuild": "cd ../frontend && npm run build && cd .. && cargo build --release -p proxy-app && node desktop/scripts/prepare-tauri-sidecar.cjs",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "electron:compile": "tsc -p tsconfig.json",
+    "electron:start": "bun run electron:compile && electron .",
+    "electron:dev": "concurrently -k -n ui,electron -c green,blue \"cd ../frontend && bun run dev\" \"bun run electron:start\"",
+    "electron:prebuild": "cd ../frontend && bun run build && cd .. && cargo build --release -p proxy-app && bun desktop/scripts/prepare-electron-resources.ts && cd desktop && bun run electron:compile",
+    "electron:pack": "bun run electron:prebuild && electron-builder --dir",
+    "electron:build": "bun run electron:prebuild && electron-builder -mwl",
+    "electron:build:mac": "bun run electron:prebuild && electron-builder --mac",
+    "electron:build:win": "bun run electron:prebuild && electron-builder --win",
+    "electron:build:linux": "bun run electron:prebuild && electron-builder --linux"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.5.0",
-    "concurrently": "^9.1.0"
+    "@types/node": "^24.12.2",
+    "concurrently": "^9.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "app.proxy.desktop",
+    "productName": "Proxy",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "package.json",
+      "dist-electron/main.js",
+      "dist-electron/preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/dist",
+        "to": "dist"
+      },
+      {
+        "from": "resources/bin",
+        "to": "bin"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "src/icons/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "binaries": [
+        "Contents/Resources/bin/proxy-app"
+      ]
+    },
+    "win": {
+      "icon": "src/icons/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "icon": "src/icons/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    }
   }
 }

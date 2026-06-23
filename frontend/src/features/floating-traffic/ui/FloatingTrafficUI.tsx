@@ -114,7 +114,6 @@ export function FloatingTrafficUI({
               onOpenMatchedBreakpoint={(id) => {
                 void openMainWindowForEntry(id)
               }}
-              onReplay={(id) => openMainWindowForEntry(id)}
               onEntryDoubleClick={(id) => void openMainWindowForEntry(id)}
               emptyText={t.empty}
               searchKeywords={activeFilterKeywords}

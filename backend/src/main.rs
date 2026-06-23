@@ -7,6 +7,8 @@ mod override_identity;
 mod overrides;
 mod ports;
 mod proxy;
+mod request_catalog;
+mod request_composer;
 mod saved_requests;
 mod state;
 mod system_proxy;
@@ -95,6 +97,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|| PathBuf::from("proxy-overrides.sqlite3"));
     let overrides = overrides::init_and_load(&override_db_path).context("override sqlite init")?;
     saved_requests::init(&override_db_path).context("saved requests sqlite init")?;
+    request_catalog::init(&override_db_path).context("request catalog sqlite init")?;
+    request_composer::init(&override_db_path).context("request composer sqlite init")?;
     let breakpoints =
         breakpoints::load_breakpoints(&override_db_path).context("load breakpoints")?;
 

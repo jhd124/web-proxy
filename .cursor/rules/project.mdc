@@ -6,11 +6,11 @@ alwaysApply: true
 * The backend should take more responsiblities, and the fontend should be as light-wight as posible
 
 # backend
-* Rust crate: `backend/`；仓库根 workspace 含 `backend` 与 `desktop/src`；在根目录执行 `cargo build -p proxy-app` 等即可。
+* Rust crate: `backend/`；仓库根 workspace 含 `backend`；在根目录执行 `cargo build -p proxy-app` 等即可。
 * `backend/` 下目录必须维护 `README.md`；每次修改代码时同步更新对应目录 README；若目录/README 路径变更，需同步更新 `backend/README.md` 索引。
 
-# 桌面 (Tauri 2)
-* 目录为 `desktop/`：其中 `package.json` + `src/`。在 `desktop/` 执行 `npm install`，再 `npm run tauri:dev` 或 `npm run tauri:build`；或根目录 `make tauri-dev` / `make tauri-build`。sidecar 跑 `proxy-app`，WebView `http://127.0.0.1:9091`；`PROXY_DATA_DIR` 为应用 support 数据目录。
+# 桌面 (Electron)
+* 目录为 `desktop/`：其中 `package.json` + `src/`。在 `desktop/` 执行 `npm install`，再 `npm run electron:dev` 或 `npm run electron:build`；或根目录 `make electron-dev` / `make electron-build`。sidecar 跑 `proxy-app`，WebView `http://127.0.0.1:9091`；`PROXY_DATA_DIR` 为 Electron userData 下的 `proxy-data`。
 
 # frontend
 

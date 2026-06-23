@@ -2,6 +2,10 @@ target/
 node_modules/
 frontend/dist/
 frontend/.proxy-dev-ports.json
+desktop/dist/
+desktop/dist-electron/
+desktop/resources/
+desktop/.data/
 
 # Runtime data
 proxy-overrides.sqlite3

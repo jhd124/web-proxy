@@ -16,7 +16,6 @@ export type TrafficPanelUIProps = {
   onEntrySaveRequest: (id: string) => Promise<void>
   onEntryOverride: (id: string) => void
   onEntryAddBreakpoint: (id: string) => Promise<void>
-  onEntryReplay: (id: string) => Promise<void>
   onEntryOpenSavedRequest: (id: string) => void
   onEntryOpenMatchedOverride: (id: string) => void
   onEntryOpenMatchedBreakpoint: (id: string) => void

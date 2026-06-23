@@ -1,6 +1,6 @@
 # panel-header
 
-通用面板顶栏组件，统一 override、breakpoints、saved-requests 三个面板的 header 布局。
+通用面板顶栏组件，统一 override、breakpoints、saved-requests、request-composer 等面板的 header 布局。
 
 ## 组件
 
@@ -24,3 +24,4 @@
 - `features/override-editor/ui/OverrideEditorUI.tsx`
 - `features/breakpoints/ui/BreakpointsPanelUI.tsx`
 - `features/saved-requests/ui/SavedRequestsPanelUI.tsx`
+- `features/request-composer/ui/RequestComposerUI.tsx`

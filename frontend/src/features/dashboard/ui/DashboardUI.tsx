@@ -1,5 +1,6 @@
 import { BreakpointsPanelPortal } from '../../breakpoints/portal'
 import { OverrideEditorPortal } from '../../override-editor/portal'
+import { RequestComposerPortal } from '../../request-composer/portal'
 import { SavedRequestsPanelPortal } from '../../saved-requests/portal'
 import { SettingsPanelPortal } from '../../settings/portal'
 import { TrafficPanelPortal } from '../../traffic/portal'
@@ -60,7 +61,6 @@ export function DashboardUI(p: DashboardViewModel) {
                     onEntryAddBreakpoint={async (id) => {
                       p.addBreakpointFromEntry(id)
                     }}
-                    onEntryReplay={p.replayEntryRequest}
                     onEntryOpenSavedRequest={p.openSavedRequestForEntry}
                     onEntryOpenMatchedOverride={p.openMatchedOverrideForEntry}
                     onEntryOpenMatchedBreakpoint={p.openMatchedBreakpointForEntry}
@@ -134,6 +134,11 @@ export function DashboardUI(p: DashboardViewModel) {
                   removeSavedRequest={p.removeSavedRequest}
                   clearSavedRequests={p.clearSavedRequests}
                 />
+              </div>
+            )}
+            {p.activeTab === 'request-composer' && (
+              <div className={root.tabPanel}>
+                <RequestComposerPortal />
               </div>
             )}
             {p.activeTab === 'settings' && (

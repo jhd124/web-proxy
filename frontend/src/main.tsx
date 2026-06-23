@@ -2,10 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { isTauri } from './lib/tauriEnv'
+import { isDesktopHost } from './lib/desktopHost'
 
-if (isTauri()) {
-  document.documentElement.classList.add('is-tauri')
+if (isDesktopHost()) {
+  document.documentElement.classList.add('is-desktop-host')
 }
 
 createRoot(document.getElementById('root')!).render(

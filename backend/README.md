@@ -26,6 +26,7 @@
 - `PROXY_DATA_DIR`：数据目录（SQLite、证书等）。
 - `OVERRIDE_DB`：覆盖规则数据库路径。
 - `MAX_TRAFFIC`：内存中保留的抓包条目上限。
+- 请求编写器模板索引与历史记录存放在 `OVERRIDE_DB` 指向的 SQLite 文件中，并由后端按固定上限裁剪。
 - `MITM`：是否启用 HTTPS MITM（`1/true` 启用）。
 - `MITM_CA_DIR`：MITM CA 存储目录。
 - `UPSTREAM_HTTP3`：是否启用上游 HTTP/3 客户端。

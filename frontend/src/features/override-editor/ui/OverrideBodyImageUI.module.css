@@ -6,7 +6,7 @@
   justify-content: center;
   padding: 1rem;
   overflow: auto;
-  background: #0b0d12;
+  background: var(--surface-inset);
 }
 
 .image {
@@ -14,5 +14,5 @@
   max-height: 100%;
   object-fit: contain;
   border-radius: 4px;
-  background: #11141c;
+  background: var(--surface-panel);
 }

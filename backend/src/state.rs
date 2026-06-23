@@ -763,6 +763,7 @@ pub struct AppState {
     pub upstream_http3_client: Option<reqwest::Client>,
     pub upstream_http3_enabled: bool,
     pub max_traffic: usize,
+    pub request_catalog: Arc<crate::request_catalog::RequestCatalogRecorder>,
     /// When set, HTTPS CONNECT is intercepted (TLS MITM) so decrypted HTTP is logged.
     pub mitm: Option<Arc<crate::mitm::Mitm>>,
     /// Absolute path to `ca.pem` on disk when MITM is enabled (default `…/mitm-ca-rsa/ca.pem`; desktop installers).
@@ -795,6 +796,9 @@ impl AppState {
             stream_controllers: Arc::new(Mutex::new(HashMap::new())),
             stream_preview_buffers: Arc::new(Mutex::new(HashMap::new())),
             auto_mitm_bypass_hosts: Arc::new(RwLock::new(HashSet::new())),
+            request_catalog: Arc::new(crate::request_catalog::RequestCatalogRecorder::new(
+                override_db_path.clone(),
+            )),
             override_db_path,
             upstream_http_client,
             upstream_http3_client,
@@ -858,8 +862,18 @@ impl AppState {
             if let Some(p) = update.stream_playing {
                 e.stream_playing = Some(p);
             }
+            let should_record_catalog = !e.pending;
+            let catalog_entry = if should_record_catalog {
+                Some(e.clone())
+            } else {
+                None
+            };
             let entry = TrafficEntrySummary::from(&*e);
             drop(log);
+            if let Some(catalog_entry) = catalog_entry {
+                self.request_catalog
+                    .record_traffic_candidate(&catalog_entry);
+            }
             let _ = self.tx.send(DashboardMessage::Traffic { entry });
         }
     }

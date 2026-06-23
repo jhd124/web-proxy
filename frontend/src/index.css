@@ -38,29 +38,29 @@ body {
   margin: 0;
 }
 
-html.is-tauri,
-html.is-tauri body,
-html.is-tauri #root {
+html.is-desktop-host,
+html.is-desktop-host body,
+html.is-desktop-host #root {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 
-html.is-tauri *:hover,
-html.is-tauri *:focus-within {
+html.is-desktop-host *:hover,
+html.is-desktop-host *:focus-within {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-html.is-tauri *::-webkit-scrollbar {
+html.is-desktop-host *::-webkit-scrollbar {
   width: var(--scrollbar-size);
   height: var(--scrollbar-size);
 }
 
-html.is-tauri *::-webkit-scrollbar-track {
+html.is-desktop-host *::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
   border-radius: 999px;
 }
 
-html.is-tauri *::-webkit-scrollbar-thumb {
+html.is-desktop-host *::-webkit-scrollbar-thumb {
   background-color: transparent;
   border: 2px solid transparent;
   border-radius: 999px;
@@ -68,16 +68,16 @@ html.is-tauri *::-webkit-scrollbar-thumb {
   transition: background-color 150ms ease;
 }
 
-html.is-tauri *:hover::-webkit-scrollbar-thumb,
-html.is-tauri *:focus-within::-webkit-scrollbar-thumb {
+html.is-desktop-host *:hover::-webkit-scrollbar-thumb,
+html.is-desktop-host *:focus-within::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
 
-html.is-tauri *::-webkit-scrollbar-thumb:hover {
+html.is-desktop-host *::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover);
 }
 
-html.is-tauri *::-webkit-scrollbar-corner {
+html.is-desktop-host *::-webkit-scrollbar-corner {
   background: transparent;
 }
 

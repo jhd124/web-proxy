@@ -1,6 +1,6 @@
 use super::*;
 use crate::state::{BreakpointRule, OverrideRule, TrafficEntry, TrafficKind};
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::Router;
 use chrono::Utc;
 use reqwest::Client;
@@ -13,6 +13,8 @@ fn build_state() -> Arc<AppState> {
         Uuid::new_v4()
     ));
     crate::saved_requests::init(&db_path).expect("init saved requests table");
+    crate::request_catalog::init(&db_path).expect("init request catalog tables");
+    crate::request_composer::init(&db_path).expect("init request composer tables");
     Arc::new(AppState::new(
         128,
         None,
@@ -450,6 +452,196 @@ async fn replay_request_replays_http_entry() {
 
     let seen = tokio::time::timeout(std::time::Duration::from_secs(1), request_seen_rx).await;
     assert!(seen.is_ok(), "expected replay request to hit test server");
+}
+
+#[tokio::test]
+async fn request_catalog_suggests_api_requests_and_skips_resources() {
+    let state = build_state();
+    let mut api_entry = sample_entry(Uuid::new_v4());
+    api_entry.host = "api.example.com".to_string();
+    api_entry.url = "https://api.example.com/api/users?page=1".to_string();
+    api_entry.path = "/api/users".to_string();
+    api_entry.response_status = Some(200);
+    api_entry.response_headers = Some(vec![(
+        "content-type".to_string(),
+        "application/json".to_string(),
+    )]);
+    state.request_catalog.record_traffic_candidate(&api_entry);
+
+    let mut js_entry = sample_entry(Uuid::new_v4());
+    js_entry.host = "static.example.com".to_string();
+    js_entry.url = "https://static.example.com/assets/app.js".to_string();
+    js_entry.path = "/assets/app.js".to_string();
+    js_entry.response_status = Some(200);
+    js_entry.response_headers = Some(vec![(
+        "content-type".to_string(),
+        "application/javascript".to_string(),
+    )]);
+    state.request_catalog.record_traffic_candidate(&js_entry);
+
+    let hosts = crate::request_catalog::suggest_hosts(
+        axum::extract::Query(crate::request_catalog::PrefixSuggestQuery {
+            prefix: String::new(),
+            limit: 20,
+        }),
+        State(state.clone()),
+    )
+    .await
+    .expect("suggest hosts should succeed")
+    .0;
+    assert_eq!(hosts.len(), 1);
+    assert_eq!(hosts[0].value, "api.example.com");
+
+    let template = crate::request_catalog::get_template(
+        axum::extract::Query(crate::request_catalog::TemplateQuery {
+            host: "api.example.com".to_string(),
+            path: "/api/users".to_string(),
+            method: "GET".to_string(),
+        }),
+        State(state),
+    )
+    .await
+    .expect("template should exist")
+    .0;
+    assert_eq!(template.search_params_schema[0].key, "page");
+    assert_eq!(template.search_params_schema[0].value_type, "number");
+}
+
+#[tokio::test]
+async fn request_catalog_respects_sensitive_header_setting() {
+    let state = build_state();
+    let mut entry = sample_entry(Uuid::new_v4());
+    entry.host = "headers.example.com".to_string();
+    entry.url = "https://headers.example.com/api/token".to_string();
+    entry.path = "/api/token".to_string();
+    entry.response_status = Some(200);
+    entry.response_headers = Some(vec![(
+        "content-type".to_string(),
+        "application/json".to_string(),
+    )]);
+    entry.request_headers = vec![
+        ("authorization".to_string(), "Bearer secret".to_string()),
+        ("x-trace-id".to_string(), "trace-1".to_string()),
+    ];
+    state.request_catalog.record_traffic_candidate(&entry);
+
+    let template = crate::request_catalog::get_template(
+        axum::extract::Query(crate::request_catalog::TemplateQuery {
+            host: "headers.example.com".to_string(),
+            path: "/api/token".to_string(),
+            method: "GET".to_string(),
+        }),
+        State(state.clone()),
+    )
+    .await
+    .expect("template should exist")
+    .0;
+    assert!(!template
+        .headers
+        .iter()
+        .any(|(name, _)| name == "authorization"));
+    assert!(template
+        .headers
+        .iter()
+        .any(|(name, _)| name == "x-trace-id"));
+
+    let saved_settings = crate::request_catalog::put_settings(
+        State(state.clone()),
+        axum::Json(crate::request_catalog::RequestCatalogSettings {
+            persist_sensitive_headers: true,
+        }),
+    )
+    .await
+    .expect("settings save should succeed")
+    .0;
+    assert!(saved_settings.persist_sensitive_headers);
+
+    entry.host = "headers-on.example.com".to_string();
+    entry.url = "https://headers-on.example.com/api/token".to_string();
+    state.request_catalog.record_traffic_candidate(&entry);
+    let template_with_sensitive = crate::request_catalog::get_template(
+        axum::extract::Query(crate::request_catalog::TemplateQuery {
+            host: "headers-on.example.com".to_string(),
+            path: "/api/token".to_string(),
+            method: "GET".to_string(),
+        }),
+        State(state),
+    )
+    .await
+    .expect("template should exist")
+    .0;
+    assert!(template_with_sensitive
+        .headers
+        .iter()
+        .any(|(name, _)| name == "authorization"));
+}
+
+#[tokio::test]
+async fn request_composer_sends_request_and_stores_history() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind composer test listener");
+    let addr = listener.local_addr().expect("read test listener addr");
+    let app = Router::new().route(
+        "/api/composer",
+        get(|| async {
+            (
+                StatusCode::OK,
+                axum::Json(serde_json::json!({ "ok": true })),
+            )
+        }),
+    );
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let state = build_state();
+    let response = crate::request_composer::send_request(
+        State(state.clone()),
+        axum::Json(crate::request_composer::RequestComposerRequest {
+            scheme: "http".to_string(),
+            host: addr.to_string(),
+            path: "/api/composer".to_string(),
+            method: "GET".to_string(),
+            search_params: vec![("page".to_string(), "1".to_string())],
+            headers: vec![("accept".to_string(), "application/json".to_string())],
+            body: None,
+        }),
+    )
+    .await
+    .expect("composer send should succeed")
+    .0;
+    assert_eq!(response.response.status, Some(200));
+    assert!(response
+        .response
+        .body_preview
+        .as_deref()
+        .unwrap_or_default()
+        .contains("ok"));
+
+    let history = crate::request_composer::list_history(
+        axum::extract::Query(crate::request_composer::HistoryQuery {
+            limit: 10,
+            offset: 0,
+            q: String::new(),
+        }),
+        State(state.clone()),
+    )
+    .await
+    .expect("history list should succeed")
+    .0;
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].id, response.history_id);
+
+    let detail = crate::request_composer::history_detail(
+        axum::extract::Path(response.history_id),
+        State(state),
+    )
+    .await
+    .expect("history detail should succeed")
+    .0;
+    assert_eq!(detail.request.search_params[0].0, "page");
+    assert_eq!(detail.response.status, Some(200));
 }
 
 #[tokio::test]

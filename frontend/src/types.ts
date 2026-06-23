@@ -67,6 +67,80 @@ export interface SavedRequest {
   entry: TrafficEntry
 }
 
+export interface CatalogFieldSchema {
+  key: string
+  valueType: string
+}
+
+export interface CatalogBodySchema {
+  kind: string
+  contentType?: string | null
+  fields: CatalogFieldSchema[]
+}
+
+export interface RequestCatalogTemplate {
+  host: string
+  path: string
+  method: string
+  searchParamsSchema: CatalogFieldSchema[]
+  bodySchema?: CatalogBodySchema | null
+  headers: [string, string][]
+  lastSeenAt: string
+}
+
+export interface CatalogSuggestion {
+  value: string
+  hitCount: number
+  lastSeenAt: string
+}
+
+export interface RequestCatalogSettings {
+  persistSensitiveHeaders: boolean
+}
+
+export interface RequestComposerRequest {
+  scheme: string
+  host: string
+  path: string
+  method: string
+  searchParams: [string, string][]
+  headers: [string, string][]
+  body?: string | null
+}
+
+export interface RequestComposerResponse {
+  status?: number | null
+  headers: [string, string][]
+  bodyPreview?: string | null
+  durationMs: number
+  error?: string | null
+}
+
+export interface RequestComposerSendResponse {
+  historyId: string
+  response: RequestComposerResponse
+}
+
+export interface RequestComposerHistoryItem {
+  id: string
+  sentAt: string
+  method: string
+  url: string
+  host: string
+  path: string
+  responseStatus?: number | null
+  durationMs: number
+  error?: string | null
+}
+
+export interface RequestComposerHistoryDetail {
+  id: string
+  sentAt: string
+  request: RequestComposerRequest
+  url: string
+  response: RequestComposerResponse
+}
+
 export interface OverrideRule {
   id: string
   enabled: boolean

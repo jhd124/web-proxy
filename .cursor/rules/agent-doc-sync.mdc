@@ -17,7 +17,7 @@
 2. 改动 `frontend/` 后，必须检查并按需更新 `docs/agent-reference/frontend.md`
 3. 改动 `desktop/` 后，必须检查并按需更新 `docs/agent-reference/desktop.md`
 4. 改动 `mcp/` 后，必须检查并按需更新 `docs/agent-reference/mcp.md`
-5. 若新增跨模块流程（例如 API + UI + Tauri 命令联动），必须同时更新受影响的多份文档
+5. 若新增跨模块流程（例如 API + UI + Electron IPC 联动），必须同时更新受影响的多份文档
 6. 若新增目录级能力但尚无对应介绍文档，必须先补文档再结束任务
 
 ## 更新标准

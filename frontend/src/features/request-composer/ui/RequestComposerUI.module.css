@@ -1,0 +1,234 @@
+.panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background: var(--background-base);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.editorScroll {
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.group,
+.historyCard,
+.responseCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.historyCard h3,
+.responseCard h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: var(--text-weight-emphasized);
+}
+
+.group {
+  gap: 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.9rem 0;
+}
+
+.group + .group {
+  border-top: 1px solid var(--border);
+}
+
+.methodRow {
+  max-width: 12rem;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.textarea {
+  min-height: 5rem;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  outline: none;
+  padding: 0.6rem 0.7rem;
+}
+
+.textarea:focus {
+  border-color: var(--text-active);
+}
+
+.bodyText {
+  min-height: 10rem;
+}
+
+.side {
+  display: grid;
+  grid-template-rows: minmax(14rem, 0.95fr) minmax(16rem, 1.05fr);
+  min-width: 0;
+  min-height: 0;
+  gap: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  overflow-y: auto;
+  padding: 0 1rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.historyCard,
+.responseCard {
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 1rem 0;
+}
+
+.responseCard {
+  border-top: 1px solid var(--border);
+}
+
+.historyList {
+  min-height: 0;
+  flex: 1;
+}
+
+.historyItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.historyItem {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 0;
+  border-radius: var(--radius-button-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+}
+
+.historyItem:hover {
+  background: var(--background-hover);
+  color: var(--text-primary);
+}
+
+.historyItemActive {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+
+.historyPath,
+.selectedUrl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyPath {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+}
+
+.historyMeta {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.responseActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.responseBody {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: auto;
+}
+
+.statusLine {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+}
+
+.pre {
+  margin: 0;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty {
+  margin: 0;
+  padding: 0.75rem 0;
+}
+
+@media (max-width: 680px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .side {
+    grid-template-rows: minmax(12rem, auto) minmax(12rem, auto);
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

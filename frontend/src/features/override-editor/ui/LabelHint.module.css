@@ -6,7 +6,7 @@
   margin: 0;
   border: none;
   background: transparent;
-  color: var(--text-muted, var(--muted));
+  color: var(--text-muted);
   cursor: help;
   line-height: 0;
   border-radius: 999px;
@@ -14,7 +14,7 @@
 }
 
 .hintBtn:hover {
-  color: var(--text-primary, var(--text));
+  color: var(--text-primary);
 }
 
 .hintBtn:focus-visible {

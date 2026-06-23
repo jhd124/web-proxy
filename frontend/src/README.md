@@ -12,10 +12,10 @@
 
 ## 关键文件
 
-- `main.tsx`：应用挂载入口。
+- `main.tsx`：应用挂载入口；Electron preload 可用时给根节点标记桌面宿主样式类。
 - `App.tsx`：应用根组件，挂载主视图、全局搜索、文本右键动作、悬浮页面检索、确认弹窗与 toast host。
-- `index.css`：全局样式。
-- `types.ts`：共享类型；流量列表使用 `TrafficEntrySummary` 摘要，完整 `TrafficEntry` 仅在详情、保存、导出等按需场景使用。
+- `index.css`：全局样式，包含桌面宿主滚动条适配。
+- `types.ts`：共享类型；流量列表使用 `TrafficEntrySummary` 摘要，完整 `TrafficEntry` 仅在详情、保存、导出等按需场景使用；同时包含请求编写器、请求模板补全与历史记录的 API 类型。
 
 ## 维护要求
 

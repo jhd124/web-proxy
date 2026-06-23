@@ -3,6 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react'
 import { PanelHeader } from '@/components/panel-header'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { ThemePreference } from '../../../theme/themeController'
+import type { RequestCatalogSettings } from '../../../types'
 import { settingsTexts as t } from '../texts'
 import s from './SettingsPanelUI.module.css'
 
@@ -21,11 +22,17 @@ const THEME_OPTIONS: ThemeOption[] = [
 type SettingsPanelUIProps = {
   preference: ThemePreference
   setPreference: (next: ThemePreference) => void
+  requestCatalogSettings: RequestCatalogSettings
+  requestCatalogSettingsSaving: boolean
+  setPersistSensitiveHeaders: (next: boolean) => Promise<void>
 }
 
 export function SettingsPanelUI({
   preference,
   setPreference,
+  requestCatalogSettings,
+  requestCatalogSettingsSaving,
+  setPersistSensitiveHeaders,
 }: SettingsPanelUIProps): ReactElement {
   return (
     <div className={s.panel}>
@@ -60,6 +67,48 @@ export function SettingsPanelUI({
                   </button>
                 )
               })}
+            </div>
+          </section>
+          <section className={s.section}>
+            <div className={s.sectionHead}>
+              <h3 className={s.sectionTitle}>{t.requestHistory.sectionTitle}</h3>
+              <p className={`small muted ${s.sectionDesc}`}>
+                {t.requestHistory.description}
+              </p>
+            </div>
+            <div
+              className={s.segmented}
+              role="radiogroup"
+              aria-label={t.requestHistory.sensitiveHeaders}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!requestCatalogSettings.persistSensitiveHeaders}
+                disabled={requestCatalogSettingsSaving}
+                className={`${s.segment} ${
+                  !requestCatalogSettings.persistSensitiveHeaders
+                    ? s.segmentActive
+                    : ''
+                }`}
+                onClick={() => void setPersistSensitiveHeaders(false)}
+              >
+                <span>{t.requestHistory.options.disabled}</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={requestCatalogSettings.persistSensitiveHeaders}
+                disabled={requestCatalogSettingsSaving}
+                className={`${s.segment} ${
+                  requestCatalogSettings.persistSensitiveHeaders
+                    ? s.segmentActive
+                    : ''
+                }`}
+                onClick={() => void setPersistSensitiveHeaders(true)}
+              >
+                <span>{t.requestHistory.options.enabled}</span>
+              </button>
             </div>
           </section>
         </div>

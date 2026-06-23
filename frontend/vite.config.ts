@@ -42,10 +42,10 @@ export default defineConfig({
     'import.meta.env.VITE_DASHBOARD_PORT': JSON.stringify(String(dashboardPort)),
   },
   server: {
-    // 与 Tauri `build.devUrl`（127.0.0.1:5173）一致；避免仅监听 ::1 时 Tauri 探测失败
+    // 与 Electron 开发主窗口默认 URL 一致；避免仅监听 ::1 时桌面壳探测失败。
     host: '127.0.0.1',
     port: viteDevPort,
-    // 禁止静默换端口，否则 Tauri 仍等 5173 直至超时
+    // 禁止静默换端口，否则桌面壳仍等 5173 直至超时。
     strictPort: true,
     proxy: {
       '/api': { target: dashboardOrigin, changeOrigin: true },

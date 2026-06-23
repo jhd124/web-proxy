@@ -1,5 +1,5 @@
 //! TCP listen port selection: scan upward from env hints until bind succeeds.
-//! Embedded UI (`DASHBOARD_DIST`, e.g. Tauri) uses the same scan; chosen ports are written to
+//! Embedded UI (`DASHBOARD_DIST`, e.g. Electron) uses the same scan; chosen ports are written to
 //! `PROXY_DATA_DIR/listen-ports.json` so the shell can open the correct dashboard URL.
 
 use anyhow::Context;
@@ -12,7 +12,7 @@ pub const LISTEN_IPV4: Ipv4Addr = Ipv4Addr::UNSPECIFIED;
 const DEFAULT_PROXY: u16 = 9090;
 const DEFAULT_DASHBOARD: u16 = 9091;
 const MAX_SCAN: u32 = 2000;
-/// Written next to app data when `DASHBOARD_DIST` is set (Tauri reads this for the webview URL).
+/// Written next to app data when `DASHBOARD_DIST` is set (desktop host reads this for the webview URL).
 pub const EMBEDDED_LISTEN_PORTS_FILE: &str = "listen-ports.json";
 
 pub fn embedded_ui_mode() -> bool {

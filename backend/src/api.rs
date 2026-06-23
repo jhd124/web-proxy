@@ -134,7 +134,7 @@ async fn watch_proxy_listen_ipv4(state: Arc<AppState>, proxy_port: u16) {
     }
 }
 
-/// `DASHBOARD_DIST` is set by the Tauri sidecar; otherwise we use the Vite `frontend/dist` next to the repo root.
+/// `DASHBOARD_DIST` is set by the Electron sidecar host; otherwise we use the Vite `frontend/dist` next to the repo root.
 fn dashboard_dist_dir() -> PathBuf {
     if let Ok(p) = std::env::var("DASHBOARD_DIST") {
         return PathBuf::from(p);
@@ -166,6 +166,50 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
         .route("/api/mitm/auto-bypass", post(clear_mitm_auto_bypass))
         .route("/api/format-body", post(crate::body_format::format_body))
         .route("/api/search", get(crate::advanced_search::search))
+        .route(
+            "/api/request-catalog/hosts",
+            get(crate::request_catalog::suggest_hosts),
+        )
+        .route(
+            "/api/request-catalog/paths",
+            get(crate::request_catalog::suggest_paths),
+        )
+        .route(
+            "/api/request-catalog/methods",
+            get(crate::request_catalog::suggest_methods),
+        )
+        .route(
+            "/api/request-catalog/template",
+            get(crate::request_catalog::get_template),
+        )
+        .route(
+            "/api/request-catalog/settings",
+            get(crate::request_catalog::get_settings),
+        )
+        .route(
+            "/api/request-catalog/settings",
+            put(crate::request_catalog::put_settings),
+        )
+        .route(
+            "/api/request-composer/send",
+            post(crate::request_composer::send_request),
+        )
+        .route(
+            "/api/request-composer/history",
+            get(crate::request_composer::list_history),
+        )
+        .route(
+            "/api/request-composer/history",
+            delete(crate::request_composer::clear_history),
+        )
+        .route(
+            "/api/request-composer/history/:id",
+            get(crate::request_composer::history_detail),
+        )
+        .route(
+            "/api/request-composer/history/:id",
+            delete(crate::request_composer::delete_history),
+        )
         .route("/api/overrides", get(crate::overrides::list_overrides))
         .route("/api/overrides", post(crate::overrides::create_override))
         .route("/api/overrides/:id", put(crate::overrides::update_override))

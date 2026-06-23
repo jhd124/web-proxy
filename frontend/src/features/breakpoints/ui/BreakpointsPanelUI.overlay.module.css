@@ -32,7 +32,7 @@
   max-width: 100%;
   min-height: 0;
   flex: 1;
-  background: var(--bg);
+  background: var(--background-base);
   border: 1px solid var(--border);
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.5);
 }

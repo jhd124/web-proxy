@@ -4,7 +4,7 @@
 
 ## 组件
 
-- `HeadersTable`：以双列 grid 渲染 `[key, value][]` 格式的 HTTP headers，key 用 accent 色高亮。
+- `HeadersTable`：以双列 grid 渲染 `[key, value][]` 格式的 HTTP headers，背景使用主题感知的 `--surface-panel`，key 用 `--text-link` 高亮（明暗自适应）。
 
 ## 使用方
 

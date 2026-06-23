@@ -13,4 +13,16 @@ export const settingsTexts = {
       dark: '深色',
     } satisfies Record<ThemePreference, string>,
   },
+  requestHistory: {
+    sectionTitle: '请求编写器历史模板',
+    description:
+      '控制历史模板是否保存敏感请求头。默认不保存 Authorization、Cookie 等字段。',
+    sensitiveHeaders: '保存敏感 headers',
+    options: {
+      disabled: '不保存',
+      enabled: '保存',
+    },
+    saveFailed: (detail: string) => `保存设置失败：${detail}`,
+    loadFailed: (detail: string) => `加载设置失败：${detail}`,
+  },
 } as const

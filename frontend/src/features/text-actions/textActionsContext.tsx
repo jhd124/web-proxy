@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import { copyTextToClipboard } from '@/lib/clipboard'
+import { getDesktopHost } from '@/lib/desktopHost'
 import { showSuccessToast, showToast } from '@/lib/toast'
-import { isTauri } from '@/lib/tauriEnv'
 import { useAdvancedSearchContext } from '../advanced-search/advancedSearchContext'
 import { usePageSearchContext } from '../page-search/pageSearchContext'
 import { decodeAndFormatText, type DecodeFormatResult } from './decodeFormat'
@@ -125,9 +125,9 @@ function toDirectUrl(query: string): string | null {
 }
 
 async function openInBrowser(url: string): Promise<void> {
-  if (isTauri()) {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('open_external_url', { url })
+  const desktopHost = getDesktopHost()
+  if (desktopHost) {
+    await desktopHost.openExternalUrl(url)
     return
   }
 

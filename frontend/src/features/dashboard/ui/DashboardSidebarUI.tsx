@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { Bookmark, Replace, Settings, StepForward, Waves } from 'lucide-react'
+import { Bookmark, NotebookPen, Replace, Settings, StepForward, Waves } from 'lucide-react'
 import type { DashboardViewModel } from '../hooks/useDashboard'
 import { dashboardTexts } from '../texts'
 import root from './DashboardSidebarUI.module.css'
@@ -104,6 +104,16 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
             >
               <Bookmark />
               <span>Saved</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === 'request-composer'}
+              onClick={viewModel.openRequestComposerPanel}
+              tooltip="Request Composer"
+            >
+              <NotebookPen />
+              <span>Request Composer</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

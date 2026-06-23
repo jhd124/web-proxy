@@ -1,6 +1,6 @@
 # dashboard
 
-`dashboard/` 负责主工作台页面结构、导航区域与全局状态协调，并为应用级全局搜索注册 traffic/override/breakpoint/saved 的结果打开动作。侧边栏顶部为各业务 tab，底部为设置入口（`<Settings />`），`activeTab === 'settings'` 时主区域渲染设置页。
+`dashboard/` 负责主工作台页面结构、导航区域与全局状态协调，并为应用级全局搜索注册 traffic/override/breakpoint/saved 的结果打开动作。侧边栏顶部为各业务 tab（含请求编写器入口 `<NotebookPen />`），底部为设置入口（`<Settings />`），`activeTab === 'settings'` 时主区域渲染设置页。
 
 ## 子目录与文件
 

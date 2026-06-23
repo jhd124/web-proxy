@@ -196,7 +196,7 @@
 }
 
 .cardSelected {
-  background: #1e2635;
+  background: var(--surface-selected);
   color: var(--text-primary);
 }
 

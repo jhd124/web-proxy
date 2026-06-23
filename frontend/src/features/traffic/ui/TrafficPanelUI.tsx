@@ -33,7 +33,6 @@ export function TrafficPanelUI({
   onEntrySaveRequest,
   onEntryOverride,
   onEntryAddBreakpoint,
-  onEntryReplay,
   onEntryOpenSavedRequest,
   onEntryOpenMatchedOverride,
   onEntryOpenMatchedBreakpoint,
@@ -87,7 +86,6 @@ export function TrafficPanelUI({
             onSaveRequest={onEntrySaveRequest}
             onOverride={onEntryOverride}
             onAddBreakpoint={onEntryAddBreakpoint}
-            onReplay={onEntryReplay}
             onOpenSavedRequest={onEntryOpenSavedRequest}
             onOpenMatchedOverride={onEntryOpenMatchedOverride}
             onOpenMatchedBreakpoint={onEntryOpenMatchedBreakpoint}
