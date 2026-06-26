@@ -793,3 +793,86 @@ async fn update_breakpoint_keeps_same_id_when_match_fields_change() {
     assert_eq!(updated.0.match_method.as_deref(), Some("POST"));
     assert_eq!(updated.0.match_path_regex.as_deref(), Some("/login"));
 }
+
+#[tokio::test]
+async fn update_breakpoint_persists_match_method_to_disk() {
+    let state = build_state();
+    let created = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause API".to_string(),
+            enabled: Some(true),
+            match_method: Some("GET".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/api".to_string()),
+        }),
+    )
+    .await
+    .expect("create breakpoint");
+
+    let _ = crate::breakpoints::update_breakpoint(
+        State(state.clone()),
+        axum::extract::Path(created.0.id),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause Login".to_string(),
+            enabled: Some(true),
+            match_method: Some("POST".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/login".to_string()),
+        }),
+    )
+    .await
+    .expect("update breakpoint");
+
+    let loaded =
+        crate::breakpoints::load_breakpoints(&state.override_db_path).expect("load breakpoints");
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].match_method.as_deref(), Some("POST"));
+}
+
+fn sample_override_body(match_method: &str) -> crate::overrides::UpsertOverrideBody {
+    crate::overrides::UpsertOverrideBody {
+        enabled: Some(true),
+        match_method: Some(match_method.to_string()),
+        match_protocol: Some("https".to_string()),
+        match_host: Some("example.com".to_string()),
+        match_path: Some("/api".to_string()),
+        match_request_headers: None,
+        match_query: None,
+        match_request_body: None,
+        status: 200,
+        headers: None,
+        body: Some("ok".to_string()),
+        map_remote_protocol: None,
+        map_remote_host: None,
+        map_remote_path: None,
+        stream_interval_ms: None,
+    }
+}
+
+#[tokio::test]
+async fn update_override_persists_match_method_to_disk() {
+    let state = build_state();
+    crate::overrides::init_and_load(&state.override_db_path).expect("init overrides table");
+    let created = crate::overrides::create_override(
+        State(state.clone()),
+        axum::Json(sample_override_body("POST")),
+    )
+    .await
+    .expect("create override");
+
+    let mut update_body = sample_override_body("POST");
+    update_body.body = Some("updated body".to_string());
+    let _ = crate::overrides::update_override(
+        State(state.clone()),
+        axum::extract::Path(created.0.id.clone()),
+        axum::Json(update_body),
+    )
+    .await
+    .expect("update override");
+
+    let loaded = crate::overrides::init_and_load(&state.override_db_path).expect("load overrides");
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].match_method.as_deref(), Some("POST"));
+    assert_eq!(loaded[0].body, "updated body");
+}

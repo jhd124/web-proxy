@@ -403,7 +403,7 @@ fn update_override_row(path: &StdPath, rule: &OverrideRule) -> anyhow::Result<bo
             &rule.id,
             &String::new(),
             if rule.enabled { 1 } else { 0 },
-            Option::<String>::None,
+            &rule.match_method,
             &rule.match_host,
             &rule.match_path,
             &rule.match_protocol,
