@@ -32,6 +32,17 @@ export const dashboardTexts = {
     enableWifiProxyAriaLabel: 'Enable WiFi HTTP and HTTPS proxy',
     enableWifiProxyFailed: (detail: string) =>
       `Could not enable WiFi HTTP/HTTPS proxy: ${detail}`,
+    launchCaptureBrowserTooltip: 'Launch browser to capture localhost',
+    launchCaptureBrowserAriaLabel: 'Launch browser to capture localhost traffic',
+    launchCaptureBrowserWith: (browserName: string) =>
+      `Launch ${browserName} (captures localhost)`,
+    captureBrowserMenuLabel: 'Choose a browser to capture localhost',
+    captureBrowserLaunched: (browserName: string) =>
+      `Launched ${browserName} with proxy + localhost capture`,
+    captureBrowserFailed: (detail: string) =>
+      `Could not launch capture browser: ${detail}`,
+    captureBrowserMissingCa:
+      'MITM CA is not ready yet (start with MITM=1 and wait for the CA)',
     missingProxyAddress: 'Proxy listen address is unavailable',
     desktopOnlyAction: 'This action is only available in desktop app',
     pauseCaptureTooltip: 'Pause traffic capture',

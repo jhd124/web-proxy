@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld('proxyDesktop', {
     ipcRenderer.invoke('proxy:install-mitm-ca-system-trust', caPemPath),
   openMitmCaFile: (caPemPath: string) =>
     ipcRenderer.invoke('proxy:open-mitm-ca-file', caPemPath),
+  listCaptureBrowsers: () => ipcRenderer.invoke('proxy:list-capture-browsers'),
+  launchCaptureBrowser: (args: {
+    proxyPort: number
+    caPemPath: string
+    browserKey?: string
+  }) => ipcRenderer.invoke('proxy:launch-capture-browser', args),
   onTrafficSelect: (callback: TrafficSelectCallback) => {
     if (typeof callback !== 'function') return () => {}
 

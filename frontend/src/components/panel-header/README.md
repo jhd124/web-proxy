@@ -1,6 +1,6 @@
 # panel-header
 
-通用面板顶栏组件，统一 override、breakpoints、saved-requests、request-composer 等面板的 header 布局。
+通用面板顶栏组件，统一 override、breakpoints、saved-requests、request-composer 等面板的 header 布局与固定高度。
 
 ## 组件
 
@@ -18,6 +18,8 @@
 ### `panelHeaderStyles`（CSS module 默认导出）
 
 提供 `.iconBtn` class，供各面板的 `TooltipButton`/按钮统一使用（2.2rem 方形图标按钮）。
+
+`PanelHeader` 根容器使用固定最小高度（`3.25rem`）+ 居中布局，确保不同页面在 action 按钮数量不同（甚至无按钮）时仍保持一致顶栏高度。
 
 ## 使用方
 

@@ -2,6 +2,25 @@ use super::*;
 use hyper::header::{HeaderMap, HeaderValue, COOKIE, HOST};
 
 #[test]
+fn parse_url_for_override_includes_explicit_port_in_host() {
+    let (_, host, _, path_only, _) = parse_url_for_override("http://localhost:3000/api/v1");
+    assert_eq!(host, "localhost:3000");
+    assert_eq!(path_only, "/api/v1");
+
+    let (_, host_default, _, _, _) = parse_url_for_override("http://example.com/api");
+    assert_eq!(host_default, "example.com");
+}
+
+#[test]
+fn host_with_optional_port_formats_authority_like_override_match_host() {
+    assert_eq!(
+        host_with_optional_port("localhost", Some(3000)),
+        "localhost:3000"
+    );
+    assert_eq!(host_with_optional_port("example.com", None), "example.com");
+}
+
+#[test]
 fn reqwest_headers_for_upstream_preserves_duplicate_request_headers() {
     let mut headers = HeaderMap::new();
     headers.append(COOKIE, HeaderValue::from_static("session=abc"));

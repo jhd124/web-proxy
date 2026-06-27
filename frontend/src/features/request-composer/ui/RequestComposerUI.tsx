@@ -11,6 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
 import { HeadersTable } from '@/components/headers-table/HeadersTable'
 import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import { requestComposerTexts as t } from '../texts'
@@ -69,198 +74,211 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
         }
       />
       <div className={s.body}>
-        <ScrollArea className={s.editorScroll}>
-          <div className={s.editor}>
-            <section className={s.group}>
-              <label className={s.field}>
-                <span>{t.fields.url}</span>
-                <Input
-                  value={form.url}
-                  onChange={(event) => setFormField('url', event.target.value)}
-                  list="request-composer-urls"
-                  placeholder={t.placeholders.url}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <datalist id="request-composer-urls">
-                  {getUrlSuggestions(form.url, hostSuggestions, pathSuggestions).map(
-                    (suggestion) => (
-                      <option key={suggestion} value={suggestion} />
-                    ),
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="min-h-0 min-w-0 flex-1"
+          id="request-composer-panels"
+        >
+          <ResizablePanel className="min-h-0 min-w-0" defaultSize={68} minSize={35}>
+            <ScrollArea className={s.editorScroll}>
+              <div className={s.editor}>
+                <section className={s.group}>
+                  <label className={s.field}>
+                    <span>{t.fields.url}</span>
+                    <Input
+                      value={form.url}
+                      onChange={(event) => setFormField('url', event.target.value)}
+                      list="request-composer-urls"
+                      placeholder={t.placeholders.url}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <datalist id="request-composer-urls">
+                      {getUrlSuggestions(form.url, hostSuggestions, pathSuggestions).map(
+                        (suggestion) => (
+                          <option key={suggestion} value={suggestion} />
+                        ),
+                      )}
+                    </datalist>
+                  </label>
+                </section>
+
+                <section className={s.group}>
+                  <div className={s.methodRow}>
+                    <label className={s.field}>
+                      <span>{t.fields.method}</span>
+                      <Select
+                        value={form.method}
+                        onValueChange={(value) => setFormField('method', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {methods.map((method) => (
+                            <SelectItem key={method} value={method}>
+                              {method}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  </div>
+                  <label className={s.field}>
+                    <span>{t.fields.searchParams}</span>
+                    <AutoGrowTextarea
+                      className={s.textarea}
+                      value={form.searchParamsText}
+                      onValueChange={(value) => setFormField('searchParamsText', value)}
+                      placeholder={t.placeholders.keyValueLines}
+                      spellCheck={false}
+                    />
+                  </label>
+                  {form.method !== 'GET' && (
+                    <label className={s.field}>
+                      <span>{t.fields.body}</span>
+                      <AutoGrowTextarea
+                        className={`${s.textarea} ${s.bodyText}`}
+                        value={form.body}
+                        onValueChange={(value) => setFormField('body', value)}
+                        placeholder={t.placeholders.body}
+                        spellCheck={false}
+                      />
+                    </label>
                   )}
-                </datalist>
-              </label>
-            </section>
+                </section>
 
-            <section className={s.group}>
-              <div className={s.methodRow}>
-                <label className={s.field}>
-                  <span>{t.fields.method}</span>
-                  <Select
-                    value={form.method}
-                    onValueChange={(value) => setFormField('method', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {methods.map((method) => (
-                        <SelectItem key={method} value={method}>
-                          {method}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
+                <section className={s.group}>
+                  <label className={s.field}>
+                    <span>{t.fields.headers}</span>
+                    <AutoGrowTextarea
+                      className={s.textarea}
+                      value={form.headersText}
+                      onValueChange={(value) => setFormField('headersText', value)}
+                      placeholder={t.placeholders.headers}
+                      spellCheck={false}
+                    />
+                  </label>
+                </section>
               </div>
-              <label className={s.field}>
-                <span>{t.fields.searchParams}</span>
-                <AutoGrowTextarea
-                  className={s.textarea}
-                  value={form.searchParamsText}
-                  onValueChange={(value) => setFormField('searchParamsText', value)}
-                  placeholder={t.placeholders.keyValueLines}
-                  spellCheck={false}
-                />
-              </label>
-              {form.method !== 'GET' && (
-                <label className={s.field}>
-                  <span>{t.fields.body}</span>
-                  <AutoGrowTextarea
-                    className={`${s.textarea} ${s.bodyText}`}
-                    value={form.body}
-                    onValueChange={(value) => setFormField('body', value)}
-                    placeholder={t.placeholders.body}
-                    spellCheck={false}
-                  />
-                </label>
-              )}
-            </section>
-
-            <section className={s.group}>
-              <label className={s.field}>
-                <span>{t.fields.headers}</span>
-                <AutoGrowTextarea
-                  className={s.textarea}
-                  value={form.headersText}
-                  onValueChange={(value) => setFormField('headersText', value)}
-                  placeholder={t.placeholders.headers}
-                  spellCheck={false}
-                />
-              </label>
-            </section>
-          </div>
-        </ScrollArea>
-
-        <aside className={s.side}>
-          <section className={s.historyCard}>
-            <div className={s.cardHead}>
-              <h3>{t.sections.history}</h3>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void clearHistory()}
-                disabled={history.length === 0}
-              >
-                <Trash2 size={14} aria-hidden />
-                {t.actions.clearHistory}
-              </Button>
-            </div>
-            <Input
-              type="search"
-              value={historyQuery}
-              onChange={(event) => setHistoryQuery(event.target.value)}
-              placeholder={t.placeholders.historySearch}
-            />
-            <ScrollArea className={s.historyList}>
-              {history.length === 0 ? (
-                <p className={`muted ${s.empty}`}>{t.emptyHistory}</p>
-              ) : (
-                <div className={s.historyItems}>
-                  {history.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`${s.historyItem} ${
-                        selectedHistoryId === item.id ? s.historyItemActive : ''
-                      }`}
-                      onClick={() => void selectHistory(item.id)}
-                    >
-                      <span className={s.historyPath}>
-                        {item.method} {formatUrlPath(item.url)}
-                      </span>
-                      <span className={s.historyMeta}>
-                        {item.responseStatus ?? item.error ?? '—'} ·{' '}
-                        {formatDateTime(item.sentAt)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </ScrollArea>
-            {hasMoreHistory && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void loadMoreHistory()}
-                disabled={historyLoading}
-              >
-                {t.actions.loadMore}
-              </Button>
-            )}
-          </section>
+          </ResizablePanel>
+          <ResizableHandle withHandle className={s.resizeHandle} />
+          <ResizablePanel className="min-h-0 min-w-0" defaultSize={32} minSize={22}>
+            <aside className={s.side}>
+              <section className={s.historyCard}>
+                <div className={s.cardHead}>
+                  <h3>{t.sections.history}</h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void clearHistory()}
+                    disabled={history.length === 0}
+                  >
+                    <Trash2 size={14} aria-hidden />
+                    {t.actions.clearHistory}
+                  </Button>
+                </div>
+                <Input
+                  type="search"
+                  value={historyQuery}
+                  onChange={(event) => setHistoryQuery(event.target.value)}
+                  placeholder={t.placeholders.historySearch}
+                />
+                <ScrollArea className={s.historyList}>
+                  {history.length === 0 ? (
+                    <p className={`muted ${s.empty}`}>{t.emptyHistory}</p>
+                  ) : (
+                    <div className={s.historyItems}>
+                      {history.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`${s.historyItem} ${
+                            selectedHistoryId === item.id ? s.historyItemActive : ''
+                          }`}
+                          onClick={() => void selectHistory(item.id)}
+                        >
+                          <span
+                            className={s.historyPath}
+                            title={`${item.method} ${formatHistoryUrl(item.url)}`}
+                          >
+                            {item.method} {formatHistoryUrl(item.url)}
+                          </span>
+                          <span className={s.historyMeta}>
+                            {item.responseStatus ?? item.error ?? '—'} ·{' '}
+                            {formatDateTime(item.sentAt)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+                {hasMoreHistory && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void loadMoreHistory()}
+                    disabled={historyLoading}
+                  >
+                    {t.actions.loadMore}
+                  </Button>
+                )}
+              </section>
 
-          <section className={s.responseCard}>
-            <div className={s.cardHead}>
-              <h3>{t.sections.response}</h3>
-              <div className={s.responseActions}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={reuseSelectedHistory}
-                  disabled={!selectedHistory}
-                >
-                  <RotateCcw size={14} aria-hidden />
-                  {t.actions.reuse}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void deleteSelectedHistory()}
-                  disabled={!selectedHistoryId}
-                >
-                  <Trash2 size={14} aria-hidden />
-                  {t.actions.delete}
-                </Button>
-              </div>
-            </div>
-            {selectedHistory && (
-              <p className={`mono small ${s.selectedUrl}`}>{selectedHistory.url}</p>
-            )}
-            {response ? (
-              <div className={s.responseBody}>
-                <p className={s.statusLine}>
-                  {response.error ??
-                    `${response.status ?? '—'} · ${response.durationMs} ms`}
-                </p>
-                {hasVisibleHeaders(response.headers) && (
-                  <HeadersTable headers={response.headers} />
+              <section className={s.responseCard}>
+                <div className={s.cardHead}>
+                  <h3>{t.sections.response}</h3>
+                  <div className={s.responseActions}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={reuseSelectedHistory}
+                      disabled={!selectedHistory}
+                    >
+                      <RotateCcw size={14} aria-hidden />
+                      {t.actions.reuse}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void deleteSelectedHistory()}
+                      disabled={!selectedHistoryId}
+                    >
+                      <Trash2 size={14} aria-hidden />
+                      {t.actions.delete}
+                    </Button>
+                  </div>
+                </div>
+                {selectedHistory && (
+                  <p className={`mono small ${s.selectedUrl}`}>{selectedHistory.url}</p>
                 )}
-                {hasBodyPreview(response.bodyPreview) && (
-                  <pre className={s.pre}>
-                    {formatResponseBodyPreview(response.bodyPreview)}
-                  </pre>
+                {response ? (
+                  <div className={s.responseBody}>
+                    <p className={s.statusLine}>
+                      {response.error ??
+                        `${response.status ?? '—'} · ${response.durationMs} ms`}
+                    </p>
+                    {hasVisibleHeaders(response.headers) && (
+                      <HeadersTable headers={response.headers} />
+                    )}
+                    {hasBodyPreview(response.bodyPreview) && (
+                      <pre className={s.pre}>
+                        {formatResponseBodyPreview(response.bodyPreview)}
+                      </pre>
+                    )}
+                  </div>
+                ) : (
+                  <p className={`muted ${s.empty}`}>{t.noResponse}</p>
                 )}
-              </div>
-            ) : (
-              <p className={`muted ${s.empty}`}>{t.noResponse}</p>
-            )}
-          </section>
-        </aside>
+              </section>
+            </aside>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </section>
   )
@@ -272,13 +290,8 @@ function formatDateTime(value: string): string {
   return date.toLocaleString()
 }
 
-function formatUrlPath(value: string): string {
-  try {
-    const url = new URL(value)
-    return `${url.pathname}${url.search}` || '/'
-  } catch {
-    return value
-  }
+function formatHistoryUrl(value: string): string {
+  return value.trim() || '/'
 }
 
 function getUrlSuggestions(

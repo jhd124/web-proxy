@@ -138,9 +138,14 @@ export function useDashboard() {
   )
   const [mitmEnabled, setMitmEnabled] = useState(false)
   const [mitmCaPemPath, setMitmCaPemPath] = useState<string | null>(null)
+  const [proxyPort, setProxyPort] = useState<number | null>(null)
   const [proxyListenAddress, setProxyListenAddress] = useState<string | null>(
     null,
   )
+  const [captureBrowserLaunching, setCaptureBrowserLaunching] = useState(false)
+  const [captureBrowsers, setCaptureBrowsers] = useState<
+    Array<{ name: string; key: string }>
+  >([])
   const [capturePaused, setCapturePaused] = useState(false)
   const [captureToggleSaving, setCaptureToggleSaving] = useState(false)
   const [wifiProxySaving, setWifiProxySaving] = useState(false)
@@ -226,6 +231,14 @@ export function useDashboard() {
             ? h.mitmCaPemPath
             : null,
         )
+        setProxyPort(
+          typeof h.proxyPort === 'number' &&
+            Number.isFinite(h.proxyPort) &&
+            h.proxyPort > 0 &&
+            h.proxyPort <= 65535
+            ? h.proxyPort
+            : null,
+        )
         const ipv4 =
           typeof h.proxyListenIpv4 === 'string' &&
           /^\d{1,3}(\.\d{1,3}){3}$/.test(h.proxyListenIpv4)
@@ -250,6 +263,25 @@ export function useDashboard() {
       }
     }
     void loadHealth()
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const desktopHost = getDesktopHost()
+    if (!desktopHost?.listCaptureBrowsers) return
+    let isCancelled = false
+    void desktopHost
+      .listCaptureBrowsers()
+      .then((list) => {
+        if (!isCancelled) {
+          setCaptureBrowsers(Array.isArray(list) ? list : [])
+        }
+      })
+      .catch(() => {
+        /* ignore: 非桌面壳或扫描失败时不显示按钮 */
+      })
     return () => {
       isCancelled = true
     }
@@ -332,6 +364,43 @@ export function useDashboard() {
       setWifiProxySaving(false)
     }
   }, [proxyListenAddress, setSystemHttpHttpsProxyEnabled])
+
+  const launchLocalhostCaptureBrowser = useCallback(
+    async (browserKey?: string) => {
+      const desktopHost = getDesktopHost()
+      if (!desktopHost) {
+        showToast(dashboardTexts.header.desktopOnlyAction, 'error')
+        return
+      }
+      const resolvedProxyPort =
+        proxyPort ?? getProxyPortFromListenAddress(proxyListenAddress)
+      if (resolvedProxyPort == null) {
+        showToast(dashboardTexts.header.missingProxyAddress, 'error')
+        return
+      }
+      if (!mitmCaPemPath) {
+        showToast(dashboardTexts.header.captureBrowserMissingCa, 'error')
+        return
+      }
+      setCaptureBrowserLaunching(true)
+      try {
+        const { browserName } = await desktopHost.launchCaptureBrowser({
+          proxyPort: resolvedProxyPort,
+          caPemPath: mitmCaPemPath,
+          ...(browserKey ? { browserKey } : {}),
+        })
+        showSuccessToast(
+          dashboardTexts.header.captureBrowserLaunched(browserName),
+        )
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        showToast(dashboardTexts.header.captureBrowserFailed(detail), 'error')
+      } finally {
+        setCaptureBrowserLaunching(false)
+      }
+    },
+    [mitmCaPemPath, proxyListenAddress, proxyPort],
+  )
 
   const { selected, entries, filteredEntries, urlFilterTrimmed } = traffic
   const getEntrySummaryById = useCallback(
@@ -802,6 +871,9 @@ export function useDashboard() {
     toggleCapturePaused,
     wifiProxySaving,
     enableWifiHttpHttpsProxy,
+    captureBrowsers,
+    captureBrowserLaunching,
+    launchLocalhostCaptureBrowser,
     exportHarSaving,
     exportFilteredTrafficAsHar,
     breakpointsOpen,

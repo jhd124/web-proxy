@@ -1,82 +1,84 @@
 # MCP 模块架构介绍（Agent 参考）
 
-本文档覆盖 `mcp/` 下的 Proxy MCP Server，实现目标是把 dashboard 的代理能力以 MCP Tools 形式暴露给 Agent/外部自动化。
+本文档描述 `mcp/` 模块在仓库中的职责、实现结构与维护要点。该模块核心目标是：把 dashboard 的关键能力以 MCP tools 形式提供给 Agent/自动化调用。
 
-## 1. 组成与职责
+## 1. 模块定位
 
-`mcp/` 当前主要包含：
+- `mcp/` 是能力适配层，不实现代理核心逻辑
+- 真实业务状态与规则由 dashboard API 持有
+- MCP 负责：
+  - 接收 `tools/call`
+  - 做输入归一化
+  - 转发 REST API 或执行本地系统命令
+  - 回包 `structuredContent`
 
-- `proxy-mcp-server.mjs`：基于 stdio 的 MCP server（JSON-RPC framing）。
-- `README.md`：本地启动与 Cursor 接入说明。
+## 2. 目录结构
 
-该模块不是独立代理实现，而是 **dashboard API 的能力封装层**。
+- `mcp/proxy-mcp-server.mjs`：MCP server 启动入口
+- `mcp/src/constants.mjs`：协议版本、服务信息、通用参数处理
+- `mcp/src/tools.mjs`：tool 清单与 schema
+- `mcp/src/toolRouter.mjs`：tool 分发与 handler 绑定
+- `mcp/src/protocol.mjs`：MCP JSON-RPC 协议层（initialize/tools/list/tools/call）
+- `mcp/src/rpcServer.mjs`：stdio transport
+- `mcp/src/httpServer.mjs`：http transport（`POST /mcp` + `GET /health`）
+- `mcp/src/apiClient.mjs`：dashboard API 访问层
+- `mcp/src/systemProxy.mjs`：macOS 系统代理命令封装
+- `mcp/src/handlers/trafficHandlers.mjs`：listen/filter handler
+- `mcp/src/handlers/ruleHandlers.mjs`：override/breakpoint/UI handler
+- `mcp/README.md`：接入与维护说明
 
-## 2. 技术架构
+## 3. 技术栈与协议
 
-- 运行时：Node.js ESM 脚本。
-- 协议：MCP over stdio（`Content-Length` framing + JSON-RPC）。
-- 版本常量：
-  - `PROTOCOL_VERSION = 2024-11-05`
-  - `SERVER_NAME = proxy-dashboard-mcp`
-- 默认后端地址：`http://127.0.0.1:9091`（可由 `PROXY_DASHBOARD_URL` 覆盖）。
+- 运行时：Node.js ESM
+- 传输：
+  - stdio（`Content-Length` framing）
+  - http（`POST /mcp`，返回 JSON-RPC）
+- 协议版本：`2024-11-05`
+- 默认 dashboard 地址：`http://127.0.0.1:9091`（可由 `PROXY_DASHBOARD_URL` 覆盖）
+- http 默认监听：`127.0.0.1:19091`（可由 `PROXY_MCP_HTTP_HOST/PORT` 覆盖）
 
-## 3. Tool 列表与能力映射
-
-当前暴露工具：
+## 4. Tool 能力映射
 
 1. `listen_traffic`
-   - 轮询 `/api/requests`；
-   - 支持 `sinceId`、超时、poll 间隔、返回条数上限。
+   - 轮询 `/api/requests` 并返回新增请求
+   - 支持 `sinceId`、`timeoutMs`、`pollIntervalMs`、`limit`
 2. `filter_traffic`
-   - 基于 query/method/host/status/error/pending/kind 在内存中过滤。
+   - 从 `/api/requests` 拉取后在内存过滤
 3. `add_override`
-   - 映射到 `POST /api/overrides`。
+   - `POST /api/overrides`
 4. `add_breakpoint`
-   - 映射到 `POST /api/breakpoints`。
+   - `POST /api/breakpoints`
 5. `operate_ui`
-   - 映射到 `POST /api/ui/actions`（聚焦主窗、开浮窗、选中请求、设置过滤）。
+   - `POST /api/ui/actions`
 6. `enable_proxy`
-   - macOS 下调用 `networksetup` 开启系统 HTTP/HTTPS 代理。
+   - macOS 使用 `networksetup` 开启系统 HTTP/HTTPS 代理
 7. `disable_proxy`
-   - macOS 下关闭系统 HTTP/HTTPS 代理。
+   - macOS 使用 `networksetup` 关闭系统 HTTP/HTTPS 代理
 
-## 4. 与 backend 的关系
+## 5. 关键实现约束
 
-MCP server 的主路径是：
+- `tools` 数组与 `TOOL_HANDLERS` 分发表必须保持一一对应
+- API 访问统一走 `apiGetJson` / `apiPostJson`
+- 系统命令统一走 `spawnSync` 包装并在非 0 退出码时报错
+- 代理控制工具必须保留平台判断（当前仅 macOS）
+- `proxy-mcp-server.mjs` 仅保留启动与装配逻辑，业务 handler 不应回流到入口文件
+- 协议方法处理统一收敛在 `protocol.mjs`，避免 stdio/http 语义漂移
 
-1. 接收 `tools/call`；
-2. 参数校验与归一化；
-3. 调用 dashboard REST API 或本地系统命令；
-4. 将结果封装成 `structuredContent` 返回。
+## 6. 与 backend 的耦合点
 
-因此，任何 backend API 字段变化都可能影响 MCP 行为，尤其是：
+以下接口字段变化会直接影响 MCP：
 
-- `/api/health`（`enable_proxy` 自动解析 `proxyPort`）；
-- `/api/requests`（listen/filter 返回结构）；
-- `/api/overrides` 与 `/api/breakpoints` 请求体字段。
+- `/api/health`：`enable_proxy` 自动解析 `proxyPort`
+- `/api/requests`：`listen_traffic` / `filter_traffic` 的返回兼容性
+- `/api/overrides`、`/api/breakpoints`：创建规则请求体字段
+- `/api/ui/actions`：`operate_ui` 支持的动作集合
 
-## 5. 实现细节
+## 7. 维护清单（Agent 必做）
 
-### 5.1 JSON-RPC 处理
+当你修改 `mcp/` 时，至少同步检查：
 
-- 支持方法：`initialize`、`tools/list`、`tools/call`、`notifications/initialized`。
-- 手动解析 stdin buffer，并按 `Content-Length` 逐帧读取。
-- 返回格式统一为：
-  - `content: [{ type: "text", text: JSON.stringify(...) }]`
-  - `structuredContent: payload`
-
-### 5.2 网络与命令执行
-
-- API 调用统一封装在 `apiGetJson`/`apiPostJson`。
-- 系统命令统一经 `spawnSync` 执行，并对非 0 退出码抛错。
-- macOS 代理服务自动识别逻辑复用了 route + networksetup 信息解析。
-
-## 6. Agent 改动注意事项
-
-1. 若 backend API 字段新增/重命名，需同步更新对应 Tool 的 `inputSchema` 和 handler。
-2. 新增 Tool 时需要同时更新：
-   - `tools` 声明；
-   - `callTool` 分发；
-   - README 用法示例。
-3. 涉及系统命令的 Tool 必须做平台判断与错误信息可读化。
-4. `listen_traffic` 目前是轮询模型，若未来切换 WS 需要评估 timeout、稳定性与兼容性。
+1. Tool schema 是否与 handler 入参一致
+2. `tools` 与 `TOOL_HANDLERS` 是否同步增删
+3. `mcp/README.md` 能力说明是否仍然准确
+4. `docs/agent-reference/mcp.md` 架构描述是否仍然准确
+5. stdio 与 http 两条 transport 的返回结构是否一致

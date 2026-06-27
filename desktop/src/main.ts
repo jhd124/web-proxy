@@ -6,13 +6,16 @@ import {
   type BrowserWindowConstructorOptions,
 } from 'electron'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { X509Certificate, createHash } from 'node:crypto'
 import fs from 'node:fs'
 import net from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 
 const APP_NAME = 'Proxy'
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const DEFAULT_VITE_PORT = 5173
+const DEFAULT_MCP_HTTP_PORT = 19091
 const WAIT_POLLS = 600
 const WAIT_INTERVAL_MS = 50
 const TRAFFIC_SELECT_CHANNEL = 'proxy:traffic-select'
@@ -36,6 +39,8 @@ type ProxyCommand = {
 let mainWindow: BrowserWindow | null = null
 let floatingTrafficWindow: BrowserWindow | null = null
 let proxyProcess: ChildProcess | null = null
+let mcpServerProcess: ChildProcess | null = null
+let mcpDashboardUrl: string | null = null
 let isQuitting = false
 
 function readDevVitePort(): number {
@@ -141,6 +146,50 @@ function getProxyCommand(): ProxyCommand {
   }
 }
 
+function getMcpScriptPath(): string {
+  if (!app.isPackaged) {
+    return path.join(repoRoot, 'mcp', 'proxy-mcp-server.mjs')
+  }
+  return path.join(process.resourcesPath, 'mcp', 'proxy-mcp-server.mjs')
+}
+
+function getMcpCommand(): ProxyCommand {
+  return {
+    command: process.execPath,
+    args: [getMcpScriptPath()],
+    cwd: app.isPackaged ? process.resourcesPath : repoRoot,
+  }
+}
+
+function resolveMcpHttpPort(): number {
+  const raw = Number(process.env.PROXY_MCP_HTTP_PORT)
+  if (Number.isFinite(raw) && raw > 0 && raw <= 65535) {
+    return raw
+  }
+  return DEFAULT_MCP_HTTP_PORT
+}
+
+function stopChildProcess(child: ChildProcess | null): void {
+  if (!child || child.killed) return
+
+  const pid = child.pid
+  if (pid == null) {
+    child.kill('SIGTERM')
+    return
+  }
+
+  if (process.platform === 'win32') {
+    execFile('taskkill', ['/pid', String(pid), '/t', '/f'], () => {})
+    return
+  }
+
+  try {
+    process.kill(-pid, 'SIGTERM')
+  } catch {
+    child.kill('SIGTERM')
+  }
+}
+
 function startProxyApp(dataDir: string): void {
   if (proxyProcess && !proxyProcess.killed) return
 
@@ -182,24 +231,59 @@ function startProxyApp(dataDir: string): void {
 }
 
 function stopProxyApp(): void {
-  if (!proxyProcess || proxyProcess.killed) return
+  stopChildProcess(proxyProcess)
+}
 
-  const pid = proxyProcess.pid
-  if (pid == null) {
-    proxyProcess.kill('SIGTERM')
+function startMcpServer(dashboardPort: number): void {
+  const nextDashboardUrl = `http://127.0.0.1:${dashboardPort}`
+  const mcpHttpPort = resolveMcpHttpPort()
+  if (
+    mcpServerProcess &&
+    !mcpServerProcess.killed &&
+    mcpDashboardUrl === nextDashboardUrl
+  ) {
     return
   }
 
-  if (process.platform === 'win32') {
-    execFile('taskkill', ['/pid', String(pid), '/t', '/f'], () => {})
-    return
+  if (mcpServerProcess && !mcpServerProcess.killed) {
+    stopChildProcess(mcpServerProcess)
+    mcpServerProcess = null
   }
 
-  try {
-    process.kill(-pid, 'SIGTERM')
-  } catch {
-    proxyProcess.kill('SIGTERM')
+  const mcp = getMcpCommand()
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
+    PROXY_MCP_TRANSPORT: 'http',
+    PROXY_MCP_HTTP_PORT: String(mcpHttpPort),
+    PROXY_MCP_HTTP_HOST: '127.0.0.1',
+    PROXY_DASHBOARD_URL: nextDashboardUrl,
   }
+
+  mcpServerProcess = spawn(mcp.command, mcp.args, {
+    cwd: mcp.cwd,
+    detached: process.platform !== 'win32',
+    env,
+    stdio: app.isPackaged ? 'ignore' : 'inherit',
+  })
+  mcpDashboardUrl = nextDashboardUrl
+
+  mcpServerProcess.on('exit', (code, signal) => {
+    mcpServerProcess = null
+    if (!isQuitting) {
+      console.error(`mcp server exited unexpectedly: code=${code} signal=${signal}`)
+    }
+  })
+  mcpServerProcess.on('error', (error) => {
+    mcpServerProcess = null
+    console.error('failed to start mcp server:', error)
+  })
+}
+
+function stopMcpServer(): void {
+  stopChildProcess(mcpServerProcess)
+  mcpServerProcess = null
+  mcpDashboardUrl = null
 }
 
 function createBrowserWindow(
@@ -358,6 +442,103 @@ async function openMitmCaFile(caPemPath: unknown): Promise<void> {
   if (errorMessage) throw new Error(errorMessage)
 }
 
+const CAPTURE_BROWSER_PROFILE_DIRNAME = 'capture-browser'
+
+type CaptureBrowser = { name: string; execPath: string; profileKey: string }
+
+/** Chromium 内核浏览器候选；`appRelExec` 是相对 Applications 目录的可执行文件路径。 */
+const MAC_CHROMIUM_BROWSER_DEFS: ReadonlyArray<{
+  name: string
+  profileKey: string
+  appRelExec: string
+}> = [
+  { name: 'Google Chrome', profileKey: 'chrome', appRelExec: 'Google Chrome.app/Contents/MacOS/Google Chrome' },
+  { name: 'Google Chrome Beta', profileKey: 'chrome-beta', appRelExec: 'Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta' },
+  { name: 'Google Chrome Dev', profileKey: 'chrome-dev', appRelExec: 'Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev' },
+  { name: 'Google Chrome Canary', profileKey: 'chrome-canary', appRelExec: 'Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary' },
+  { name: 'Microsoft Edge', profileKey: 'edge', appRelExec: 'Microsoft Edge.app/Contents/MacOS/Microsoft Edge' },
+  { name: 'Brave Browser', profileKey: 'brave', appRelExec: 'Brave Browser.app/Contents/MacOS/Brave Browser' },
+  { name: 'Vivaldi', profileKey: 'vivaldi', appRelExec: 'Vivaldi.app/Contents/MacOS/Vivaldi' },
+  { name: 'Opera', profileKey: 'opera', appRelExec: 'Opera.app/Contents/MacOS/Opera' },
+  { name: 'Arc', profileKey: 'arc', appRelExec: 'Arc.app/Contents/MacOS/Arc' },
+  { name: 'Chromium', profileKey: 'chromium', appRelExec: 'Chromium.app/Contents/MacOS/Chromium' },
+]
+
+/** 扫描本机已安装的 Chromium 内核浏览器（/Applications 与 ~/Applications）。 */
+function listInstalledCaptureBrowsers(): CaptureBrowser[] {
+  if (process.platform !== 'darwin') return []
+  const roots = ['/Applications', path.join(os.homedir(), 'Applications')]
+  const found: CaptureBrowser[] = []
+  for (const def of MAC_CHROMIUM_BROWSER_DEFS) {
+    for (const root of roots) {
+      const execPath = path.join(root, def.appRelExec)
+      if (fs.existsSync(execPath)) {
+        found.push({ name: def.name, profileKey: def.profileKey, execPath })
+        break
+      }
+    }
+  }
+  return found
+}
+
+/** Chrome `--ignore-certificate-errors-spki-list` 需要 base64(sha256(DER SPKI))。 */
+function computeCaSpkiSha256(caPemPath: string): string {
+  const cert = new X509Certificate(fs.readFileSync(caPemPath))
+  const spkiDer = cert.publicKey.export({ type: 'spki', format: 'der' })
+  return createHash('sha256').update(spkiDer).digest('base64')
+}
+
+function launchCaptureBrowser(rawArgs: unknown): { browserName: string } {
+  const args = (rawArgs ?? {}) as {
+    proxyPort?: unknown
+    caPemPath?: unknown
+    browserKey?: unknown
+  }
+  const proxyPort = Number(args.proxyPort)
+  if (!Number.isInteger(proxyPort) || proxyPort <= 0 || proxyPort > 65535) {
+    throw new Error('valid proxyPort is required')
+  }
+  const safeCaPath = validateMitmCaPath(args.caPemPath)
+  const installed = listInstalledCaptureBrowsers()
+  if (installed.length === 0) {
+    throw new Error(
+      'no Chromium-based browser found (install Google Chrome to capture localhost)',
+    )
+  }
+  // 仅允许从扫描结果中按 key 选择，避免 renderer 传入任意可执行路径。
+  const browser =
+    typeof args.browserKey === 'string'
+      ? installed.find((b) => b.profileKey === args.browserKey)
+      : installed[0]
+  if (!browser) {
+    throw new Error('requested browser is not installed')
+  }
+  const spkiSha256 = computeCaSpkiSha256(safeCaPath)
+  // 独立 profile：避免污染日常浏览器，并确保命令行代理参数不会被已运行实例忽略。
+  const profileDir = path.join(
+    getProxyDataDir(),
+    CAPTURE_BROWSER_PROFILE_DIRNAME,
+    browser.profileKey,
+  )
+  fs.mkdirSync(profileDir, { recursive: true })
+  const launchArgs = [
+    `--proxy-server=127.0.0.1:${proxyPort}`,
+    // 关键：减去 Chromium 硬编码的 localhost/loopback 隐式 bypass，否则本机请求不走代理。
+    '--proxy-bypass-list=<-loopback>',
+    // 仅信任本应用的 MITM CA，无需安装到系统钥匙串。
+    `--ignore-certificate-errors-spki-list=${spkiSha256}`,
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+  ]
+  const child = spawn(browser.execPath, launchArgs, {
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+  return { browserName: browser.name }
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('proxy:focus-main-window', (_event, requestId: unknown) => {
     focusMainWindow(requestId)
@@ -377,6 +558,12 @@ function registerIpcHandlers(): void {
   ipcMain.handle('proxy:open-mitm-ca-file', (_event, caPemPath: unknown) =>
     openMitmCaFile(caPemPath),
   )
+  ipcMain.handle('proxy:list-capture-browsers', () =>
+    listInstalledCaptureBrowsers().map((b) => ({ name: b.name, key: b.profileKey })),
+  )
+  ipcMain.handle('proxy:launch-capture-browser', (_event, args: unknown) =>
+    launchCaptureBrowser(args),
+  )
 }
 
 async function boot(): Promise<void> {
@@ -385,6 +572,7 @@ async function boot(): Promise<void> {
   const main = createMainWindow()
 
   const ports = await waitForDashboard(dataDir)
+  startMcpServer(ports.dashboardPort)
   if (app.isPackaged) {
     await main.loadURL(`http://127.0.0.1:${ports.dashboardPort}`)
     return
@@ -415,6 +603,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  stopMcpServer()
   stopProxyApp()
 })
 

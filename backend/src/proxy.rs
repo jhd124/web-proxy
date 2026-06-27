@@ -458,9 +458,21 @@ fn normalize_proxy_url(req: &Request<Incoming>) -> Option<String> {
     Some(format!("http://{}{}", host, pq))
 }
 
+/// 用于 override 匹配的 host；显式端口会保留（如 `localhost:3000`），与 `match_host` 字段一致。
+fn host_with_optional_port(hostname: &str, port: Option<u16>) -> String {
+    match port {
+        Some(p) => format!("{hostname}:{p}"),
+        None => hostname.to_string(),
+    }
+}
+
+fn host_from_url(u: &url::Url) -> String {
+    host_with_optional_port(u.host_str().unwrap_or(""), u.port())
+}
+
 fn parse_host_path(url: &str) -> (String, String) {
     if let Ok(u) = url::Url::parse(url) {
-        let host = u.host_str().unwrap_or("").to_string();
+        let host = host_from_url(&u);
         let path = u.path();
         let path = if path.is_empty() { "/" } else { path };
         let path = match u.query() {
@@ -477,7 +489,7 @@ fn parse_host_path(url: &str) -> (String, String) {
 fn parse_url_for_override(url: &str) -> (String, String, String, String, Vec<(String, String)>) {
     if let Ok(u) = url::Url::parse(url) {
         let scheme = u.scheme().to_string();
-        let host = u.host_str().unwrap_or("").to_string();
+        let host = host_from_url(&u);
         let path_only = u.path();
         let path_only = if path_only.is_empty() {
             "/".to_string()

@@ -6,6 +6,12 @@ export type DesktopHostApi = {
   openExternalUrl: (url: string) => Promise<void>
   installMitmCaSystemTrust: (caPemPath: string) => Promise<void>
   openMitmCaFile: (caPemPath: string) => Promise<void>
+  listCaptureBrowsers: () => Promise<Array<{ name: string; key: string }>>
+  launchCaptureBrowser: (args: {
+    proxyPort: number
+    caPemPath: string
+    browserKey?: string
+  }) => Promise<{ browserName: string }>
   onTrafficSelect: (
     callback: (requestId: string) => void,
   ) => DesktopTrafficSelectUnsubscribe

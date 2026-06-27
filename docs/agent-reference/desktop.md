@@ -11,7 +11,8 @@
 - 核心目标：
   1. 托管主窗口与浮动流量窗口；
   2. 启动/管理后端 sidecar；
-  3. 通过安全 preload IPC 提供系统级能力（MITM 证书安装、外部链接、窗口管理）。
+  3. 启动/管理本地 MCP server（供外部 Agent 自动化调用）；
+  4. 通过安全 preload IPC 提供系统级能力（MITM 证书安装、外部链接、窗口管理）。
 
 ## 2. 目录与核心文件
 
@@ -21,6 +22,7 @@
 - `desktop/scripts/prepare-electron-resources.ts`：复制 `frontend/dist` 与 release `proxy-app` 到 `desktop/resources/`。
 - `desktop/tsconfig.json`：将 `src/*.ts` 编译到 `dist-electron/`，供 Electron 运行与打包使用。
 - `desktop/package.json`：Bun 驱动的 Electron 运行脚本与 electron-builder 打包配置。
+- `desktop/resources/mcp/`（构建产物）：打包前从仓库根 `mcp/` 复制，应用启动时由主进程拉起 MCP server。
 
 ## 3. 运行模式
 
@@ -33,6 +35,12 @@
   - `PROXY_DATA_DIR=desktop/.data/dev`；
   - `MITM=1`；
   - `PROXY_AUTO_SYSTEM_PROXY=1`。
+- 等待 dashboard 端口就绪后，主进程会自动拉起 `mcp/proxy-mcp-server.mjs`，并注入：
+  - `ELECTRON_RUN_AS_NODE=1`；
+  - `PROXY_MCP_TRANSPORT=http`；
+  - `PROXY_MCP_HTTP_HOST=127.0.0.1`；
+  - `PROXY_MCP_HTTP_PORT=19091`（可由外部环境变量覆盖）；
+  - `PROXY_DASHBOARD_URL=http://127.0.0.1:<dashboardPort>`。
 - Electron 等待 `frontend/.proxy-dev-ports.json` 与 Vite 默认端口可用后加载 `VITE_DEV_URL`（默认 `http://127.0.0.1:5173`）。
 
 ### 3.2 发布模式
@@ -44,10 +52,13 @@
 - electron-builder 使用 `extraResources` 携带：
   - `resources/dist` -> 应用资源目录 `dist`；
   - `resources/bin` -> 应用资源目录 `bin`。
+  - `resources/mcp` -> 应用资源目录 `mcp`。
 - Electron 启动时 spawn sidecar `proxy-app`，注入：
   - `DASHBOARD_DIST`（静态资源目录）；
   - `PROXY_DATA_DIR`（应用数据目录）；
   - `MITM=1`。
+- dashboard 就绪后，主进程会再拉起 MCP server（使用应用内 Node 运行时 + `ELECTRON_RUN_AS_NODE=1`）。
+- 外部自动化可通过 `POST http://127.0.0.1:19091/mcp` 调用工具（app 运行期间可用）。
 - 读取 `listen-ports.json` 等待 dashboard 就绪后再导航主窗口。
 
 ## 4. Electron IPC（前端可调用）
@@ -68,6 +79,13 @@
   - 安装 MITM 根证书到系统信任（当前重点支持 macOS）。
 - `openMitmCaFile(caPemPath)`
   - 打开证书文件，辅助用户手动安装。
+- `listCaptureBrowsers()`
+  - 扫描本机已安装的 Chromium 内核浏览器（macOS 检查 `/Applications` 与 `~/Applications`，覆盖 Chrome/Beta/Dev/Canary、Edge、Brave、Vivaldi、Opera、Arc、Chromium）；
+  - 返回 `[{ name, key }]`，供前端渲染选择菜单。
+- `launchCaptureBrowser({ proxyPort, caPemPath, browserKey? })`
+  - 以独立 `--user-data-dir` 启动指定（或列表中第一个）Chromium 系浏览器；`browserKey` 只能取自 `listCaptureBrowsers` 的扫描结果，避免 renderer 传入任意可执行路径；
+  - 注入 `--proxy-server=127.0.0.1:<proxyPort>`、`--proxy-bypass-list=<-loopback>`（绕过 Chromium 硬编码的 localhost 隐式 bypass）、`--ignore-certificate-errors-spki-list=<CA SPKI sha256>`（仅信任本应用 MITM CA，无需装入系统钥匙串）；
+  - 用于抓取 localhost/127.0.0.1 流量（系统代理或 PAC 都无法让 Chrome 代理 localhost）。
 - `onTrafficSelect(callback)`
   - 主窗口监听浮窗请求选中同步。
 

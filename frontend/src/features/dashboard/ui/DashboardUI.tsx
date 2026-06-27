@@ -36,9 +36,12 @@ export function DashboardUI(p: DashboardViewModel) {
                   capturePaused={p.capturePaused}
                   captureToggleSaving={p.captureToggleSaving}
                   wifiProxySaving={p.wifiProxySaving}
+                  captureBrowsers={p.captureBrowsers}
+                  captureBrowserLaunching={p.captureBrowserLaunching}
                   exportHarSaving={p.exportHarSaving}
                   onCaptureToggleClick={p.toggleCapturePaused}
                   onEnableWifiProxyClick={p.enableWifiHttpHttpsProxy}
+                  onLaunchCaptureBrowser={p.launchLocalhostCaptureBrowser}
                   onFloatingTrafficEntryClick={p.openFloatingTrafficWindow}
                   onExportHarClick={p.exportFilteredTrafficAsHar}
                 />

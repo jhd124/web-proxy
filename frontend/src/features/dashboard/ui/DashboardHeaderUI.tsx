@@ -10,6 +10,7 @@ import {
   WifiCog,
   X,
 } from 'lucide-react'
+import { CaptureBrowserMenu } from './CaptureBrowserMenu'
 import { dashboardTexts } from '../texts'
 import { trafficTexts } from '../../traffic/texts'
 import { TrafficFilterDialogUI } from '../../traffic/ui/TrafficFilterDialogUI'
@@ -41,9 +42,12 @@ type Props = {
   capturePaused: boolean
   captureToggleSaving: boolean
   wifiProxySaving: boolean
+  captureBrowsers: Array<{ name: string; key: string }>
+  captureBrowserLaunching: boolean
   exportHarSaving: boolean
   onCaptureToggleClick: () => void
   onEnableWifiProxyClick: () => void
+  onLaunchCaptureBrowser: (browserKey?: string) => void
   onFloatingTrafficEntryClick: () => void
   onExportHarClick: () => void
 }
@@ -65,9 +69,12 @@ export function DashboardHeaderUI({
   capturePaused,
   captureToggleSaving,
   wifiProxySaving,
+  captureBrowsers,
+  captureBrowserLaunching,
   exportHarSaving,
   onCaptureToggleClick,
   onEnableWifiProxyClick,
+  onLaunchCaptureBrowser,
   onFloatingTrafficEntryClick,
   onExportHarClick,
 }: Props) {
@@ -221,6 +228,12 @@ export function DashboardHeaderUI({
         >
           <WifiCog size={16} aria-hidden />
         </TooltipButton>
+
+        <CaptureBrowserMenu
+          browsers={captureBrowsers}
+          launching={captureBrowserLaunching}
+          onLaunch={onLaunchCaptureBrowser}
+        />
 
         <TooltipButton
           type="button"

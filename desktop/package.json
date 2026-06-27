@@ -43,6 +43,10 @@
       {
         "from": "resources/bin",
         "to": "bin"
+      },
+      {
+        "from": "resources/mcp",
+        "to": "mcp"
       }
     ],
     "mac": {

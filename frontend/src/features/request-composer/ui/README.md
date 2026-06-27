@@ -4,7 +4,7 @@
 
 ## 当前内容
 
-- `RequestComposerUI.tsx`：请求编写器页面，标题区展示标题与发送请求图标按钮；左侧为 URL、request、headers 三段连续表单（组间细分隔线、无组标题，`GET` 方法下隐藏 Body 输入），右侧历史与响应区同样去卡片化并保留章节标题与操作区。
+- `RequestComposerUI.tsx`：请求编写器页面，标题区展示标题与发送请求图标按钮；左侧为 URL、request、headers 三段连续表单（组间细分隔线、无组标题，`GET` 方法下隐藏 Body 输入），右侧历史与响应区同样去卡片化并保留章节标题与操作区。中间新增可拖拽分栏手柄，可实时调节右侧 history/response 面板宽度。历史列表主行展示 `Method + 完整 URL`（不再只显示 path），并在文本截断时可通过 hover title 查看完整内容。
 - `RequestComposerUI.module.css`：页面分栏、表单分隔线、历史列表、响应预览与表单样式；多行输入框按内容自动增高，并在窄屏下允许右侧区域纵向滚动查看溢出内容；响应体预览区域按内容自然撑开。
 
 ## 维护要求

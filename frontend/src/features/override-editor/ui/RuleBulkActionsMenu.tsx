@@ -45,16 +45,19 @@ export function RuleBulkActionsMenu<T extends RuleWithEnabled>({
 }: RuleBulkActionsMenuProps<T>): ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const closeTimerRef = useRef<number | null>(null)
-  const isAllEnabled = rules.length > 0 && rules.every((rule) => rule.enabled)
-  const nextEnabled = !isAllEnabled
-  const actionLabel = isAllEnabled ? labels.disableAll : labels.enableAll
-
-  const targetRules = useMemo(
-    () => rules.filter((rule) => rule.enabled !== nextEnabled),
-    [nextEnabled, rules],
+  const enableTargetRules = useMemo(
+    () => rules.filter((rule) => !rule.enabled),
+    [rules],
   )
-  const isSaving = targetRules.some((rule) => toggleSaving[rule.id] === true)
-  const isDisabled = rules.length === 0 || isSaving
+  const disableTargetRules = useMemo(
+    () => rules.filter((rule) => rule.enabled),
+    [rules],
+  )
+  const isEnabling = enableTargetRules.some((rule) => toggleSaving[rule.id] === true)
+  const isDisabling = disableTargetRules.some((rule) => toggleSaving[rule.id] === true)
+  const isEnableDisabled = rules.length === 0 || enableTargetRules.length === 0 || isEnabling
+  const isDisableDisabled =
+    rules.length === 0 || disableTargetRules.length === 0 || isDisabling
 
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current === null) return
@@ -81,11 +84,18 @@ export function RuleBulkActionsMenu<T extends RuleWithEnabled>({
     }
   }, [clearCloseTimer])
 
-  const handleToggleAll = () => {
-    if (isDisabled) return
+  const handleEnableAll = () => {
+    if (isEnableDisabled) return
     setIsOpen(false)
     void Promise.all(
-      targetRules.map((rule) => Promise.resolve(setRuleEnabled(rule, nextEnabled))),
+      enableTargetRules.map((rule) => Promise.resolve(setRuleEnabled(rule, true))),
+    )
+  }
+  const handleDisableAll = () => {
+    if (isDisableDisabled) return
+    setIsOpen(false)
+    void Promise.all(
+      disableTargetRules.map((rule) => Promise.resolve(setRuleEnabled(rule, false))),
     )
   }
 
@@ -119,18 +129,28 @@ export function RuleBulkActionsMenu<T extends RuleWithEnabled>({
         <button
           type="button"
           className={s.menuItem}
-          disabled={isDisabled}
+          disabled={isEnableDisabled}
           role="menuitem"
-          onClick={handleToggleAll}
+          onClick={handleEnableAll}
         >
           <span
             className={cn(
               s.stateDot,
-              nextEnabled ? s.stateDotEnabled : s.stateDotDisabled,
+              s.stateDotEnabled,
             )}
             aria-hidden
           />
-          <span>{isSaving ? labels.saving : actionLabel}</span>
+          <span>{isEnabling ? labels.saving : labels.enableAll}</span>
+        </button>
+        <button
+          type="button"
+          className={s.menuItem}
+          disabled={isDisableDisabled}
+          role="menuitem"
+          onClick={handleDisableAll}
+        >
+          <span className={cn(s.stateDot, s.stateDotDisabled)} aria-hidden />
+          <span>{isDisabling ? labels.saving : labels.disableAll}</span>
         </button>
       </PopoverContent>
     </Popover>

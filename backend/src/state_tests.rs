@@ -26,6 +26,32 @@ fn rule_with(host: &str, path: &str) -> OverrideRule {
 }
 
 #[test]
+fn localhost_with_port_matches_override_host() {
+    let mut rule = rule_with("localhost:3000", "/api");
+    rule.match_protocol = Some("http".to_string());
+    assert!(rule.matches(
+        "GET",
+        "http",
+        "localhost:3000",
+        "/api",
+        "/api",
+        &[],
+        &HeaderMap::new(),
+        b"",
+    ));
+    assert!(!rule.matches(
+        "GET",
+        "http",
+        "localhost",
+        "/api",
+        "/api",
+        &[],
+        &HeaderMap::new(),
+        b"",
+    ));
+}
+
+#[test]
 fn wildcard_host_matches_subdomain() {
     let rule = rule_with("*.example.com", "/api/*");
     assert!(rule.matches(
