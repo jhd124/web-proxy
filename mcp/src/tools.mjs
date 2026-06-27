@@ -145,4 +145,63 @@ export const tools = [
       },
     },
   },
+  {
+    name: "list_hosts",
+    description: "List proxy-app managed hosts entries and system apply status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dashboardUrl: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "upsert_host",
+    description: "Create or update one proxy-app managed hosts entry.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dashboardUrl: { type: "string" },
+        address: { type: "string" },
+        hostname: { type: "string" },
+        enabled: { type: "boolean" },
+        comment: { type: "string" },
+      },
+      required: ["hostname"],
+    },
+  },
+  {
+    name: "remove_host",
+    description: "Remove one proxy-app managed hosts entry by hostname.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dashboardUrl: { type: "string" },
+        hostname: { type: "string" },
+      },
+      required: ["hostname"],
+    },
+  },
+  {
+    name: "apply_hosts",
+    description:
+      "Ask dashboard backend to apply proxy-app managed hosts block to the system hosts file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dashboardUrl: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "revert_hosts",
+    description:
+      "Ask dashboard backend to remove proxy-app managed hosts block from the system hosts file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dashboardUrl: { type: "string" },
+      },
+    },
+  },
 ];

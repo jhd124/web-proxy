@@ -2,6 +2,7 @@ mod advanced_search;
 mod api;
 mod body_format;
 mod breakpoints;
+mod hosts;
 mod mitm;
 mod override_identity;
 mod overrides;

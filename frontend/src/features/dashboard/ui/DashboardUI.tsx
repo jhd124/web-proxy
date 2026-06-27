@@ -1,4 +1,5 @@
 import { BreakpointsPanelPortal } from '../../breakpoints/portal'
+import { HostsPanelPortal } from '../../hosts/portal'
 import { OverrideEditorPortal } from '../../override-editor/portal'
 import { RequestComposerPortal } from '../../request-composer/portal'
 import { SavedRequestsPanelPortal } from '../../saved-requests/portal'
@@ -142,6 +143,11 @@ export function DashboardUI(p: DashboardViewModel) {
             {p.activeTab === 'request-composer' && (
               <div className={root.tabPanel}>
                 <RequestComposerPortal />
+              </div>
+            )}
+            {p.activeTab === 'hosts' && (
+              <div className={root.tabPanel}>
+                <HostsPanelPortal />
               </div>
             )}
             {p.activeTab === 'settings' && (

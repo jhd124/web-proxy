@@ -15,6 +15,7 @@
 - `src/systemProxy.mjs`：macOS 系统代理启停能力
 - `src/handlers/trafficHandlers.mjs`：流量监听与过滤 handler
 - `src/handlers/ruleHandlers.mjs`：override/breakpoint/UI 操作 handler
+- `src/handlers/hostsHandlers.mjs`：hosts 托管配置 handler
 
 ## 能力清单
 
@@ -25,6 +26,11 @@
 - `operate_ui`：执行 dashboard UI 动作（聚焦窗口、打开浮窗、选中请求、设置过滤）
 - `enable_proxy`：开启 macOS 系统 HTTP/HTTPS 代理
 - `disable_proxy`：关闭 macOS 系统 HTTP/HTTPS 代理
+- `list_hosts`：查看托管 hosts 条目与系统应用状态
+- `upsert_host`：新增或更新一个托管 hosts 条目
+- `remove_host`：按 hostname 删除一个托管 hosts 条目
+- `apply_hosts`：请求 dashboard 后端将托管区块写入系统 hosts
+- `revert_hosts`：请求 dashboard 后端从系统 hosts 移除托管区块
 
 ## 启动方式
 
@@ -100,6 +106,10 @@ curl -sS -X POST "http://127.0.0.1:19091/mcp" \
 - `disable_proxy`
   - 自动识别主网络服务后关闭系统 HTTP/HTTPS 代理
   - 可选参数：`serviceName`
+
+## Hosts 控制说明
+
+`list_hosts`、`upsert_host`、`remove_host` 操作的是 dashboard 后端保存的托管配置；`apply_hosts` 与 `revert_hosts` 只调用 dashboard 后端接口，系统 hosts 文件的读写统一由后端进程完成。后端进程需要具备写入系统 hosts 文件的权限。
 
 ## 开发约束
 

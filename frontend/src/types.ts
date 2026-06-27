@@ -98,6 +98,22 @@ export interface RequestCatalogSettings {
   persistSensitiveHeaders: boolean
 }
 
+export interface ManagedHostEntry {
+  address: string
+  hostname: string
+  enabled: boolean
+  comment: string
+}
+
+export interface HostsState {
+  entries: ManagedHostEntry[]
+  systemPath: string
+  platform: string
+  managedBlockPresent: boolean
+  applied: boolean
+  writeRequiresElevation: boolean
+}
+
 export interface RequestComposerRequest {
   scheme: string
   host: string

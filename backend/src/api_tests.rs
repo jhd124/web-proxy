@@ -140,6 +140,56 @@ async fn set_system_proxy_enable_rejects_zero_port() {
 }
 
 #[tokio::test]
+async fn hosts_update_persists_sanitized_entries() {
+    let state = build_state();
+    let response = crate::hosts::update_hosts(
+        State(state.clone()),
+        Json(crate::hosts::HostsConfig {
+            entries: vec![crate::hosts::ManagedHostEntry {
+                address: "127.0.0.1".to_string(),
+                hostname: "API.Test.Local".to_string(),
+                enabled: true,
+                comment: "local mock".to_string(),
+            }],
+        }),
+    )
+    .await
+    .expect("hosts update should succeed")
+    .0;
+
+    assert_eq!(response.entries.len(), 1);
+    assert_eq!(response.entries[0].hostname, "api.test.local");
+
+    let listed = crate::hosts::list_hosts(State(state))
+        .await
+        .expect("hosts list should succeed")
+        .0;
+    assert_eq!(listed.entries, response.entries);
+}
+
+#[tokio::test]
+async fn hosts_update_rejects_invalid_hostname() {
+    let state = build_state();
+    let result = crate::hosts::update_hosts(
+        State(state),
+        Json(crate::hosts::HostsConfig {
+            entries: vec![crate::hosts::ManagedHostEntry {
+                address: "127.0.0.1".to_string(),
+                hostname: "bad host".to_string(),
+                enabled: true,
+                comment: String::new(),
+            }],
+        }),
+    )
+    .await;
+
+    let Err((status, _)) = result else {
+        panic!("invalid host should fail");
+    };
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn resume_request_returns_not_found_when_missing_and_no_content_when_exists() {
     let state = build_state();
     let id = Uuid::new_v4();

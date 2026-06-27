@@ -1,0 +1,32 @@
+/** User-visible copy for the hosts feature (key–value, single place of truth). */
+export const hostsTexts = {
+  title: 'Hosts',
+  description:
+    'Manage the proxy-app block in your system hosts file. Existing system lines stay untouched.',
+  addEntry: 'Add entry',
+  save: 'Save',
+  apply: 'Apply to system',
+  revert: 'Remove from system',
+  loading: 'Loading hosts...',
+  empty: 'No managed hosts yet. Add a hostname to start.',
+  enabled: 'Enabled',
+  disabled: 'Disabled',
+  address: 'IP address',
+  hostname: 'Hostname',
+  comment: 'Comment',
+  actions: 'Actions',
+  remove: 'Remove',
+  statusApplied: 'Applied',
+  statusPending: 'Pending apply',
+  systemPath: (path: string) => `System hosts: ${path}`,
+  platform: (platform: string) => `Platform: ${platform}`,
+  loadFailed: (detail: string) => `Could not load hosts: ${detail}`,
+  saveSuccess: 'Hosts entries saved',
+  saveFailed: (detail: string) => `Could not save hosts: ${detail}`,
+  applySuccess: 'Hosts file updated',
+  applyFailed: (detail: string) => `Could not update hosts file: ${detail}`,
+  revertSuccess: 'Managed hosts block removed',
+  revertFailed: (detail: string) => `Could not remove hosts block: ${detail}`,
+  applyHint:
+    'Applying is handled by the backend process. If direct write is denied, it will ask the operating system for permission.',
+} as const

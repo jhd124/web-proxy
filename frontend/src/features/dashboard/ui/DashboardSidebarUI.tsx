@@ -8,7 +8,15 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { Bookmark, NotebookPen, Replace, Settings, StepForward, Waves } from 'lucide-react'
+import {
+  Bookmark,
+  FileCog,
+  NotebookPen,
+  Replace,
+  Settings,
+  StepForward,
+  Waves,
+} from 'lucide-react'
 import type { DashboardViewModel } from '../hooks/useDashboard'
 import { dashboardTexts } from '../texts'
 import root from './DashboardSidebarUI.module.css'
@@ -114,6 +122,16 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
             >
               <NotebookPen />
               <span>Request Composer</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === 'hosts'}
+              onClick={viewModel.openHostsPanel}
+              tooltip="Hosts"
+            >
+              <FileCog />
+              <span>Hosts</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

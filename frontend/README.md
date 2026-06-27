@@ -48,6 +48,9 @@
 - `src/features/request-composer/README.md`
 - `src/features/request-composer/hooks/README.md`
 - `src/features/request-composer/ui/README.md`
+- `src/features/hosts/README.md`
+- `src/features/hosts/hooks/README.md`
+- `src/features/hosts/ui/README.md`
 - `src/features/settings/README.md`
 - `src/features/settings/ui/README.md`
 

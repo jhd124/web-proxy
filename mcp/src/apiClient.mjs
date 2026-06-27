@@ -22,3 +22,20 @@ export async function apiPostJson(baseUrl, path, body) {
   }
   return JSON.parse(text);
 }
+
+export async function apiPutJson(baseUrl, path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`HTTP ${response.status} for PUT ${path}: ${detail}`);
+  }
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  return JSON.parse(text);
+}

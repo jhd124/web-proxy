@@ -32,6 +32,7 @@ export type DashboardTab =
   | 'traffic'
   | 'override'
   | 'breakpoints'
+  | 'hosts'
   | 'request-composer'
   | 'saved'
   | 'settings'
@@ -53,6 +54,7 @@ function readDashboardTabFromUrl(): DashboardTab {
     rawTab === 'traffic' ||
     rawTab === 'override' ||
     rawTab === 'breakpoints' ||
+    rawTab === 'hosts' ||
     rawTab === 'request-composer' ||
     rawTab === 'saved' ||
     rawTab === 'settings'
@@ -100,6 +102,9 @@ export function useDashboard() {
   }, [navigateToTab])
   const openRequestComposerPanel = useCallback(() => {
     navigateToTab('request-composer')
+  }, [navigateToTab])
+  const openHostsPanel = useCallback(() => {
+    navigateToTab('hosts')
   }, [navigateToTab])
   const openSettingsPanel = useCallback(() => {
     navigateToTab('settings')
@@ -881,6 +886,7 @@ export function useDashboard() {
     closeBreakpointsPanel,
     openSavedRequestsPanel,
     openRequestComposerPanel,
+    openHostsPanel,
     openSettingsPanel,
     openFloatingTrafficWindow,
     closeSavedRequestsPanel,
