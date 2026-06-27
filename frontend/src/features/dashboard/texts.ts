@@ -14,6 +14,7 @@ export const dashboardTexts = {
       `Could not export HAR: ${detail}`,
     downloadCaTooltip: 'Download MITM CA certificate (PEM)',
     downloadCaAriaLabel: 'Download MITM CA certificate',
+    downloadCaSuccess: 'Downloaded MITM CA certificate',
     downloadCaFailed: (detail: string) =>
       `Could not download CA certificate: ${detail}`,
     openOverridesTooltip: 'Open overrides editor',
@@ -30,6 +31,7 @@ export const dashboardTexts = {
     openFloatingTrafficAriaLabel: 'Open floating traffic window',
     enableWifiProxyTooltip: 'Enable WiFi HTTP/HTTPS proxy',
     enableWifiProxyAriaLabel: 'Enable WiFi HTTP and HTTPS proxy',
+    enableWifiProxySuccess: 'Enabled WiFi HTTP/HTTPS proxy',
     enableWifiProxyFailed: (detail: string) =>
       `Could not enable WiFi HTTP/HTTPS proxy: ${detail}`,
     launchCaptureBrowserTooltip: 'Launch browser to capture localhost',
@@ -49,6 +51,8 @@ export const dashboardTexts = {
     pauseCaptureAriaLabel: 'Pause traffic capture',
     resumeCaptureTooltip: 'Resume traffic capture',
     resumeCaptureAriaLabel: 'Resume traffic capture',
+    pauseCaptureSuccess: 'Paused traffic capture',
+    resumeCaptureSuccess: 'Resumed traffic capture',
     pauseCaptureFailed: (detail: string) =>
       `Could not pause traffic capture: ${detail}`,
     resumeCaptureFailed: (detail: string) =>

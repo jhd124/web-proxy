@@ -336,6 +336,11 @@ export function useDashboard() {
         }
       }
       setCapturePaused(targetPaused)
+      showSuccessToast(
+        targetPaused
+          ? dashboardTexts.header.pauseCaptureSuccess
+          : dashboardTexts.header.resumeCaptureSuccess,
+      )
     } catch (error) {
       if (!targetPaused) {
         await setSystemHttpHttpsProxyEnabled(false).catch(() => {
@@ -343,10 +348,11 @@ export function useDashboard() {
         })
       }
       const detail = error instanceof Error ? error.message : String(error)
-      window.alert(
+      showToast(
         targetPaused
           ? dashboardTexts.header.pauseCaptureFailed(detail)
           : dashboardTexts.header.resumeCaptureFailed(detail),
+        'error',
       )
     } finally {
       setCaptureToggleSaving(false)
@@ -356,15 +362,16 @@ export function useDashboard() {
   const enableWifiHttpHttpsProxy = useCallback(async () => {
     const proxyPort = getProxyPortFromListenAddress(proxyListenAddress)
     if (proxyPort == null) {
-      window.alert(dashboardTexts.header.missingProxyAddress)
+      showToast(dashboardTexts.header.missingProxyAddress, 'error')
       return
     }
     setWifiProxySaving(true)
     try {
       await setSystemHttpHttpsProxyEnabled(true)
+      showSuccessToast(dashboardTexts.header.enableWifiProxySuccess)
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
-      window.alert(dashboardTexts.header.enableWifiProxyFailed(detail))
+      showToast(dashboardTexts.header.enableWifiProxyFailed(detail), 'error')
     } finally {
       setWifiProxySaving(false)
     }

@@ -5,6 +5,7 @@ import {
   Download,
   KeyRound,
   ListFilter,
+  LoaderCircle,
   Pin,
   Trash,
   WifiCog,
@@ -23,6 +24,7 @@ import { panelHeaderStyles as ph } from '@/components/panel-header'
 import s from './DashboardHeaderUI.module.css'
 import { Input } from '@/components/ui/input'
 import { downloadFromUrl } from '@/lib/download'
+import { showSuccessToast, showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -91,10 +93,9 @@ export function DashboardHeaderUI({
     setDownloading(true)
     try {
       await downloadFromUrl(mitm.linkPath, mitm.linkDownload)
+      showSuccessToast(t.downloadCaSuccess)
     } catch (e) {
-      window.alert(
-        t.downloadCaFailed(e instanceof Error ? e.message : String(e)),
-      )
+      showToast(t.downloadCaFailed(e instanceof Error ? e.message : String(e)), 'error')
     } finally {
       setDownloading(false)
     }
@@ -215,7 +216,13 @@ export function DashboardHeaderUI({
           disabled={captureToggleSaving}
           onClick={onCaptureToggleClick}
         >
-          {capturePaused ? <CirclePlay size={16} aria-hidden /> : <CirclePause size={16} aria-hidden />}
+          {captureToggleSaving ? (
+            <LoaderCircle size={16} className={s.spin} aria-hidden />
+          ) : capturePaused ? (
+            <CirclePlay size={16} aria-hidden />
+          ) : (
+            <CirclePause size={16} aria-hidden />
+          )}
         </TooltipButton>
 
         <TooltipButton
@@ -226,7 +233,11 @@ export function DashboardHeaderUI({
           disabled={wifiProxySaving}
           onClick={onEnableWifiProxyClick}
         >
-          <WifiCog size={16} aria-hidden />
+          {wifiProxySaving ? (
+            <LoaderCircle size={16} className={s.spin} aria-hidden />
+          ) : (
+            <WifiCog size={16} aria-hidden />
+          )}
         </TooltipButton>
 
         <CaptureBrowserMenu
