@@ -9,7 +9,7 @@ use futures_util::{Stream, TryStreamExt};
 use http_body::Frame;
 use http_body_util::{BodyExt, Either, Full, StreamBody};
 use hyper::body::Incoming;
-use hyper::header::{HeaderName, HeaderValue};
+use hyper::header::{HeaderName, HeaderValue, CONNECTION, CONTENT_LENGTH, HOST, UPGRADE};
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use std::convert::Infallible;
@@ -947,7 +947,10 @@ async fn handle_connect_mitm(
         });
         // 用 auto::Builder 让接收侧根据 ALPN 自动选 HTTP/2 或 HTTP/1.1，匹配 rustls 协商结果。
         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
-        if let Err(e) = builder.serve_connection(tls_io, service).await {
+        if let Err(e) = builder
+            .serve_connection_with_upgrades(tls_io, service)
+            .await
+        {
             tracing::debug!("mitm http connection {}: {}", host_spawn, e);
         }
     });
@@ -977,6 +980,10 @@ async fn handle_mitm_https_request(
 ) -> Result<Response<ProxyBody>, Infallible> {
     let method = req.method().clone();
     let url = mitm_full_url(&connect_host, connect_port, req.uri());
+    if is_http1_upgrade_request(&method, req.headers()) {
+        let request_headers = req.headers().clone();
+        return forward_mitm_upgrade_tunnel(state, peer, method, url, request_headers, req).await;
+    }
     let (parts, body) = req.into_parts();
     let collected = match body.collect().await {
         Ok(c) => c.to_bytes(),
@@ -1182,6 +1189,253 @@ fn reqwest_headers_for_upstream(headers: &hyper::header::HeaderMap) -> reqwest::
         }
     }
     req_headers
+}
+
+fn reqwest_headers_for_upgrade_upstream(
+    headers: &hyper::header::HeaderMap,
+) -> reqwest::header::HeaderMap {
+    let mut req_headers = reqwest::header::HeaderMap::new();
+    for (k, v) in headers.iter() {
+        if k == "proxy-connection" || k == "proxy-authorization" || k == HOST || k == CONTENT_LENGTH
+        {
+            continue;
+        }
+        if let (Ok(name), Ok(val)) = (
+            reqwest::header::HeaderName::from_bytes(k.as_str().as_bytes()),
+            reqwest::header::HeaderValue::from_bytes(v.as_bytes()),
+        ) {
+            req_headers.append(name, val);
+        }
+    }
+    req_headers
+}
+
+fn header_contains_token(
+    headers: &hyper::header::HeaderMap,
+    name: HeaderName,
+    token: &str,
+) -> bool {
+    headers.get_all(name).iter().any(|value| {
+        value
+            .to_str()
+            .ok()
+            .map(|raw| {
+                raw.split(',')
+                    .any(|part| part.trim().eq_ignore_ascii_case(token))
+            })
+            .unwrap_or(false)
+    })
+}
+
+fn is_http1_upgrade_request(method: &Method, headers: &hyper::header::HeaderMap) -> bool {
+    *method == Method::GET
+        && headers.contains_key(UPGRADE)
+        && header_contains_token(headers, CONNECTION, "upgrade")
+}
+
+async fn forward_mitm_upgrade_tunnel(
+    state: Arc<AppState>,
+    peer: SocketAddr,
+    method: Method,
+    url: String,
+    request_headers: hyper::header::HeaderMap,
+    req: Request<Incoming>,
+) -> Result<Response<ProxyBody>, Infallible> {
+    let (scheme, host, _, path_only, _) = parse_url_for_override(&url);
+    let app_name = resolve_client_app_name(peer).await;
+    let entry_id = Uuid::new_v4();
+    let entry = TrafficEntry {
+        id: entry_id,
+        at: chrono::Utc::now(),
+        peer: peer.to_string(),
+        app_name,
+        method: method.to_string(),
+        url: url.clone(),
+        scheme,
+        host,
+        path: path_only,
+        request_headers: request_headers
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
+            .collect(),
+        request_body_preview: None,
+        kind: TrafficKind::Http,
+        mitm_bypassed: false,
+        response_status: None,
+        response_headers: None,
+        response_body_preview: None,
+        duration_ms: None,
+        error: None,
+        pending: false,
+        breakpoint_name: None,
+        override_match_id: None,
+        breakpoint_match_id: None,
+        stream_controllable: false,
+        stream_playing: None,
+    };
+    state.push_traffic(entry);
+
+    let started = Instant::now();
+    let req_headers = reqwest_headers_for_upgrade_upstream(&request_headers);
+    let client = match reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .http1_only()
+        .build()
+    {
+        Ok(client) => client,
+        Err(e) => {
+            state.update_traffic(
+                entry_id,
+                TrafficUpdate {
+                    response_status: None,
+                    response_headers: None,
+                    response_body_preview: None,
+                    duration_ms: Some(started.elapsed().as_millis() as u64),
+                    error: Some(format!("build upgrade client: {e}")),
+                    pending: None,
+                    breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
+                    stream_controllable: None,
+                    stream_playing: None,
+                },
+            );
+            return Ok(Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(Either::Left(full_body_bytes(b"upgrade client error")))
+                .unwrap());
+        }
+    };
+
+    let upstream = match client
+        .request(method.clone(), url.clone())
+        .version(reqwest::Version::HTTP_11)
+        .headers(req_headers)
+        .body(Vec::new())
+        .send()
+        .await
+    {
+        Ok(response) => response,
+        Err(e) => {
+            state.update_traffic(
+                entry_id,
+                TrafficUpdate {
+                    response_status: None,
+                    response_headers: None,
+                    response_body_preview: None,
+                    duration_ms: Some(started.elapsed().as_millis() as u64),
+                    error: Some(format!("upgrade upstream: {e}")),
+                    pending: None,
+                    breakpoint_name: None,
+                    override_match_id: None,
+                    breakpoint_match_id: None,
+                    stream_controllable: None,
+                    stream_playing: None,
+                },
+            );
+            return Ok(Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(Either::Left(full_body_bytes(b"upgrade upstream error")))
+                .unwrap());
+        }
+    };
+
+    let status = upstream.status();
+    let header_map = upstream.headers().clone();
+    let resp_headers: Vec<(String, String)> = header_map
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
+        .collect();
+
+    if status != reqwest::StatusCode::SWITCHING_PROTOCOLS {
+        let bytes = upstream.bytes().await.unwrap_or_else(|_| Bytes::new());
+        let preview = preview_bytes(&bytes);
+        state.update_traffic(
+            entry_id,
+            TrafficUpdate {
+                response_status: Some(status.as_u16()),
+                response_headers: Some(resp_headers),
+                response_body_preview: preview,
+                duration_ms: Some(started.elapsed().as_millis() as u64),
+                error: Some(format!("upgrade rejected with HTTP {}", status.as_u16())),
+                pending: None,
+                breakpoint_name: None,
+                override_match_id: None,
+                breakpoint_match_id: None,
+                stream_controllable: None,
+                stream_playing: None,
+            },
+        );
+        let mut res = Response::builder()
+            .status(StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY));
+        for (k, v) in header_map.iter() {
+            let skip = matches!(
+                k.as_str(),
+                "connection" | "keep-alive" | "transfer-encoding"
+            );
+            if !skip {
+                if let (Ok(name), Ok(val)) = (
+                    HeaderName::from_bytes(k.as_str().as_bytes()),
+                    HeaderValue::from_bytes(v.as_bytes()),
+                ) {
+                    res = res.header(name, val);
+                }
+            }
+        }
+        return Ok(res.body(Either::Left(Full::new(bytes))).unwrap());
+    }
+
+    state.update_traffic(
+        entry_id,
+        TrafficUpdate {
+            response_status: Some(StatusCode::SWITCHING_PROTOCOLS.as_u16()),
+            response_headers: Some(resp_headers),
+            response_body_preview: None,
+            duration_ms: Some(started.elapsed().as_millis() as u64),
+            error: None,
+            pending: None,
+            breakpoint_name: None,
+            override_match_id: None,
+            breakpoint_match_id: None,
+            stream_controllable: None,
+            stream_playing: None,
+        },
+    );
+
+    let client_upgrade = hyper::upgrade::on(req);
+    let upstream_upgrade = upstream.upgrade();
+    tokio::spawn(async move {
+        let mut client_io = match client_upgrade.await {
+            Ok(upgraded) => TokioIo::new(upgraded),
+            Err(e) => {
+                tracing::debug!("mitm client upgrade {}: {}", url, e);
+                return;
+            }
+        };
+        let mut upstream_io = match upstream_upgrade.await {
+            Ok(upgraded) => upgraded,
+            Err(e) => {
+                tracing::debug!("mitm upstream upgrade {}: {}", url, e);
+                return;
+            }
+        };
+        let _ = tokio::io::copy_bidirectional(&mut client_io, &mut upstream_io).await;
+    });
+
+    let mut res = Response::builder().status(StatusCode::SWITCHING_PROTOCOLS);
+    for (k, v) in header_map.iter() {
+        if k == CONTENT_LENGTH {
+            continue;
+        }
+        if let (Ok(name), Ok(val)) = (
+            HeaderName::from_bytes(k.as_str().as_bytes()),
+            HeaderValue::from_bytes(v.as_bytes()),
+        ) {
+            res = res.header(name, val);
+        }
+    }
+    Ok(res.body(Either::Left(Full::new(Bytes::new()))).unwrap())
 }
 
 async fn forward_proxied_http(

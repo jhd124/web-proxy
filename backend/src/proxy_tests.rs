@@ -1,5 +1,5 @@
 use super::*;
-use hyper::header::{HeaderMap, HeaderValue, COOKIE, HOST};
+use hyper::header::{HeaderMap, HeaderValue, CONNECTION, COOKIE, HOST, UPGRADE};
 
 #[test]
 fn parse_url_for_override_includes_explicit_port_in_host() {
@@ -52,6 +52,52 @@ fn reqwest_headers_for_upstream_skips_proxy_specific_headers() {
             .get("x-request-id")
             .and_then(|value| value.to_str().ok()),
         Some("request-1")
+    );
+}
+
+#[test]
+fn is_http1_upgrade_request_requires_connection_upgrade_token() {
+    let mut headers = HeaderMap::new();
+    headers.insert(UPGRADE, HeaderValue::from_static("websocket"));
+    headers.insert(CONNECTION, HeaderValue::from_static("keep-alive, Upgrade"));
+
+    assert!(is_http1_upgrade_request(&Method::GET, &headers));
+    assert!(!is_http1_upgrade_request(&Method::POST, &headers));
+
+    headers.insert(CONNECTION, HeaderValue::from_static("keep-alive"));
+    assert!(!is_http1_upgrade_request(&Method::GET, &headers));
+}
+
+#[test]
+fn reqwest_headers_for_upgrade_upstream_preserves_upgrade_headers() {
+    let mut headers = HeaderMap::new();
+    headers.insert(HOST, HeaderValue::from_static("example.com"));
+    headers.insert(CONNECTION, HeaderValue::from_static("Upgrade"));
+    headers.insert(UPGRADE, HeaderValue::from_static("websocket"));
+    headers.insert("sec-websocket-key", HeaderValue::from_static("abc"));
+    headers.insert("proxy-authorization", HeaderValue::from_static("secret"));
+
+    let upstream_headers = reqwest_headers_for_upgrade_upstream(&headers);
+
+    assert!(upstream_headers.get(reqwest::header::HOST).is_none());
+    assert!(upstream_headers.get("proxy-authorization").is_none());
+    assert_eq!(
+        upstream_headers
+            .get(reqwest::header::CONNECTION)
+            .and_then(|value| value.to_str().ok()),
+        Some("Upgrade")
+    );
+    assert_eq!(
+        upstream_headers
+            .get(reqwest::header::UPGRADE)
+            .and_then(|value| value.to_str().ok()),
+        Some("websocket")
+    );
+    assert_eq!(
+        upstream_headers
+            .get("sec-websocket-key")
+            .and_then(|value| value.to_str().ok()),
+        Some("abc")
     );
 }
 
