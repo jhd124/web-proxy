@@ -72,3 +72,82 @@
   color: var(--text-active);
   background: var(--surface-selected);
 }
+
+.billingCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-inset);
+}
+
+.billingMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.billingPlan {
+  color: var(--text-primary);
+  font-weight: var(--text-weight-emphasized);
+}
+
+.limitList {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.limitItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.licenseForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.licenseInput {
+  min-width: min(100%, 18rem);
+  flex: 1;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button-md);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-button-md);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 1px solid var(--text-active);
+  background: var(--surface-selected);
+  color: var(--text-active);
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}

@@ -3,7 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react'
 import { PanelHeader } from '@/components/panel-header'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { ThemePreference } from '../../../theme/themeController'
-import type { RequestCatalogSettings } from '../../../types'
+import type { BillingStatus, PlanLimits, RequestCatalogSettings } from '../../../types'
 import { settingsTexts as t } from '../texts'
 import s from './SettingsPanelUI.module.css'
 
@@ -25,6 +25,12 @@ type SettingsPanelUIProps = {
   requestCatalogSettings: RequestCatalogSettings
   requestCatalogSettingsSaving: boolean
   setPersistSensitiveHeaders: (next: boolean) => Promise<void>
+  billingStatus: BillingStatus | null
+  licenseKey: string
+  setLicenseKey: (next: string) => void
+  licenseActivating: boolean
+  activateLicense: () => Promise<void>
+  openPurchasePage: () => Promise<void>
 }
 
 export function SettingsPanelUI({
@@ -33,6 +39,12 @@ export function SettingsPanelUI({
   requestCatalogSettings,
   requestCatalogSettingsSaving,
   setPersistSensitiveHeaders,
+  billingStatus,
+  licenseKey,
+  setLicenseKey,
+  licenseActivating,
+  activateLicense,
+  openPurchasePage,
 }: SettingsPanelUIProps): ReactElement {
   return (
     <div className={s.panel}>
@@ -67,6 +79,70 @@ export function SettingsPanelUI({
                   </button>
                 )
               })}
+            </div>
+          </section>
+          <section className={s.section}>
+            <div className={s.sectionHead}>
+              <h3 className={s.sectionTitle}>{t.billing.sectionTitle}</h3>
+              <p className={`small muted ${s.sectionDesc}`}>
+                {t.billing.description}
+              </p>
+            </div>
+            <div className={s.billingCard}>
+              <div className={s.billingMeta}>
+                <span className={s.billingPlan}>
+                  {billingStatus
+                    ? t.billing.plan[billingStatus.plan]
+                    : t.billing.loading}
+                </span>
+                <span className="small muted">
+                  {billingStatus?.activated
+                    ? t.billing.activated(billingStatus.licenseId ?? '')
+                    : t.billing.trial}
+                </span>
+              </div>
+              {billingStatus ? (
+                <ul className={s.limitList}>
+                  <LimitItem
+                    label={t.billing.features.breakpoints}
+                    used={billingStatus.usage.breakpoints}
+                    limit={billingStatus.limits.breakpoints}
+                  />
+                  <LimitItem
+                    label={t.billing.features.overrides}
+                    used={billingStatus.usage.overrides}
+                    limit={billingStatus.limits.overrides}
+                  />
+                  <LimitItem
+                    label={t.billing.features.savedRequests}
+                    used={billingStatus.usage.savedRequests}
+                    limit={billingStatus.limits.savedRequests}
+                  />
+                </ul>
+              ) : null}
+              <div className={s.licenseForm}>
+                <input
+                  className={s.licenseInput}
+                  value={licenseKey}
+                  placeholder={t.billing.licensePlaceholder}
+                  onChange={(event) => setLicenseKey(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className={s.primaryButton}
+                  disabled={licenseActivating}
+                  onClick={() => void activateLicense()}
+                >
+                  {licenseActivating ? t.billing.activating : t.billing.activate}
+                </button>
+                <button
+                  type="button"
+                  className={s.secondaryButton}
+                  onClick={() => void openPurchasePage()}
+                >
+                  {t.billing.purchase}
+                </button>
+              </div>
             </div>
           </section>
           <section className={s.section}>
@@ -114,5 +190,22 @@ export function SettingsPanelUI({
         </div>
       </ScrollArea>
     </div>
+  )
+}
+
+type LimitItemProps = {
+  label: string
+  used: number
+  limit: PlanLimits[keyof PlanLimits]
+}
+
+function LimitItem({ label, used, limit }: LimitItemProps): ReactElement {
+  return (
+    <li className={s.limitItem}>
+      <span>{label}</span>
+      <span className="small muted">
+        {used} / {limit == null ? t.billing.unlimited : limit}
+      </span>
+    </li>
   )
 }

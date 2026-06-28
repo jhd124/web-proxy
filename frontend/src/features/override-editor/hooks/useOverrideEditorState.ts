@@ -5,6 +5,7 @@ import {
   isDefaultOverrideForm,
   parseHeadersText,
 } from '../../../lib/dashboardUtils'
+import { readBillingErrorMessage } from '../../../lib/billingError'
 import { apiPayloadFromRule, computeOverrideIdFromFormState } from '../../../lib/overrideIdentity'
 import { showSuccessToast } from '../../../lib/toast'
 import type { OverrideFormState, OverrideRule } from '../../../types'
@@ -188,7 +189,10 @@ export function useOverrideEditorState() {
             ),
           },
         )
-        if (!r.ok) throw new Error(`Save failed (HTTP ${r.status})`)
+        if (!r.ok) {
+          const billingMessage = await readBillingErrorMessage(r)
+          throw new Error(billingMessage ?? `Save failed (HTTP ${r.status})`)
+        }
         await refreshOverrides()
       } catch (e) {
         window.alert(String(e))
@@ -250,7 +254,10 @@ export function useOverrideEditorState() {
           setOverrideError(oreq.hostRequired)
           return
         }
-        if (!r.ok) throw new Error(`Save failed (HTTP ${r.status})`)
+        if (!r.ok) {
+          const billingMessage = await readBillingErrorMessage(r)
+          throw new Error(billingMessage ?? `Save failed (HTTP ${r.status})`)
+        }
         const updated = (await r.json()) as OverrideRule
         setOverrideEditingId(updated.id)
       } else {

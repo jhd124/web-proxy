@@ -98,6 +98,36 @@ export interface RequestCatalogSettings {
   persistSensitiveHeaders: boolean
 }
 
+export type PlanName = 'trial' | 'pro'
+
+export type LicensedFeature = 'breakpoints' | 'overrides' | 'savedRequests'
+
+export interface PlanLimits {
+  breakpoints: number | null
+  overrides: number | null
+  savedRequests: number | null
+}
+
+export interface BillingUsage {
+  breakpoints: number
+  overrides: number
+  savedRequests: number
+}
+
+export interface BillingStatus {
+  plan: PlanName
+  activated: boolean
+  licenseId?: string | null
+  limits: PlanLimits
+  usage: BillingUsage
+  expiresAt?: string | null
+  error?: string | null
+}
+
+export interface ActivateLicenseRequest {
+  licenseKey: string
+}
+
 export interface ManagedHostEntry {
   address: string
   hostname: string

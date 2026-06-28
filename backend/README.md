@@ -25,6 +25,7 @@
 - `DASHBOARD_PORT`：Dashboard 端口（默认 `9091`）。
 - `PROXY_DATA_DIR`：数据目录（SQLite、证书等）。
 - `OVERRIDE_DB`：覆盖规则数据库路径。
+- `LICENSE_PUBLIC_KEY`：License Ed25519 公钥（原始 32 字节 base64url），用于验证发码服务签名；未配置时应用保持试用版，激活接口会拒绝 License。
 - hosts 托管配置保存为 `OVERRIDE_DB` 同目录下的 `proxy-hosts.json`；配置文件缺失时会从系统 hosts 中的 `proxy-app` 标记区块恢复，系统 hosts 写入只替换该标记区块；直接写入无权限时后端会尝试触发系统授权。
 - `MAX_TRAFFIC`：内存中保留的抓包条目上限。
 - 请求编写器模板索引与历史记录存放在 `OVERRIDE_DB` 指向的 SQLite 文件中，并由后端按固定上限裁剪。

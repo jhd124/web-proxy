@@ -78,6 +78,22 @@ fn upsert(path: &StdPath, entry: &TrafficEntry) -> anyhow::Result<SavedRequest> 
     Ok(request)
 }
 
+pub(crate) fn count_saved_requests(path: &StdPath) -> anyhow::Result<u32> {
+    let conn = Connection::open(path)?;
+    let count: i64 = conn.query_row("SELECT COUNT(1) FROM saved_requests", [], |row| row.get(0))?;
+    Ok(count.max(0) as u32)
+}
+
+fn saved_request_exists(path: &StdPath, id: Uuid) -> anyhow::Result<bool> {
+    let conn = Connection::open(path)?;
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(1) FROM saved_requests WHERE id = ?1",
+        params![id.to_string()],
+        |row| row.get(0),
+    )?;
+    Ok(count > 0)
+}
+
 fn delete_row(path: &StdPath, id: Uuid) -> anyhow::Result<bool> {
     let conn = Connection::open(path)?;
     let changed = conn.execute(
@@ -104,10 +120,19 @@ pub async fn list_saved_requests(
 pub async fn save_request(
     State(state): State<Arc<AppState>>,
     Json(entry): Json<TrafficEntry>,
-) -> Result<Json<SavedRequest>, StatusCode> {
+) -> Result<Json<SavedRequest>, crate::billing::ApiError> {
+    let already_saved = saved_request_exists(&state.override_db_path, entry.id)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let saved_count = count_saved_requests(&state.override_db_path)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    state.billing.ensure_quota(
+        crate::billing::LicensedFeature::SavedRequests,
+        saved_count,
+        !already_saved,
+    )?;
     upsert(&state.override_db_path, &entry)
         .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into())
 }
 
 pub async fn delete_saved_request(

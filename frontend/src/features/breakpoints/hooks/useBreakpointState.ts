@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { inferOriginFromHostHint } from '../../../lib/dashboardUtils'
+import { readBillingErrorMessage } from '../../../lib/billingError'
 import { showToast } from '../../../lib/toast'
 import type { BreakpointRule } from '../../../types'
 import { breakpointTexts } from '../texts'
@@ -100,6 +101,11 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
       openBreakpointsPanel()
       return
     }
+    const billingMessage = await readBillingErrorMessage(r)
+    if (billingMessage) {
+      showToast(billingMessage, 'error')
+      return
+    }
     showBreakpointUpsertError(r.status, editingRule ? 'update' : 'create')
   }, [
     breakpoints,
@@ -141,6 +147,11 @@ export function useBreakpointState(p: { openBreakpointsPanel: () => void }) {
           }),
         })
         if (!r.ok) {
+          const billingMessage = await readBillingErrorMessage(r)
+          if (billingMessage) {
+            showToast(billingMessage, 'error')
+            return
+          }
           if (r.status === 409) {
             showToast(t.duplicateIdentity, 'error')
             return

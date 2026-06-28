@@ -85,8 +85,8 @@ pub fn load_breakpoints(override_db_path: &StdPath) -> anyhow::Result<Vec<Breakp
     if !path.exists() {
         return Ok(Vec::new());
     }
-    let content =
-        fs::read_to_string(&path).with_context(|| format!("read breakpoints: {}", path.display()))?;
+    let content = fs::read_to_string(&path)
+        .with_context(|| format!("read breakpoints: {}", path.display()))?;
     if content.trim().is_empty() {
         return Ok(Vec::new());
     }
@@ -122,7 +122,7 @@ pub async fn list_breakpoints(State(state): State<Arc<AppState>>) -> Json<Vec<Br
 pub async fn create_breakpoint(
     State(state): State<Arc<AppState>>,
     Json(body): Json<UpsertBreakpointBody>,
-) -> Result<Json<BreakpointRule>, StatusCode> {
+) -> Result<Json<BreakpointRule>, crate::billing::ApiError> {
     let match_method = normalize_method(body.match_method);
     let match_origin = normalize_origin(body.match_origin);
     let match_path_regex = normalize_path_regex(body.match_path_regex);
@@ -133,8 +133,13 @@ pub async fn create_breakpoint(
     );
     let breakpoints = state.breakpoints.read();
     if has_duplicate_breakpoint(&breakpoints, &candidate_identity, None) {
-        return Err(StatusCode::CONFLICT);
+        return Err(StatusCode::CONFLICT.into());
     }
+    state.billing.ensure_quota(
+        crate::billing::LicensedFeature::Breakpoints,
+        breakpoints.len() as u32,
+        true,
+    )?;
     drop(breakpoints);
     let rule = BreakpointRule {
         id: Uuid::new_v4(),
@@ -149,7 +154,7 @@ pub async fn create_breakpoint(
     if let Err(error) = save_breakpoints(&state.override_db_path, &breakpoints) {
         breakpoints.remove(0);
         tracing::error!("persist breakpoints after create failed: {}", error);
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR.into());
     }
     drop(breakpoints);
     state.notify_breakpoints_changed();

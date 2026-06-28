@@ -13,6 +13,32 @@ export const settingsTexts = {
       dark: '深色',
     } satisfies Record<ThemePreference, string>,
   },
+  billing: {
+    sectionTitle: 'License / 付费功能',
+    description: '试用版断点、Override、Saved Requests 最多各添加 1 条。激活后可解锁更多配额。',
+    loading: '加载中',
+    trial: '当前为试用版',
+    activated: (licenseId: string) =>
+      licenseId ? `已激活：${licenseId}` : '已激活',
+    plan: {
+      trial: '试用版',
+      pro: 'Pro',
+    },
+    features: {
+      breakpoints: '断点',
+      overrides: 'Override',
+      savedRequests: 'Saved Requests',
+    },
+    unlimited: '不限',
+    licensePlaceholder: '粘贴 License Key',
+    activate: '激活',
+    activating: '激活中',
+    purchase: '购买 License',
+    emptyLicenseKey: '请输入 License Key',
+    activateSucceeded: 'License 激活成功',
+    activateFailed: (detail: string) => `License 激活失败：${detail}`,
+    loadFailed: (detail: string) => `加载 License 状态失败：${detail}`,
+  },
   requestHistory: {
     sectionTitle: '请求编写器历史模板',
     description:

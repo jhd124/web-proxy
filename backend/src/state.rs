@@ -763,6 +763,7 @@ pub struct AppState {
     pub upstream_http3_client: Option<reqwest::Client>,
     pub upstream_http3_enabled: bool,
     pub max_traffic: usize,
+    pub billing: Arc<crate::billing::BillingState>,
     pub request_catalog: Arc<crate::request_catalog::RequestCatalogRecorder>,
     /// When set, HTTPS CONNECT is intercepted (TLS MITM) so decrypted HTTP is logged.
     pub mitm: Option<Arc<crate::mitm::Mitm>>,
@@ -787,6 +788,14 @@ impl AppState {
         upstream_http3_enabled: bool,
     ) -> Self {
         let (tx, _) = broadcast::channel(2048);
+        let billing = Arc::new(
+            crate::billing::BillingState::init(&override_db_path).unwrap_or_else(|error| {
+                crate::billing::BillingState::trial_only(
+                    override_db_path.clone(),
+                    error.to_string(),
+                )
+            }),
+        );
         Self {
             tx,
             traffic: Arc::new(RwLock::new(Vec::new())),
@@ -804,6 +813,7 @@ impl AppState {
             upstream_http3_client,
             upstream_http3_enabled,
             max_traffic,
+            billing,
             mitm,
             mitm_ca_pem_path,
             capture_paused: AtomicBool::new(false),

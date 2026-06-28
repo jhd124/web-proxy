@@ -1,5 +1,6 @@
 mod advanced_search;
 mod api;
+mod billing;
 mod body_format;
 mod breakpoints;
 mod hosts;

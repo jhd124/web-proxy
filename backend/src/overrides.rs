@@ -446,15 +446,20 @@ pub async fn list_overrides(State(state): State<Arc<AppState>>) -> Json<Vec<Over
 pub async fn create_override(
     State(state): State<Arc<AppState>>,
     Json(body): Json<UpsertOverrideBody>,
-) -> Result<Json<OverrideRule>, StatusCode> {
-    validate_upsert(&body)?;
+) -> Result<Json<OverrideRule>, crate::billing::ApiError> {
+    validate_upsert(&body).map_err(crate::billing::ApiError::from)?;
     let mut rule = rule_from_body(&body, String::new());
     rule.id = override_id_for_rule(&rule);
     if override_exists(&state.override_db_path, &rule.id)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| crate::billing::ApiError::from(StatusCode::INTERNAL_SERVER_ERROR))?
     {
-        return Err(StatusCode::CONFLICT);
+        return Err(StatusCode::CONFLICT.into());
     }
+    state.billing.ensure_quota(
+        crate::billing::LicensedFeature::Overrides,
+        state.overrides.read().len() as u32,
+        true,
+    )?;
     insert_override(&state.override_db_path, &rule).map_err(StatusCode::from)?;
     state.overrides.write().insert(0, rule.clone());
     state.notify_overrides_changed();

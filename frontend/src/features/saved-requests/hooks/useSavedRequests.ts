@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { readBillingErrorMessage } from '../../../lib/billingError'
 import type { SavedRequest, TrafficEntry } from '../../../types'
 import type { SavedRequestState } from '../types'
 
@@ -55,6 +56,10 @@ export function useSavedRequests(): SavedRequestState {
       body: JSON.stringify(entry),
     })
     if (!response.ok) {
+      const billingMessage = await readBillingErrorMessage(response)
+      if (billingMessage) {
+        throw new Error(billingMessage)
+      }
       throw new Error(`Save request failed (HTTP ${response.status})`)
     }
     const savedRequest = (await response.json()) as SavedRequest
