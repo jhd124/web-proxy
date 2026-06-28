@@ -1,4 +1,4 @@
-# Proxy MCP Server
+# LeoProxy MCP Server
 
 `proxy-mcp-server.mjs` 是一个 MCP Server，支持 `stdio` 与 `http` 两种 transport，把 dashboard 的 HTTP API 与部分系统代理操作封装成 MCP tools，供 Cursor Agent 或外部自动化脚本调用。
 
@@ -65,7 +65,7 @@ PROXY_MCP_TRANSPORT=http node mcp/proxy-mcp-server.mjs
 ```json
 {
   "mcpServers": {
-    "proxy-dashboard": {
+    "LeoProxy": {
       "command": "node",
       "args": ["/Users/dp/proxy/mcp/proxy-mcp-server.mjs"],
       "env": {

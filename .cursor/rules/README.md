@@ -1,4 +1,4 @@
-# Proxy - Cursor Rules
+# LeoProxy - Cursor Rules
 
 本目录用于维护仓库的 Cursor 规则（`.mdc`）。
 

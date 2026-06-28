@@ -1,5 +1,5 @@
 export const PROTOCOL_VERSION = "2024-11-05";
-export const SERVER_NAME = "proxy-dashboard-mcp";
+export const SERVER_NAME = "LeoProxy";
 export const SERVER_VERSION = "0.1.0";
 export const DEFAULT_DASHBOARD_URL = "http://127.0.0.1:9091";
 export const DEFAULT_MCP_HTTP_HOST = "127.0.0.1";

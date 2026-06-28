@@ -7,7 +7,7 @@
 - `ui/`：工作台 UI 组件（Header/Sidebar/主容器）。
 - `hooks/`：工作台状态与 WebSocket 连接逻辑。
 - `portal.tsx`：模块组装入口。
-- `texts.ts`：模块文案。
+- `texts.ts`：模块文案，包含 LeoProxy 浮动流量窗口标题等应用展示文案。
 
 ## 维护要求
 

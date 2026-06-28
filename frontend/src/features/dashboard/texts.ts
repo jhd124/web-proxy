@@ -57,7 +57,7 @@ export const dashboardTexts = {
       `Could not pause traffic capture: ${detail}`,
     resumeCaptureFailed: (detail: string) =>
       `Could not resume traffic capture: ${detail}`,
-    floatingTrafficTitle: 'Proxy Traffic',
+    floatingTrafficTitle: 'LeoProxy Traffic',
     openFloatingTrafficFailed: (detail: string) =>
       `Could not open floating traffic window: ${detail}`,
     proxyListenPrefix: '代理服务器监听在',

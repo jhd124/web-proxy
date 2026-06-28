@@ -175,7 +175,7 @@ export function trafficEntriesToHar(entries: TrafficEntry[]): HarDocument {
     log: {
       version: '1.2',
       creator: {
-        name: 'proxy-dashboard',
+        name: 'LeoProxy',
         version: '1.0.0',
       },
       entries: entries.map(toHarEntry),

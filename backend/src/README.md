@@ -11,7 +11,7 @@
 - `ports.rs`：端口解析与默认端口策略；Electron 发布态通过 `DASHBOARD_DIST` + `PROXY_DATA_DIR/listen-ports.json` 等待 dashboard 实际端口。
 - `advanced_search.rs`：全局文本搜索接口实现，扫描内存 traffic、override、breakpoint 与已保存请求，返回分组后的节选结果，避免向前端传输完整 body。
 - `billing.rs`：License Key 验签、激活状态持久化、试用/付费配额计算与结构化超限错误；试用版断点、Override、Saved Requests 各最多新增 1 条。
-- `mitm.rs`：MITM 证书与 TLS 相关能力。
+- `mitm.rs`：MITM 证书与 TLS 相关能力；新建根证书使用 LeoProxy 作为证书展示名称。
 - `overrides.rs`：覆盖规则的增删改查与匹配逻辑。
 - `override_identity.rs`：覆盖规则标识与归一化逻辑。
 - `breakpoints.rs`：断点规则管理与相关接口（创建时使用随机 UUID 作为 id，并基于规范化后的 method+origin+path 手动判重，冲突返回 409；`path` 按字符串精确匹配（归一化后），不再按正则解释；规则持久化到与 `OVERRIDE_DB` 同路径前缀的 `*.breakpoints.json`，重启后自动加载）。

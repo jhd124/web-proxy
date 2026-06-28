@@ -1,9 +1,9 @@
 {
-  "name": "proxy",
+  "name": "leoproxy",
   "private": true,
   "version": "0.1.0",
-  "description": "Proxy desktop app",
-  "author": "Proxy contributors",
+  "description": "LeoProxy desktop app",
+  "author": "LeoProxy contributors",
   "main": "dist-electron/main.js",
   "scripts": {
     "electron:compile": "tsc -p tsconfig.json",
@@ -24,8 +24,8 @@
     "typescript": "^5.9.3"
   },
   "build": {
-    "appId": "app.proxy.desktop",
-    "productName": "Proxy",
+    "appId": "app.leoproxy.desktop",
+    "productName": "LeoProxy",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist"

@@ -12,7 +12,7 @@ import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 
-const APP_NAME = 'Proxy'
+const APP_NAME = 'LeoProxy'
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const DEFAULT_VITE_PORT = 5173
 const DEFAULT_MCP_HTTP_PORT = 19091
@@ -342,7 +342,7 @@ function openFloatingTrafficWindow(targetUrl = getFloatingUrl()): void {
   }
 
   floatingTrafficWindow = createBrowserWindow({
-    title: 'Proxy Traffic',
+    title: 'LeoProxy Traffic',
     width: 380,
     height: 560,
     minWidth: 300,

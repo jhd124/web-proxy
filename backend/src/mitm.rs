@@ -53,7 +53,7 @@ impl Mitm {
             (ca_cert_pem, ca_key)
         } else {
             let ca_name = format!(
-                "Proxy App MITM CA ({})",
+                "LeoProxy MITM CA ({})",
                 chrono::Local::now().format("%Y-%m-%d")
             );
             let mut params =
@@ -62,7 +62,7 @@ impl Mitm {
             params.distinguished_name.push(DnType::CountryName, "US");
             params
                 .distinguished_name
-                .push(DnType::OrganizationName, "Proxy App Local");
+                .push(DnType::OrganizationName, "LeoProxy Local");
             params.distinguished_name.push(DnType::CommonName, ca_name);
             params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
             params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];

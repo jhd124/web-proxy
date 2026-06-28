@@ -5,7 +5,7 @@
 - `docs/agent-reference/backend.md`：`backend/`（Rust proxy + dashboard API）架构说明
 - `docs/agent-reference/frontend.md`：`frontend/`（React dashboard）架构说明
 - `docs/agent-reference/desktop.md`：`desktop/`（Electron 宿主）架构说明
-- `docs/agent-reference/mcp.md`：`mcp/`（Proxy MCP Server）架构说明
+- `docs/agent-reference/mcp.md`：`mcp/`（LeoProxy MCP Server）架构说明
 
 建议在以下场景优先阅读：
 

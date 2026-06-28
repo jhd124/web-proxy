@@ -1,4 +1,4 @@
-# Proxy dashboard: Rust proxy + React UI
+# LeoProxy dashboard: Rust proxy + React UI
 # Usage: make help
 
 .DEFAULT_GOAL := help
