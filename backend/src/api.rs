@@ -156,6 +156,11 @@ pub async fn run_dashboard(bind: SocketAddr, state: Arc<AppState>) -> anyhow::Re
 
     let app = Router::new()
         .route("/api/health", get(health))
+        .route("/api/billing/status", get(crate::billing::get_status))
+        .route(
+            "/api/billing/activate",
+            post(crate::billing::activate_license),
+        )
         .route("/api/requests", get(list_requests))
         .route("/api/requests", delete(clear_requests))
         .route("/api/requests/:id", get(request_detail))

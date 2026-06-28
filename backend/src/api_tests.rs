@@ -7,7 +7,7 @@ use reqwest::Client;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
-fn build_state() -> Arc<AppState> {
+fn build_trial_state() -> Arc<AppState> {
     let db_path = std::env::temp_dir().join(format!(
         "proxy-app-test-overrides-{}.sqlite",
         Uuid::new_v4()
@@ -26,6 +26,12 @@ fn build_state() -> Arc<AppState> {
         None,
         false,
     ))
+}
+
+fn build_state() -> Arc<AppState> {
+    let state = build_trial_state();
+    state.billing.activate_pro_for_tests();
+    state
 }
 
 fn search_group_count(
@@ -925,4 +931,149 @@ async fn update_override_persists_match_method_to_disk() {
     assert_eq!(loaded.len(), 1);
     assert_eq!(loaded[0].match_method.as_deref(), Some("POST"));
     assert_eq!(loaded[0].body, "updated body");
+}
+
+fn signed_test_license_key() -> (String, String) {
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use base64::Engine;
+    use ed25519_dalek::{Signer, SigningKey};
+
+    let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+    let public_key = URL_SAFE_NO_PAD.encode(signing_key.verifying_key().to_bytes());
+    let payload = serde_json::json!({
+        "licenseId": "test-pro-license",
+        "plan": "pro",
+        "limits": {
+            "breakpoints": null,
+            "overrides": null,
+            "savedRequests": null
+        },
+        "issuedAt": Utc::now().to_rfc3339(),
+        "expiresAt": null,
+        "customerEmail": "test@example.com",
+        "deviceLimit": null
+    });
+    let payload_base64 = URL_SAFE_NO_PAD.encode(payload.to_string());
+    let signature = signing_key.sign(payload_base64.as_bytes());
+    let signature_base64 = URL_SAFE_NO_PAD.encode(signature.to_bytes());
+    (
+        public_key,
+        format!("proxy-license-v1.{payload_base64}.{signature_base64}"),
+    )
+}
+
+#[tokio::test]
+async fn billing_status_defaults_to_trial_limits() {
+    let state = build_trial_state();
+    let status = crate::billing::get_status(State(state)).await.0;
+
+    assert_eq!(status.plan, crate::billing::Plan::Trial);
+    assert!(!status.activated);
+    assert_eq!(status.limits.breakpoints, Some(1));
+    assert_eq!(status.limits.overrides, Some(1));
+    assert_eq!(status.limits.saved_requests, Some(1));
+}
+
+#[tokio::test]
+async fn activate_license_accepts_signed_pro_key() {
+    let state = build_trial_state();
+    let (public_key, license_key) = signed_test_license_key();
+    state.billing.set_public_key_base64_for_tests(&public_key);
+
+    let status = crate::billing::activate_license(
+        State(state),
+        axum::Json(crate::billing::ActivateLicenseBody { license_key }),
+    )
+    .await
+    .expect("signed license should activate")
+    .0;
+
+    assert_eq!(status.plan, crate::billing::Plan::Pro);
+    assert!(status.activated);
+    assert_eq!(status.license_id.as_deref(), Some("test-pro-license"));
+    assert_eq!(status.limits.breakpoints, None);
+}
+
+#[tokio::test]
+async fn trial_limits_breakpoints_to_one_new_rule() {
+    let state = build_trial_state();
+    let first = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause API".to_string(),
+            enabled: Some(true),
+            match_method: Some("GET".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/api".to_string()),
+        }),
+    )
+    .await
+    .expect("first breakpoint should be allowed");
+
+    let err = crate::breakpoints::create_breakpoint(
+        State(state.clone()),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause Login".to_string(),
+            enabled: Some(true),
+            match_method: Some("POST".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/login".to_string()),
+        }),
+    )
+    .await
+    .expect_err("second breakpoint should exceed trial quota");
+    assert_eq!(err.status(), StatusCode::PAYMENT_REQUIRED);
+
+    let updated = crate::breakpoints::update_breakpoint(
+        State(state),
+        axum::extract::Path(first.0.id),
+        axum::Json(crate::breakpoints::UpsertBreakpointBody {
+            name: "Pause Updated".to_string(),
+            enabled: Some(false),
+            match_method: Some("GET".to_string()),
+            match_origin: Some("https://example.com".to_string()),
+            match_path_regex: Some("/api".to_string()),
+        }),
+    )
+    .await
+    .expect("updating existing breakpoint should remain allowed");
+    assert_eq!(updated.0.name, "Pause Updated");
+}
+
+#[tokio::test]
+async fn trial_limits_overrides_to_one_new_rule() {
+    let state = build_trial_state();
+    crate::overrides::init_and_load(&state.override_db_path).expect("init overrides table");
+    let _ = crate::overrides::create_override(
+        State(state.clone()),
+        axum::Json(sample_override_body("GET")),
+    )
+    .await
+    .expect("first override should be allowed");
+
+    let err =
+        crate::overrides::create_override(State(state), axum::Json(sample_override_body("POST")))
+            .await
+            .expect_err("second override should exceed trial quota");
+    assert_eq!(err.status(), StatusCode::PAYMENT_REQUIRED);
+}
+
+#[tokio::test]
+async fn trial_limits_saved_requests_to_one_new_request() {
+    let state = build_trial_state();
+    let first_entry = sample_entry(Uuid::new_v4());
+    let _ =
+        crate::saved_requests::save_request(State(state.clone()), axum::Json(first_entry.clone()))
+            .await
+            .expect("first saved request should be allowed");
+
+    let _ = crate::saved_requests::save_request(State(state.clone()), axum::Json(first_entry))
+        .await
+        .expect("updating an existing saved request should be allowed");
+
+    let second_entry = sample_entry(Uuid::new_v4());
+    let err = crate::saved_requests::save_request(State(state), axum::Json(second_entry))
+        .await
+        .expect_err("second saved request should exceed trial quota");
+    assert_eq!(err.status(), StatusCode::PAYMENT_REQUIRED);
 }
