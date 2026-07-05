@@ -73,7 +73,7 @@ function requestHeadersSatisfied(
           any = true
           break
         }
-        if (val === rv) {
+        if (valueMatchesRule(val, rv)) {
           any = true
           break
         }
@@ -96,7 +96,7 @@ function querySatisfied(
           any = true
           break
         }
-        if (qv === v) {
+        if (valueMatchesRule(qv, v)) {
           any = true
           break
         }
@@ -105,6 +105,13 @@ function querySatisfied(
     if (!any) return false
   }
   return true
+}
+
+function valueMatchesRule(requestValue: string, ruleValue: string): boolean {
+  if (ruleValue.includes('*') || ruleValue.includes('?')) {
+    return wildcardMatch(ruleValue, requestValue)
+  }
+  return requestValue === ruleValue
 }
 
 /** URLSearchParams order for query pairs from a URL */

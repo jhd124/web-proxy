@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('proxyDesktop', {
     ipcRenderer.invoke('proxy:focus-main-window', requestId ?? null),
   openFloatingTrafficWindow: () =>
     ipcRenderer.invoke('proxy:open-floating-traffic-window'),
+  updateProxyListenAddress: (proxyListenAddress: string | null) =>
+    ipcRenderer.invoke('proxy:update-proxy-listen-address', proxyListenAddress),
   openExternalUrl: (url: string) => ipcRenderer.invoke('proxy:open-external-url', url),
   installMitmCaSystemTrust: (caPemPath: string) =>
     ipcRenderer.invoke('proxy:install-mitm-ca-system-trust', caPemPath),

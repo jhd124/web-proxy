@@ -111,7 +111,12 @@ fn request_headers_satisfied(req: &HeaderMap, rules: &[(String, String)]) -> boo
                     any = true;
                     break;
                 }
-                if val.to_str().ok() == Some(rv.as_str()) {
+                if val
+                    .to_str()
+                    .ok()
+                    .map(|request_value| text_matches_rule_value(request_value, rv))
+                    == Some(true)
+                {
                     any = true;
                     break;
                 }
@@ -134,7 +139,7 @@ fn query_satisfied(request: &[(String, String)], rules: &[(String, String)]) -> 
                     any = true;
                     break;
                 }
-                if qv == v {
+                if text_matches_rule_value(qv, v) {
                     any = true;
                     break;
                 }
@@ -145,6 +150,13 @@ fn query_satisfied(request: &[(String, String)], rules: &[(String, String)]) -> 
         }
     }
     true
+}
+
+fn text_matches_rule_value(request_value: &str, rule_value: &str) -> bool {
+    if rule_value.contains('*') || rule_value.contains('?') {
+        return wildcard_match(rule_value, request_value);
+    }
+    request_value == rule_value
 }
 
 fn normalize_path(p: &str) -> String {

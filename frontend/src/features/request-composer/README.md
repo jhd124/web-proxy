@@ -14,8 +14,9 @@
 
 - URL 字段合并原 scheme/hostname/path，hostname/path/method 补全来自后端 request catalog。
 - 发送请求入口位于页面标题栏右侧，以图标按钮形式展示。
-- 历史列表只展示通过请求编写器发送过的请求；选择历史记录后可查看响应摘要并复用到表单。
+- 历史列表只展示通过请求编写器发送过的请求；选择历史记录后可查看响应摘要并复用到表单，`Reuse` 会回填 URL、method、search params、headers 与 body。
 - search params 与 headers 在表单中使用 `key=value` 的多行文本格式。
+- 右侧历史区与响应区仅在存在历史记录时显示，并支持上下拖拽调整高度，便于在不同数据量下聚焦查看。
 
 ## 维护要求
 

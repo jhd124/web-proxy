@@ -189,13 +189,6 @@ export function DashboardHeaderUI({
         clearFilters={clearTrafficFilters}
       />
       <div className={s.right}>
-        <span
-          className={s.listenAddr}
-          aria-label={t.proxyListenAriaLabel(listenAddressLabel)}
-        >
-          <span className={s.listenAddrPrefix}>{t.proxyListenPrefix}</span>{' '}
-          <span className={s.listenAddrHost}>{listenAddressLabel}</span>
-        </span>
 
         <TooltipButton
           type="button"

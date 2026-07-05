@@ -92,6 +92,38 @@ fn wildcard_path_supports_single_char() {
 }
 
 #[test]
+fn wildcard_query_and_header_values_match() {
+    let mut rule = rule_with("example.com", "/api");
+    rule.match_query = vec![("trace_id".to_string(), "*-prod".to_string())];
+    rule.match_request_headers = vec![("x-env".to_string(), "staging-*".to_string())];
+
+    let mut headers = HeaderMap::new();
+    headers.insert("x-env", "staging-cn".parse().expect("valid header value"));
+
+    assert!(rule.matches(
+        "GET",
+        "https",
+        "example.com",
+        "/api?trace_id=abc-prod",
+        "/api",
+        &[("trace_id".to_string(), "abc-prod".to_string())],
+        &headers,
+        b"",
+    ));
+
+    assert!(!rule.matches(
+        "GET",
+        "https",
+        "example.com",
+        "/api?trace_id=abc-dev",
+        "/api",
+        &[("trace_id".to_string(), "abc-dev".to_string())],
+        &headers,
+        b"",
+    ));
+}
+
+#[test]
 fn method_match_is_case_insensitive_and_optional() {
     let mut rule = rule_with("example.com", "/api");
     rule.match_method = Some("POST".to_string());

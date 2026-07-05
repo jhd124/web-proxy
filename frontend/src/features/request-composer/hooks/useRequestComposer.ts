@@ -28,6 +28,8 @@ export function useRequestComposer(): RequestComposerViewModel {
   const [methodSuggestions, setMethodSuggestions] = useState<CatalogSuggestion[]>([])
   const [response, setResponse] = useState<RequestComposerResponse | null>(null)
   const [isSending, setIsSending] = useState(false)
+  const [latestReusableRequest, setLatestReusableRequest] =
+    useState<RequestComposerRequest | null>(null)
   const [history, setHistory] = useState<RequestComposerHistoryItem[]>([])
   const [selectedHistory, setSelectedHistory] =
     useState<RequestComposerHistoryDetail | null>(null)
@@ -195,6 +197,7 @@ export function useRequestComposer(): RequestComposerViewModel {
         `/api/request-composer/history/${encodeURIComponent(id)}`,
       )
       setSelectedHistory(detail)
+      setLatestReusableRequest(detail.request)
       setResponse(detail.response)
     } catch (error) {
       showToast(t.historyLoadFailed(errorDetail(error)), 'error')
@@ -203,6 +206,7 @@ export function useRequestComposer(): RequestComposerViewModel {
 
   const sendRequest = useCallback(async () => {
     setIsSending(true)
+    setLatestReusableRequest(requestBody)
     try {
       const result = await fetchJson<RequestComposerSendResponse>(
         '/api/request-composer/send',
@@ -225,9 +229,10 @@ export function useRequestComposer(): RequestComposerViewModel {
   }, [loadHistoryPage, requestBody, selectHistory])
 
   const reuseSelectedHistory = useCallback(() => {
-    if (!selectedHistory) return
-    setForm(requestToForm(selectedHistory.request))
-  }, [selectedHistory])
+    const reusableRequest = selectedHistory?.request ?? latestReusableRequest
+    if (!reusableRequest) return
+    setForm(requestToForm(reusableRequest))
+  }, [latestReusableRequest, selectedHistory])
 
   const deleteSelectedHistory = useCallback(async () => {
     if (!selectedHistoryId) return
@@ -249,6 +254,7 @@ export function useRequestComposer(): RequestComposerViewModel {
       setHistory([])
       setSelectedHistory(null)
       setSelectedHistoryId(null)
+      setLatestReusableRequest(null)
       setHasMoreHistory(false)
       showSuccessToast(t.historyCleared)
     } catch (error) {
@@ -273,6 +279,7 @@ export function useRequestComposer(): RequestComposerViewModel {
     history,
     selectedHistory,
     selectedHistoryId,
+    canReuseRequest: selectedHistory !== null || latestReusableRequest !== null,
     historyQuery,
     setHistoryQuery,
     selectHistory,

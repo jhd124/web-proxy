@@ -275,6 +275,14 @@ export function useDashboard() {
 
   useEffect(() => {
     const desktopHost = getDesktopHost()
+    if (!desktopHost?.updateProxyListenAddress) return
+    void desktopHost.updateProxyListenAddress(dashboardTexts.header.proxyListenAriaLabel(`${proxyListenAddress}`)).catch(() => {
+      /* ignore: 浏览器模式或旧桌面壳不影响 dashboard 使用 */
+    })
+  }, [proxyListenAddress])
+
+  useEffect(() => {
+    const desktopHost = getDesktopHost()
     if (!desktopHost?.listCaptureBrowsers) return
     let isCancelled = false
     void desktopHost

@@ -28,7 +28,6 @@ export const requestComposerTexts = {
     loadMore: 'Load more',
     reuse: 'Reuse',
     delete: 'Delete',
-    clearHistory: 'Clear history',
   },
   emptyHistory: 'No composed requests yet.',
   noResponse: 'Send a request to see the response preview.',

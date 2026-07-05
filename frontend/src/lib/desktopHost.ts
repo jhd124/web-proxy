@@ -3,6 +3,7 @@ export type DesktopTrafficSelectUnsubscribe = () => void
 export type DesktopHostApi = {
   focusMainWindow: (requestId?: string | null) => Promise<void>
   openFloatingTrafficWindow: () => Promise<void>
+  updateProxyListenAddress: (proxyListenAddress: string | null) => Promise<void>
   openExternalUrl: (url: string) => Promise<void>
   installMitmCaSystemTrust: (caPemPath: string) => Promise<void>
   openMitmCaFile: (caPemPath: string) => Promise<void>

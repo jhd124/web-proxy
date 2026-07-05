@@ -59,10 +59,11 @@ export const overrideEditorTexts = {
       'Path only, no query string; leave empty to match any path. Supports wildcard (*, ?).',
     matchHeaders: 'Request headers to match',
     matchHeadersHelp:
-      'Name: value per line, or add rows. Empty = match all requests (ignore header matching).',
+      'Name: value per line, or add rows. Empty = match all requests (ignore header matching). Value supports wildcard (*, ?).',
     addHeaderRow: 'Add header',
     matchQuery: 'Search parameters to match',
-    matchQueryHelp: 'Empty = match all. Each key must appear on the request with the given value.',
+    matchQueryHelp:
+      'Empty = match all. Each key must appear on the request with the given value. Value supports wildcard (*, ?).',
     addQueryRow: 'Add parameter',
     matchBody: 'Request body to match',
     matchBodyHelp: 'Empty = any body. When set, must match the full request body (UTF-8).',

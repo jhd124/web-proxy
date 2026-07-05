@@ -89,15 +89,6 @@
   padding: 0.2rem 0.55rem;
 }
 
-.listenAddr {
-  composes: pillSubtle;
-  cursor: default;
-}
-
-.listenAddrPrefix {
-  color: var(--muted);
-}
-
 .listenAddrHost {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     'Liberation Mono', 'Courier New', monospace;

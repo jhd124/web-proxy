@@ -11,6 +11,10 @@
 - `override*.ts`：覆盖规则相关纯函数。
 - `*.test.ts`：覆盖规则工具测试。
 
+## 匹配能力说明
+
+- 请求匹配中的 host、path 以及 request headers / query 的 value 支持通配符 `*`、`?`。
+
 ## 维护要求
 
 调整 override-editor 模块结构、工具函数或交互职责时，必须同步更新本文件。

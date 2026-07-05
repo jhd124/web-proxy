@@ -26,6 +26,7 @@ export interface RequestComposerViewModel {
   history: RequestComposerHistoryItem[]
   selectedHistory: RequestComposerHistoryDetail | null
   selectedHistoryId: string | null
+  canReuseRequest: boolean
   historyQuery: string
   setHistoryQuery: (value: string) => void
   selectHistory: (id: string) => Promise<void>

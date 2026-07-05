@@ -93,6 +93,16 @@ function readListenPorts(filePath: string): ListenPorts | null {
   return null
 }
 
+function formatMainWindowTitle(proxyListenAddress: unknown): string {
+  if (proxyListenAddress == null) return APP_NAME
+  return String(proxyListenAddress)
+}
+
+function setMainWindowTitle(proxyListenAddress: unknown): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.setTitle(formatMainWindowTitle(proxyListenAddress))
+}
+
 function waitForTcp(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection({ host: '127.0.0.1', port }, () => {
@@ -320,6 +330,9 @@ function createBrowserWindow(
 
 function createMainWindow(): BrowserWindow {
   mainWindow = createBrowserWindow()
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault()
+  })
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -545,6 +558,9 @@ function registerIpcHandlers(): void {
   })
   ipcMain.handle('proxy:open-floating-traffic-window', () => {
     openFloatingTrafficWindow()
+  })
+  ipcMain.handle('proxy:update-proxy-listen-address', (_event, proxyListenAddress: unknown) => {
+    setMainWindowTitle(proxyListenAddress)
   })
   ipcMain.handle('proxy:open-external-url', async (_event, url: unknown) => {
     if (!isHttpUrl(url)) {
