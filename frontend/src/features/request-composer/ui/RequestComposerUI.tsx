@@ -1,9 +1,21 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { Send, Trash2, RotateCcw } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Send,
+  Trash2,
+  RotateCcw,
+  Bookmark,
+  Replace,
+  SquareTerminal,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { SimpleTooltip } from '@/components/ui/tooltip'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import {
   Select,
   SelectContent,
@@ -20,6 +32,8 @@ import { HeadersTable } from '@/components/headers-table/HeadersTable'
 import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import { requestComposerTexts as t } from '../texts'
 import type { RequestComposerViewModel } from '../types'
+import { CurlImportDialogUI } from './CurlImportDialogUI'
+import { TooltipButton } from '../../override-editor/ui/TooltipButton'
 import s from './RequestComposerUI.module.css'
 
 const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
@@ -35,6 +49,7 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
     isSending,
     isRequestTargetReady,
     sendRequest,
+    importCurlCommand,
     history,
     selectedHistory,
     selectedHistoryId,
@@ -43,6 +58,8 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
     setHistoryQuery,
     selectHistory,
     reuseSelectedHistory,
+    saveHistoryRequest,
+    createHistoryOverride,
     clearHistory,
     loadMoreHistory,
     hasMoreHistory,
@@ -53,6 +70,7 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
     new Set([...methodSuggestions.map((suggestion) => suggestion.value), ...METHOD_OPTIONS]),
   )
   const hasHistory = history.length > 0
+  const [isCurlImportOpen, setIsCurlImportOpen] = useState(false)
 
   return (
     <section className={s.panel}>
@@ -60,19 +78,33 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
         id="request-composer-title"
         title={t.title}
         actions={
-          <SimpleTooltip label={isSending ? t.actions.sending : t.actions.send}>
-            <Button
+          <>
+            <TooltipButton
               type="button"
-              className={ph.iconBtn}
-              size="icon"
+              className={`ghost ${ph.iconBtn}`}
+              tooltip={t.actions.importCurl}
+              onClick={() => setIsCurlImportOpen(true)}
+              aria-label={t.actions.importCurl}
+            >
+              <SquareTerminal size={16} aria-hidden />
+            </TooltipButton>
+            <TooltipButton
+              type="button"
+              className={`ghost ${ph.iconBtn} primary`}
+              tooltip={isSending ? t.actions.sending : t.actions.send}
               onClick={() => void sendRequest()}
               disabled={isSending || !isRequestTargetReady}
               aria-label={isSending ? t.actions.sending : t.actions.send}
             >
               <Send size={16} aria-hidden />
-            </Button>
-          </SimpleTooltip>
+            </TooltipButton>
+          </>
         }
+      />
+      <CurlImportDialogUI
+        open={isCurlImportOpen}
+        onOpenChange={setIsCurlImportOpen}
+        onImport={importCurlCommand}
       />
       <div className={s.body}>
         <ResizablePanelGroup
@@ -200,25 +232,42 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
                           ) : (
                             <div className={s.historyItems}>
                               {history.map((item) => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  className={`${s.historyItem} ${
-                                    selectedHistoryId === item.id ? s.historyItemActive : ''
-                                  }`}
-                                  onClick={() => void selectHistory(item.id)}
-                                >
-                                  <span
-                                    className={s.historyPath}
-                                    title={`${item.method} ${formatHistoryUrl(item.url)}`}
-                                  >
-                                    {item.method} {formatHistoryUrl(item.url)}
-                                  </span>
-                                  <span className={s.historyMeta}>
-                                    {item.responseStatus ?? item.error ?? '—'} ·{' '}
-                                    {formatDateTime(item.sentAt)}
-                                  </span>
-                                </button>
+                                <ContextMenu key={item.id}>
+                                  <ContextMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className={`${s.historyItem} ${
+                                        selectedHistoryId === item.id ? s.historyItemActive : ''
+                                      }`}
+                                      onClick={() => void selectHistory(item.id)}
+                                    >
+                                      <span
+                                        className={s.historyPath}
+                                        title={`${item.method} ${formatHistoryUrl(item.url)}`}
+                                      >
+                                        {item.method} {formatHistoryUrl(item.url)}
+                                      </span>
+                                      <span className={s.historyMeta}>
+                                        {item.responseStatus ?? item.error ?? '—'} ·{' '}
+                                        {formatDateTime(item.sentAt)}
+                                      </span>
+                                    </button>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent>
+                                    <ContextMenuItem
+                                      onSelect={() => void saveHistoryRequest(item.id)}
+                                    >
+                                      <Bookmark aria-hidden />
+                                      {t.actions.saveRequest}
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      onSelect={() => void createHistoryOverride(item.id)}
+                                    >
+                                      <Replace aria-hidden />
+                                      {t.actions.createOverride}
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
                               ))}
                             </div>
                           )}

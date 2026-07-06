@@ -23,6 +23,7 @@ export interface RequestComposerViewModel {
   isSending: boolean
   isRequestTargetReady: boolean
   sendRequest: () => Promise<void>
+  importCurlCommand: (command: string) => boolean
   history: RequestComposerHistoryItem[]
   selectedHistory: RequestComposerHistoryDetail | null
   selectedHistoryId: string | null
@@ -31,6 +32,8 @@ export interface RequestComposerViewModel {
   setHistoryQuery: (value: string) => void
   selectHistory: (id: string) => Promise<void>
   reuseSelectedHistory: () => void
+  saveHistoryRequest: (id: string) => Promise<void>
+  createHistoryOverride: (id: string) => Promise<void>
   deleteSelectedHistory: () => Promise<void>
   clearHistory: () => Promise<void>
   loadMoreHistory: () => Promise<void>

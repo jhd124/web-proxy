@@ -17,7 +17,14 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton'
-import { ArrowUpToLine, Focus } from 'lucide-react'
+import {
+  ArrowUpToLine,
+  Bookmark,
+  Copy,
+  Focus,
+  Replace,
+  StepForward,
+} from 'lucide-react'
 import { usePageSearchContext } from '../../page-search/pageSearchContext'
 import type { TrafficEntrySummary } from '../../../types'
 import { trafficTexts as t } from '../texts'
@@ -333,6 +340,7 @@ export function TrafficVirtualListUI({
             onCopyCurl(contextMenuEntry.id)
           }}
         >
+          <Copy aria-hidden />
           {t.rowMenuCopyCurl}
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -348,6 +356,7 @@ export function TrafficVirtualListUI({
             void onSaveRequest(contextMenuEntry.id)
           }}
         >
+          <Bookmark aria-hidden />
           {contextMenuEntry && savedEntryIds?.has(contextMenuEntry.id)
             ? t.rowMenuOpenSavedRequest
             : t.rowMenuSaveRequest}
@@ -366,6 +375,7 @@ export function TrafficVirtualListUI({
             onOverride(contextMenuEntry.id)
           }}
         >
+          <Replace aria-hidden />
           {contextMenuEntry &&
           (Boolean(contextMenuEntry.overrideMatchId) ||
             matchedOverrideByEntryId?.has(contextMenuEntry.id))
@@ -386,6 +396,7 @@ export function TrafficVirtualListUI({
             void onAddBreakpoint(contextMenuEntry.id)
           }}
         >
+          <StepForward aria-hidden />
           {contextMenuEntry &&
           (Boolean(contextMenuEntry.breakpointMatchId) ||
             matchedBreakpointByEntryId?.has(contextMenuEntry.id))

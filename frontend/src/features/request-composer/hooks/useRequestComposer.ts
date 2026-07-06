@@ -21,7 +21,15 @@ const DEFAULT_FORM: RequestComposerFormState = {
   body: '',
 }
 
-export function useRequestComposer(): RequestComposerViewModel {
+export type RequestComposerActions = {
+  onSaveHistoryRequest?: (detail: RequestComposerHistoryDetail) => Promise<void>
+  onCreateHistoryOverride?: (detail: RequestComposerHistoryDetail) => Promise<void>
+}
+
+export function useRequestComposer(
+  actions: RequestComposerActions = {},
+): RequestComposerViewModel {
+  const { onCreateHistoryOverride, onSaveHistoryRequest } = actions
   const [form, setForm] = useState<RequestComposerFormState>(DEFAULT_FORM)
   const [hostSuggestions, setHostSuggestions] = useState<CatalogSuggestion[]>([])
   const [pathSuggestions, setPathSuggestions] = useState<CatalogSuggestion[]>([])
@@ -190,19 +198,23 @@ export function useRequestComposer(): RequestComposerViewModel {
     return () => window.clearTimeout(timer)
   }, [historyQuery, loadHistoryPage])
 
+  const loadHistoryDetail = useCallback(async (id: string) => {
+    return fetchJson<RequestComposerHistoryDetail>(
+      `/api/request-composer/history/${encodeURIComponent(id)}`,
+    )
+  }, [])
+
   const selectHistory = useCallback(async (id: string) => {
     setSelectedHistoryId(id)
     try {
-      const detail = await fetchJson<RequestComposerHistoryDetail>(
-        `/api/request-composer/history/${encodeURIComponent(id)}`,
-      )
+      const detail = await loadHistoryDetail(id)
       setSelectedHistory(detail)
       setLatestReusableRequest(detail.request)
       setResponse(detail.response)
     } catch (error) {
       showToast(t.historyLoadFailed(errorDetail(error)), 'error')
     }
-  }, [])
+  }, [loadHistoryDetail])
 
   const sendRequest = useCallback(async () => {
     setIsSending(true)
@@ -228,11 +240,51 @@ export function useRequestComposer(): RequestComposerViewModel {
     }
   }, [loadHistoryPage, requestBody, selectHistory])
 
+  const importCurlCommand = useCallback((command: string) => {
+    try {
+      const importedRequest = parseCurlCommand(command)
+      setForm(requestToForm(importedRequest))
+      setResponse(null)
+      setLatestReusableRequest(importedRequest)
+      showSuccessToast(t.curlImportSuccess)
+      return true
+    } catch (error) {
+      showToast(t.curlImportFailed(errorDetail(error)), 'error')
+      return false
+    }
+  }, [])
+
   const reuseSelectedHistory = useCallback(() => {
     const reusableRequest = selectedHistory?.request ?? latestReusableRequest
     if (!reusableRequest) return
     setForm(requestToForm(reusableRequest))
   }, [latestReusableRequest, selectedHistory])
+
+  const saveHistoryRequest = useCallback(
+    async (id: string) => {
+      if (!onSaveHistoryRequest) return
+      try {
+        const detail = selectedHistory?.id === id ? selectedHistory : await loadHistoryDetail(id)
+        await onSaveHistoryRequest(detail)
+      } catch (error) {
+        showToast(errorDetail(error), 'error')
+      }
+    },
+    [loadHistoryDetail, onSaveHistoryRequest, selectedHistory],
+  )
+
+  const createHistoryOverride = useCallback(
+    async (id: string) => {
+      if (!onCreateHistoryOverride) return
+      try {
+        const detail = selectedHistory?.id === id ? selectedHistory : await loadHistoryDetail(id)
+        await onCreateHistoryOverride(detail)
+      } catch (error) {
+        showToast(errorDetail(error), 'error')
+      }
+    },
+    [loadHistoryDetail, onCreateHistoryOverride, selectedHistory],
+  )
 
   const deleteSelectedHistory = useCallback(async () => {
     if (!selectedHistoryId) return
@@ -276,6 +328,7 @@ export function useRequestComposer(): RequestComposerViewModel {
     isSending,
     isRequestTargetReady: target.host.length > 0,
     sendRequest,
+    importCurlCommand,
     history,
     selectedHistory,
     selectedHistoryId,
@@ -284,6 +337,8 @@ export function useRequestComposer(): RequestComposerViewModel {
     setHistoryQuery,
     selectHistory,
     reuseSelectedHistory,
+    saveHistoryRequest,
+    createHistoryOverride,
     deleteSelectedHistory,
     clearHistory,
     loadMoreHistory,
@@ -373,6 +428,171 @@ function requestToForm(request: RequestComposerRequest): RequestComposerFormStat
     headersText: formatPairs(request.headers),
     body: request.body ?? '',
   }
+}
+
+function parseCurlCommand(command: string): RequestComposerRequest {
+  const tokens = tokenizeShellCommand(command.trim())
+  if (tokens.length === 0 || tokens[0] !== 'curl') {
+    throw new Error(t.curlImportInvalid)
+  }
+
+  let method = ''
+  let url = ''
+  const headers: [string, string][] = []
+  const bodyParts: string[] = []
+
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index]
+    if (!token) continue
+
+    if (token === '-X' || token === '--request') {
+      method = requireCurlOptionValue(tokens, index, token).toUpperCase()
+      index += 1
+      continue
+    }
+
+    if (token.startsWith('-X') && token.length > 2) {
+      method = token.slice(2).toUpperCase()
+      continue
+    }
+
+    if (token === '--url') {
+      url = requireCurlOptionValue(tokens, index, token)
+      index += 1
+      continue
+    }
+
+    if (token.startsWith('--url=')) {
+      url = token.slice('--url='.length)
+      continue
+    }
+
+    if (token === '-H' || token === '--header') {
+      headers.push(parseCurlHeader(requireCurlOptionValue(tokens, index, token)))
+      index += 1
+      continue
+    }
+
+    if (token.startsWith('-H') && token.length > 2) {
+      headers.push(parseCurlHeader(token.slice(2)))
+      continue
+    }
+
+    if (isCurlDataOption(token)) {
+      bodyParts.push(requireCurlOptionValue(tokens, index, token))
+      index += 1
+      continue
+    }
+
+    if (token.startsWith('--data=') || token.startsWith('--data-raw=')) {
+      bodyParts.push(token.slice(token.indexOf('=') + 1))
+      continue
+    }
+
+    if (!token.startsWith('-')) {
+      url = token
+    }
+  }
+
+  if (!url) {
+    throw new Error(t.curlImportMissingUrl)
+  }
+
+  const parsedUrl = parseTargetUrl(url)
+  if (!parsedUrl.host) {
+    throw new Error(t.curlImportMissingUrl)
+  }
+
+  return {
+    scheme: parsedUrl.scheme,
+    host: parsedUrl.host,
+    path: parsedUrl.path,
+    method: method || (bodyParts.length > 0 ? 'POST' : 'GET'),
+    searchParams: parsedUrl.searchParams,
+    headers,
+    body: bodyParts.length > 0 ? bodyParts.join('&') : null,
+  }
+}
+
+function tokenizeShellCommand(command: string): string[] {
+  const tokens: string[] = []
+  let current = ''
+  let quote: '"' | "'" | null = null
+  let isEscaped = false
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index] ?? ''
+    if (isEscaped) {
+      if (char === '\n' || char === '\r') {
+        isEscaped = false
+        continue
+      }
+      current += char
+      isEscaped = false
+      continue
+    }
+    if (quote == null && char === '$' && command[index + 1] === "'") {
+      quote = "'"
+      index += 1
+      continue
+    }
+    if (char === '\\' && quote !== "'") {
+      isEscaped = true
+      continue
+    }
+    if ((char === '"' || char === "'") && quote === char) {
+      quote = null
+      continue
+    }
+    if ((char === '"' || char === "'") && quote == null) {
+      quote = char
+      continue
+    }
+    if (/\s/.test(char) && quote == null) {
+      if (current.length > 0) {
+        tokens.push(current)
+        current = ''
+      }
+      continue
+    }
+    current += char
+  }
+
+  if (isEscaped) current += '\\'
+  if (quote != null) {
+    throw new Error(t.curlImportUnclosedQuote)
+  }
+  if (current.length > 0) tokens.push(current)
+  return tokens
+}
+
+function requireCurlOptionValue(tokens: string[], index: number, option: string): string {
+  const value = tokens[index + 1]
+  if (value == null) {
+    throw new Error(t.curlImportMissingOptionValue(option))
+  }
+  return value
+}
+
+function parseCurlHeader(value: string): [string, string] {
+  const separatorIndex = value.indexOf(':')
+  if (separatorIndex <= 0) {
+    throw new Error(t.curlImportInvalidHeader(value))
+  }
+  return [
+    value.slice(0, separatorIndex).trim(),
+    value.slice(separatorIndex + 1).trim(),
+  ]
+}
+
+function isCurlDataOption(token: string): boolean {
+  return (
+    token === '-d' ||
+    token === '--data' ||
+    token === '--data-raw' ||
+    token === '--data-binary' ||
+    token === '--data-urlencode'
+  )
 }
 
 type ParsedTargetUrl = {

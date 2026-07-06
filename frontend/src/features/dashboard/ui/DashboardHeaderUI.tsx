@@ -67,7 +67,6 @@ export function DashboardHeaderUI({
   toggleTrafficFilterValue,
   clearTrafficFilters,
   hasTrafficFilters,
-  proxyListenAddress,
   capturePaused,
   captureToggleSaving,
   wifiProxySaving,
@@ -82,10 +81,6 @@ export function DashboardHeaderUI({
 }: Props) {
   const t = dashboardTexts.header
   const mitm = dashboardTexts.mitm
-  const listenAddressLabel =
-    typeof proxyListenAddress === 'string' && proxyListenAddress.trim().length > 0
-      ? proxyListenAddress
-      : t.missingProxyAddress
   const [downloading, setDownloading] = useState(false)
   const [filterDialogOpen, setFilterDialogOpen] = useState(false)
 

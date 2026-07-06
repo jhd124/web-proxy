@@ -142,7 +142,10 @@ export function DashboardUI(p: DashboardViewModel) {
             )}
             {p.activeTab === 'request-composer' && (
               <div className={root.tabPanel}>
-                <RequestComposerPortal />
+                <RequestComposerPortal
+                  onSaveHistoryRequest={p.saveComposerHistoryRequest}
+                  onCreateHistoryOverride={p.createComposerHistoryOverride}
+                />
               </div>
             )}
             {p.activeTab === 'hosts' && (

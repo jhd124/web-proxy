@@ -22,7 +22,7 @@ import { showSuccessToast, showToast } from '../../../lib/toast'
 import { trafficTexts } from '../../traffic/texts'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
-import type { TrafficEntry } from '../../../types'
+import type { RequestComposerHistoryDetail, TrafficEntry } from '../../../types'
 
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
@@ -817,6 +817,46 @@ export function useDashboard() {
     ],
   )
 
+  const saveComposerHistoryRequest = useCallback(
+    async (detail: RequestComposerHistoryDetail) => {
+      const entry = requestComposerHistoryToTrafficEntry(detail)
+      await saveRequest(entry)
+      showSuccessToast(trafficTexts.requestSaved)
+    },
+    [saveRequest],
+  )
+
+  const createComposerHistoryOverride = useCallback(
+    async (detail: RequestComposerHistoryDetail) => {
+      const entry = requestComposerHistoryToTrafficEntry(detail)
+      setOverrideError(null)
+      const matchParts = urlMatchPartsForForm(entry)
+      setOverrideEditingId(null)
+      setOverrideForm({
+        ...getDefaultOverrideForm(),
+        status: entry.responseStatus ?? 200,
+        body: entry.responseBodyPreview ?? '',
+        headersText: headersToText(entry.responseHeaders ?? undefined),
+        matchMethod: matchParts.matchMethod,
+        matchProtocol: matchParts.matchProtocol,
+        matchHost: matchParts.matchHost,
+        matchPath: matchParts.matchPath,
+        matchQuery: matchParts.matchQuery,
+      })
+      bumpRequestPanel()
+      setOverridesPanel({ state: 'edit', source: 'traffic' })
+      navigateToTab('override')
+    },
+    [
+      bumpRequestPanel,
+      navigateToTab,
+      setOverrideEditingId,
+      setOverrideError,
+      setOverrideForm,
+      setOverridesPanel,
+    ],
+  )
+
   const openSavedRequestForEntry = useCallback(
     (id: string) => {
       if (!savedTrafficEntryIds.has(id)) return
@@ -985,6 +1025,8 @@ export function useDashboard() {
     copyEntryCurl,
     saveEntryRequest,
     openEntryOverrideDrawer,
+    saveComposerHistoryRequest,
+    createComposerHistoryOverride,
     addBreakpointFromEntry,
     openSavedRequestForEntry,
     savedRequests,
@@ -996,3 +1038,39 @@ export function useDashboard() {
 }
 
 export type DashboardViewModel = ReturnType<typeof useDashboard>
+
+function requestComposerHistoryToTrafficEntry(
+  detail: RequestComposerHistoryDetail,
+): TrafficEntry {
+  const request = detail.request
+  return {
+    id: `composer:${detail.id}`,
+    at: detail.sentAt,
+    peer: 'request-composer',
+    method: request.method,
+    url: formatComposerHistoryUrl(detail),
+    scheme: request.scheme,
+    host: request.host,
+    path: request.path || '/',
+    requestHeaders: request.headers,
+    requestBodyPreview: request.body ?? null,
+    kind: 'http',
+    responseStatus: detail.response.status ?? null,
+    responseHeaders: detail.response.headers,
+    responseBodyPreview: detail.response.bodyPreview ?? null,
+    durationMs: detail.response.durationMs,
+    error: detail.response.error ?? null,
+    pending: false,
+    streamControllable: false,
+  }
+}
+
+function formatComposerHistoryUrl(detail: RequestComposerHistoryDetail): string {
+  const request = detail.request
+  const path = request.path.startsWith('/') ? request.path : `/${request.path || ''}`
+  const query = new URLSearchParams(request.searchParams).toString()
+  const urlFromRequest = `${request.scheme}://${request.host}${path}${
+    query ? `?${query}` : ''
+  }`
+  return detail.url || urlFromRequest
+}
