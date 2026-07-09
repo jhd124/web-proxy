@@ -67,9 +67,11 @@ export function useFloatingTraffic() {
     popUrlFilterTag: traffic.popUrlFilterTag,
     clearTraffic: traffic.clearTraffic,
     filteredEntries: traffic.filteredEntries,
+    highlightedEntryIds: traffic.highlightedEntryIds,
     selectedId: traffic.selectedId,
     setSelectedId: traffic.setSelectedId,
     selected: traffic.selected,
+    toggleEntryHighlight: traffic.toggleEntryHighlight,
     openMainWindowForEntry,
   }
 }

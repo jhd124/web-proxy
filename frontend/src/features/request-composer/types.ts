@@ -2,6 +2,7 @@ import type {
   CatalogSuggestion,
   RequestComposerHistoryDetail,
   RequestComposerHistoryItem,
+  RequestComposerRequest,
   RequestComposerResponse,
 } from '../../types'
 
@@ -40,3 +41,8 @@ export interface RequestComposerViewModel {
   hasMoreHistory: boolean
   historyLoading: boolean
 }
+
+export type RequestComposerInitialRequest = {
+  request: RequestComposerRequest
+  key: string
+} | null

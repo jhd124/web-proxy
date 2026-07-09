@@ -22,6 +22,7 @@ export function TrafficPanelUI({
   filteredEntries,
   matchedTrafficEntryIds,
   savedTrafficEntryIds,
+  highlightedEntryIds,
   matchedOverrideByEntryId,
   matchedBreakpointByEntryId,
   selectedId,
@@ -36,6 +37,7 @@ export function TrafficPanelUI({
   onEntryOpenSavedRequest,
   onEntryOpenMatchedOverride,
   onEntryOpenMatchedBreakpoint,
+  onEntryToggleHighlight,
 }: TrafficPanelUIProps) {
   const hasSelectedEntry = selectedId != null
   // 通过库自带持久化按「当前面板集合」精确记忆并恢复分栏宽度，切换 tab 后保持不变。
@@ -78,6 +80,7 @@ export function TrafficPanelUI({
             entries={filteredEntries}
             matchedEntryIds={matchedTrafficEntryIds}
             savedEntryIds={savedTrafficEntryIds}
+            highlightedEntryIds={highlightedEntryIds}
             matchedOverrideByEntryId={matchedOverrideByEntryId}
             matchedBreakpointByEntryId={matchedBreakpointByEntryId}
             selectedId={selectedId}
@@ -89,6 +92,7 @@ export function TrafficPanelUI({
             onOpenSavedRequest={onEntryOpenSavedRequest}
             onOpenMatchedOverride={onEntryOpenMatchedOverride}
             onOpenMatchedBreakpoint={onEntryOpenMatchedBreakpoint}
+            onToggleHighlight={onEntryToggleHighlight}
             searchKeywords={searchKeywords}
           />
         </aside>

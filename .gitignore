@@ -6,10 +6,14 @@ desktop/dist/
 desktop/dist-electron/
 desktop/resources/
 desktop/.data/
+remote-server/.output/
 
 # Runtime data
 proxy-overrides.sqlite3
 proxy-overrides.sqlite3-*
+remote-server/.env.local
+remote-server/*.sqlite3
+remote-server/*.sqlite3-*
 *.db
 *.db-*
 

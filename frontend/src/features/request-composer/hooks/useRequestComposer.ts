@@ -10,7 +10,11 @@ import type {
   RequestComposerSendResponse,
 } from '../../../types'
 import { requestComposerTexts as t } from '../texts'
-import type { RequestComposerFormState, RequestComposerViewModel } from '../types'
+import type {
+  RequestComposerFormState,
+  RequestComposerInitialRequest,
+  RequestComposerViewModel,
+} from '../types'
 
 const HISTORY_PAGE_SIZE = 40
 const DEFAULT_FORM: RequestComposerFormState = {
@@ -20,8 +24,35 @@ const DEFAULT_FORM: RequestComposerFormState = {
   headersText: '',
   body: '',
 }
+const CURL_OPTIONS_WITH_VALUE = new Set([
+  '-A',
+  '--cacert',
+  '--cert',
+  '--connect-timeout',
+  '--cookie',
+  '--cookie-jar',
+  '--form',
+  '--interface',
+  '--key',
+  '--max-time',
+  '--output',
+  '--proxy',
+  '--referer',
+  '--request-target',
+  '--resolve',
+  '--user',
+  '--user-agent',
+  '-b',
+  '-e',
+  '-F',
+  '-m',
+  '-o',
+  '-u',
+  '-x',
+])
 
 export type RequestComposerActions = {
+  initialRequest?: RequestComposerInitialRequest
   onSaveHistoryRequest?: (detail: RequestComposerHistoryDetail) => Promise<void>
   onCreateHistoryOverride?: (detail: RequestComposerHistoryDetail) => Promise<void>
 }
@@ -29,7 +60,7 @@ export type RequestComposerActions = {
 export function useRequestComposer(
   actions: RequestComposerActions = {},
 ): RequestComposerViewModel {
-  const { onCreateHistoryOverride, onSaveHistoryRequest } = actions
+  const { initialRequest, onCreateHistoryOverride, onSaveHistoryRequest } = actions
   const [form, setForm] = useState<RequestComposerFormState>(DEFAULT_FORM)
   const [hostSuggestions, setHostSuggestions] = useState<CatalogSuggestion[]>([])
   const [pathSuggestions, setPathSuggestions] = useState<CatalogSuggestion[]>([])
@@ -46,6 +77,7 @@ export function useRequestComposer(
   const [historyLoading, setHistoryLoading] = useState(false)
   const [hasMoreHistory, setHasMoreHistory] = useState(false)
   const lastTemplateKeyRef = useRef('')
+  const appliedInitialRequestKeyRef = useRef<string | null>(null)
 
   const setFormField = useCallback(
     (field: keyof RequestComposerFormState, value: string) => {
@@ -60,6 +92,18 @@ export function useRequestComposer(
 
   const target = useMemo(() => parseTargetUrl(form.url), [form.url])
   const requestBody = useMemo(() => formToRequest(form), [form])
+
+  useEffect(() => {
+    if (!initialRequest) return
+    if (appliedInitialRequestKeyRef.current === initialRequest.key) return
+    appliedInitialRequestKeyRef.current = initialRequest.key
+    lastTemplateKeyRef.current = templateKeyForRequest(initialRequest.request)
+    setForm(requestToForm(initialRequest.request))
+    setResponse(null)
+    setSelectedHistory(null)
+    setSelectedHistoryId(null)
+    setLatestReusableRequest(initialRequest.request)
+  }, [initialRequest])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -430,6 +474,10 @@ function requestToForm(request: RequestComposerRequest): RequestComposerFormStat
   }
 }
 
+function templateKeyForRequest(request: RequestComposerRequest): string {
+  return `${request.host}\n${normalizePath(request.path)}\n${request.method.trim()}`
+}
+
 function parseCurlCommand(command: string): RequestComposerRequest {
   const tokens = tokenizeShellCommand(command.trim())
   if (tokens.length === 0 || tokens[0] !== 'curl') {
@@ -473,6 +521,11 @@ function parseCurlCommand(command: string): RequestComposerRequest {
       continue
     }
 
+    if (token.startsWith('--header=')) {
+      headers.push(parseCurlHeader(token.slice('--header='.length)))
+      continue
+    }
+
     if (token.startsWith('-H') && token.length > 2) {
       headers.push(parseCurlHeader(token.slice(2)))
       continue
@@ -489,7 +542,20 @@ function parseCurlCommand(command: string): RequestComposerRequest {
       continue
     }
 
-    if (!token.startsWith('-')) {
+    if (isInlineCurlOptionWithValue(token)) {
+      continue
+    }
+
+    if (CURL_OPTIONS_WITH_VALUE.has(token)) {
+      index += 1
+      continue
+    }
+
+    if (token.startsWith('-')) {
+      continue
+    }
+
+    if (!url && isPotentialCurlUrl(token)) {
       url = token
     }
   }
@@ -593,6 +659,21 @@ function isCurlDataOption(token: string): boolean {
     token === '--data-binary' ||
     token === '--data-urlencode'
   )
+}
+
+function isInlineCurlOptionWithValue(token: string): boolean {
+  const optionName = token.split('=', 1)[0] ?? ''
+  return token.includes('=') && CURL_OPTIONS_WITH_VALUE.has(optionName)
+}
+
+function isPotentialCurlUrl(token: string): boolean {
+  const value = token.trim()
+  if (!value || value.includes(' ')) return false
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return true
+  if (/^(localhost|\d{1,3}(?:\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(value)) {
+    return true
+  }
+  return /^[\w.-]+\.[a-z]{2,}(:\d+)?([/?#].*)?$/i.test(value)
 }
 
 type ParsedTargetUrl = {

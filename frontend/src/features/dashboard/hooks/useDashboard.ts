@@ -22,7 +22,11 @@ import { showSuccessToast, showToast } from '../../../lib/toast'
 import { trafficTexts } from '../../traffic/texts'
 import { dashboardTexts } from '../texts'
 import { useAppWebSocket } from './useAppWebSocket'
-import type { RequestComposerHistoryDetail, TrafficEntry } from '../../../types'
+import type {
+  RequestComposerHistoryDetail,
+  RequestComposerRequest,
+  TrafficEntry,
+} from '../../../types'
 
 const FLOATING_TRAFFIC_WINDOW_LABEL = 'floating-traffic'
 const FLOATING_TRAFFIC_VIEW_PATH = '/?view=floating-traffic'
@@ -155,6 +159,10 @@ export function useDashboard() {
   const [captureToggleSaving, setCaptureToggleSaving] = useState(false)
   const [wifiProxySaving, setWifiProxySaving] = useState(false)
   const [exportHarSaving, setExportHarSaving] = useState(false)
+  const [composerInitialRequest, setComposerInitialRequest] = useState<{
+    request: RequestComposerRequest
+    key: string
+  } | null>(null)
 
   const traffic = useTrafficState()
   useMainWindowTrafficSelect(traffic.setSelectedId)
@@ -191,6 +199,7 @@ export function useDashboard() {
     useAdvancedSearchContext()
 
   const selectedIdRef = useRef<string | null>(null)
+  const composerInitialRequestCounterRef = useRef(0)
   const setTrafficSelectedId = traffic.setSelectedId
 
   useEffect(() => {
@@ -866,6 +875,20 @@ export function useDashboard() {
     [navigateToTab, savedTrafficEntryIds, setSelectedSavedRequestId],
   )
 
+  const composeSavedRequest = useCallback(
+    (id: string) => {
+      const savedRequest = savedRequests.find((request) => request.id === id)
+      if (!savedRequest) return
+      composerInitialRequestCounterRef.current += 1
+      setComposerInitialRequest({
+        request: trafficEntryToComposerRequest(savedRequest.entry),
+        key: `saved:${id}:${composerInitialRequestCounterRef.current}`,
+      })
+      navigateToTab('request-composer')
+    },
+    [navigateToTab, savedRequests],
+  )
+
   useEffect(() => {
     return registerAdvancedSearchOpenHandler((target) => {
       if (target.entityType === 'traffic') {
@@ -963,6 +986,7 @@ export function useDashboard() {
     filteredEntries: traffic.filteredEntries,
     matchedTrafficEntryIds,
     savedTrafficEntryIds,
+    highlightedEntryIds: traffic.highlightedEntryIds,
     matchedOverrideByEntryId,
     matchedBreakpointByEntryId,
     selectedId: traffic.selectedId,
@@ -1024,9 +1048,12 @@ export function useDashboard() {
     openMatchedBreakpointForEntry,
     copyEntryCurl,
     saveEntryRequest,
+    toggleEntryHighlight: traffic.toggleEntryHighlight,
     openEntryOverrideDrawer,
     saveComposerHistoryRequest,
     createComposerHistoryOverride,
+    composerInitialRequest,
+    composeSavedRequest,
     addBreakpointFromEntry,
     openSavedRequestForEntry,
     savedRequests,
@@ -1062,6 +1089,43 @@ function requestComposerHistoryToTrafficEntry(
     error: detail.response.error ?? null,
     pending: false,
     streamControllable: false,
+  }
+}
+
+function trafficEntryToComposerRequest(entry: TrafficEntry): RequestComposerRequest {
+  const parsedUrl = parseTrafficEntryUrl(entry)
+  return {
+    scheme: parsedUrl.scheme,
+    host: parsedUrl.host,
+    path: parsedUrl.path,
+    method: entry.method || 'GET',
+    searchParams: parsedUrl.searchParams,
+    headers: entry.requestHeaders,
+    body: entry.requestBodyPreview ?? null,
+  }
+}
+
+function parseTrafficEntryUrl(entry: TrafficEntry): {
+  scheme: string
+  host: string
+  path: string
+  searchParams: [string, string][]
+} {
+  try {
+    const parsed = new URL(entry.url)
+    return {
+      scheme: parsed.protocol.replace(/:$/, '') || entry.scheme,
+      host: parsed.host || entry.host,
+      path: parsed.pathname || '/',
+      searchParams: Array.from(parsed.searchParams.entries()),
+    }
+  } catch {
+    return {
+      scheme: entry.scheme,
+      host: entry.host,
+      path: entry.path || '/',
+      searchParams: [],
+    }
   }
 }
 

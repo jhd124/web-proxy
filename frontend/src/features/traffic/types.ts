@@ -5,6 +5,7 @@ export type TrafficPanelUIProps = {
   filteredEntries: TrafficEntrySummary[]
   matchedTrafficEntryIds: ReadonlySet<string>
   savedTrafficEntryIds: ReadonlySet<string>
+  highlightedEntryIds: ReadonlySet<string>
   matchedOverrideByEntryId: ReadonlyMap<string, string>
   matchedBreakpointByEntryId: ReadonlyMap<string, string>
   selectedId: string | null
@@ -19,4 +20,5 @@ export type TrafficPanelUIProps = {
   onEntryOpenSavedRequest: (id: string) => void
   onEntryOpenMatchedOverride: (id: string) => void
   onEntryOpenMatchedBreakpoint: (id: string) => void
+  onEntryToggleHighlight: (id: string) => void
 }

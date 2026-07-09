@@ -28,6 +28,9 @@ export function useTrafficState() {
   const [trafficFilters, setTrafficFilters] =
     useState<TrafficFilters>(EMPTY_TRAFFIC_FILTERS)
   const [testError, setTestError] = useState<string | null>(null)
+  const [highlightedEntryIds, setHighlightedEntryIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  )
   const [resumeSaving, setResumeSaving] = useState<Record<string, boolean>>({})
   const [streamActionSaving, setStreamActionSaving] = useState<Record<string, boolean>>(
     {},
@@ -183,9 +186,22 @@ export function useTrafficState() {
   const clearTraffic = useCallback(async () => {
     await fetch('/api/requests', { method: 'DELETE' })
     setEntries([])
+    setHighlightedEntryIds(new Set<string>())
     setSelectedId(null)
     setSelectedDetail(null)
   }, [setEntries])
+
+  const toggleEntryHighlight = useCallback((id: string) => {
+    setHighlightedEntryIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
 
   const resumeRequest = useCallback(async (id: string) => {
     setResumeSaving((prev) => ({ ...prev, [id]: true }))
@@ -257,6 +273,8 @@ export function useTrafficState() {
     availableRequesterApps,
     testError,
     setTestError,
+    highlightedEntryIds,
+    toggleEntryHighlight,
     urlFilterTrimmed,
     filteredEntries,
     selected,

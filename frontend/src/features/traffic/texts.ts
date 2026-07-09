@@ -71,6 +71,8 @@ export const trafficTexts = {
   copyUrlFailed: (detail: string) => `Could not copy URL: ${detail}`,
   rowMenuOpen: 'Actions',
   rowMenuCopyCurl: 'Copy cURL',
+  rowMenuHighlight: 'Highlight',
+  rowMenuRemoveHighlight: 'Remove highlight',
   rowMenuSaveRequest: 'Save request',
   rowMenuOpenSavedRequest: 'Open saved request',
   rowMenuOverride: 'Override response',

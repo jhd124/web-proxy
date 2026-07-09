@@ -25,9 +25,11 @@ export function FloatingTrafficUI({
   popUrlFilterTag,
   clearTraffic,
   filteredEntries,
+  highlightedEntryIds,
   selectedId,
   selected,
   setSelectedId,
+  toggleEntryHighlight,
   openMainWindowForEntry,
 }: FloatingTrafficViewModel) {
   const hasDetail = selectedId != null
@@ -93,6 +95,7 @@ export function FloatingTrafficUI({
               entries={filteredEntries}
               matchedEntryIds={EMPTY_ID_SET}
               savedEntryIds={EMPTY_ID_SET}
+              highlightedEntryIds={highlightedEntryIds}
               matchedOverrideByEntryId={EMPTY_ID_MAP}
               matchedBreakpointByEntryId={EMPTY_ID_MAP}
               selectedId={selectedId}
@@ -114,6 +117,7 @@ export function FloatingTrafficUI({
               onOpenMatchedBreakpoint={(id) => {
                 void openMainWindowForEntry(id)
               }}
+              onToggleHighlight={toggleEntryHighlight}
               onEntryDoubleClick={(id) => void openMainWindowForEntry(id)}
               emptyText={t.empty}
               searchKeywords={activeFilterKeywords}

@@ -60,6 +60,18 @@
   background: var(--background-list-item-active);
 }
 
+.rowHighlighted {
+  color: var(--amber-700);
+}
+
+.rowHighlighted .url,
+.rowHighlighted .code,
+.rowHighlighted .method,
+.rowHighlighted .contentType,
+.rowHighlighted .app {
+  color: var(--amber-700);
+}
+
 .rowMatched::before {
   border: 6px solid var(--badge-matched);
   border-right-color: transparent;

@@ -1,5 +1,11 @@
 import { useMemo } from 'react'
-import { Trash2 } from 'lucide-react'
+import { NotebookPen, Trash2 } from 'lucide-react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -41,6 +47,7 @@ export function SavedRequestsPanelUI({
   setSelectedSavedRequestId,
   closeSavedRequestsPanel,
   variant = 'dialog',
+  composeSavedRequest,
   removeSavedRequest,
 }: SavedRequestsPanelUIProps) {
   const isInline = variant !== 'dialog'
@@ -75,18 +82,29 @@ export function SavedRequestsPanelUI({
     const entry = request.entry
     const isActive = selectedSavedRequest?.id === request.id
     return (
-      <button
-        type="button"
-        className={`${s.itemButton} ${isActive ? s.itemButtonActive : ''}`}
-        onClick={() => setSelectedSavedRequestId(request.id)}
-      >
-        <span className={s.itemPath} title={`${entry.method} ${entry.url}`}>
-          {urlPathLabel(entry.url)}
-        </span>
-        {entry.responseStatus != null && (
-          <span className={s.itemStatus}>{entry.responseStatus}</span>
-        )}
-      </button>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <button
+            type="button"
+            className={`${s.itemButton} ${isActive ? s.itemButtonActive : ''}`}
+            onClick={() => setSelectedSavedRequestId(request.id)}
+            onContextMenu={() => setSelectedSavedRequestId(request.id)}
+          >
+            <span className={s.itemPath} title={`${entry.method} ${entry.url}`}>
+              {urlPathLabel(entry.url)}
+            </span>
+            {entry.responseStatus != null && (
+              <span className={s.itemStatus}>{entry.responseStatus}</span>
+            )}
+          </button>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={() => composeSavedRequest(request.id)}>
+            <NotebookPen aria-hidden />
+            {t.compose}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     )
   }
 

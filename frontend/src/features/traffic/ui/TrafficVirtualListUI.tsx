@@ -22,6 +22,7 @@ import {
   Bookmark,
   Copy,
   Focus,
+  Highlighter,
   Replace,
   StepForward,
 } from 'lucide-react'
@@ -47,6 +48,7 @@ export type TrafficVirtualListUIProps = {
   entries: TrafficEntrySummary[]
   matchedEntryIds?: ReadonlySet<string>
   savedEntryIds?: ReadonlySet<string>
+  highlightedEntryIds?: ReadonlySet<string>
   matchedOverrideByEntryId?: ReadonlyMap<string, string>
   matchedBreakpointByEntryId?: ReadonlyMap<string, string>
   selectedId: string | null
@@ -58,6 +60,7 @@ export type TrafficVirtualListUIProps = {
   onOpenMatchedOverride: (id: string) => void
   onAddBreakpoint: (id: string) => Promise<void>
   onOpenMatchedBreakpoint: (id: string) => void
+  onToggleHighlight: (id: string) => void
   onEntryDoubleClick?: (id: string) => void
   emptyText?: string
   className?: string
@@ -69,6 +72,7 @@ export function TrafficVirtualListUI({
   entries,
   matchedEntryIds,
   savedEntryIds,
+  highlightedEntryIds,
   matchedOverrideByEntryId,
   matchedBreakpointByEntryId,
   selectedId,
@@ -80,6 +84,7 @@ export function TrafficVirtualListUI({
   onOpenMatchedOverride,
   onAddBreakpoint,
   onOpenMatchedBreakpoint,
+  onToggleHighlight,
   onEntryDoubleClick,
   emptyText,
   className,
@@ -286,6 +291,7 @@ export function TrafficVirtualListUI({
                     entry.breakpointMatchId ||
                     matchedEntryIds?.has(entry.id),
                 )
+                const isHighlighted = highlightedEntryIds?.has(entry.id) === true
 
                 return (
                   <TrafficRow
@@ -293,6 +299,7 @@ export function TrafficVirtualListUI({
                     entry={entry}
                     isSelected={selectedId === entry.id}
                     hasMatchedRule={hasMatchedRule}
+                    isHighlighted={isHighlighted}
                     tags={tags}
                     top={virtualRow.start}
                     height={virtualRow.size}
@@ -342,6 +349,19 @@ export function TrafficVirtualListUI({
         >
           <Copy aria-hidden />
           {t.rowMenuCopyCurl}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={!contextMenuEntry}
+          onSelect={() => {
+            if (!contextMenuEntry) return
+            onToggleHighlight(contextMenuEntry.id)
+          }}
+        >
+          <Highlighter aria-hidden />
+          {contextMenuEntry && highlightedEntryIds?.has(contextMenuEntry.id)
+            ? t.rowMenuRemoveHighlight
+            : t.rowMenuHighlight}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -412,6 +432,7 @@ type TrafficRowProps = {
   entry: TrafficEntrySummary
   isSelected: boolean
   hasMatchedRule: boolean
+  isHighlighted: boolean
   tags: TrafficVirtualListTagTexts
   top: number
   height: number
@@ -427,6 +448,7 @@ const TrafficRow = memo(function TrafficRow({
   entry,
   isSelected,
   hasMatchedRule,
+  isHighlighted,
   tags,
   top,
   height,
@@ -455,7 +477,7 @@ const TrafficRow = memo(function TrafficRow({
     >
       <button
         type="button"
-        className={`${s.row} ${isSelected ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''}`}
+        className={`${s.row} ${isSelected ? s.rowActive : ''} ${hasMatchedRule ? s.rowMatched : ''} ${isHighlighted ? s.rowHighlighted : ''}`}
         style={{ height }}
         onClick={() => {
           onSelect(entry.id)

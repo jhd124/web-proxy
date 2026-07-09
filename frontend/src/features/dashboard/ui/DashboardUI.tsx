@@ -52,6 +52,7 @@ export function DashboardUI(p: DashboardViewModel) {
                     filteredEntries={p.filteredEntries}
                     matchedTrafficEntryIds={p.matchedTrafficEntryIds}
                     savedTrafficEntryIds={p.savedTrafficEntryIds}
+                    highlightedEntryIds={p.highlightedEntryIds}
                     matchedOverrideByEntryId={p.matchedOverrideByEntryId}
                     matchedBreakpointByEntryId={p.matchedBreakpointByEntryId}
                     selectedId={p.selectedId}
@@ -68,6 +69,7 @@ export function DashboardUI(p: DashboardViewModel) {
                     onEntryOpenSavedRequest={p.openSavedRequestForEntry}
                     onEntryOpenMatchedOverride={p.openMatchedOverrideForEntry}
                     onEntryOpenMatchedBreakpoint={p.openMatchedBreakpointForEntry}
+                    onEntryToggleHighlight={p.toggleEntryHighlight}
                   />
                 </div>
               </div>
@@ -135,6 +137,7 @@ export function DashboardUI(p: DashboardViewModel) {
                   selectedSavedRequestId={p.selectedSavedRequestId}
                   setSelectedSavedRequestId={p.setSelectedSavedRequestId}
                   closeSavedRequestsPanel={p.closeSavedRequestsPanel}
+                  composeSavedRequest={p.composeSavedRequest}
                   removeSavedRequest={p.removeSavedRequest}
                   clearSavedRequests={p.clearSavedRequests}
                 />
@@ -143,6 +146,7 @@ export function DashboardUI(p: DashboardViewModel) {
             {p.activeTab === 'request-composer' && (
               <div className={root.tabPanel}>
                 <RequestComposerPortal
+                  initialRequest={p.composerInitialRequest}
                   onSaveHistoryRequest={p.saveComposerHistoryRequest}
                   onCreateHistoryOverride={p.createComposerHistoryOverride}
                 />

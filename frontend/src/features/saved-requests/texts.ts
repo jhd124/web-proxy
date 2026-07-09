@@ -8,6 +8,7 @@ export const savedRequestsTexts = {
   toggleHostGroup: (host: string) => `Show or hide saved requests for ${host}`,
   savedAt: (value: string) => `Saved ${value}`,
   originalAt: (value: string) => `Captured ${value}`,
+  compose: 'Compose',
   delete: 'Delete',
   deleteConfirm: 'Delete this saved request?',
   request: 'Request',

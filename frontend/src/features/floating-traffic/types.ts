@@ -10,8 +10,10 @@ export type FloatingTrafficViewModel = {
   popUrlFilterTag: () => void
   clearTraffic: () => Promise<void>
   filteredEntries: TrafficEntrySummary[]
+  highlightedEntryIds: ReadonlySet<string>
   selectedId: string | null
   setSelectedId: (id: string) => void
   selected: TrafficEntry | null
+  toggleEntryHighlight: (id: string) => void
   openMainWindowForEntry: (id?: string | null) => Promise<void>
 }

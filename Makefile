@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install build dev backend frontend run clean electron-dev electron-build electron-build-mac electron-build-win electron-build-linux
+.PHONY: help install build dev backend frontend run clean electron-dev electron-build electron-build-mac electron-build-mac-local electron-build-win electron-build-linux
 
 help:
 	@echo "Targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  make electron-dev  – Electron + Vite + proxy (cd desktop/ && bun install first)"
 	@echo "  make electron-build – Electron production bundles (from desktop/, per host target)"
 	@echo "  make electron-build-mac – Electron macOS production bundle"
+	@echo "  make electron-build-mac-local – Electron macOS local bundle without signing"
 	@echo "  make electron-build-win – Electron Windows production bundle"
 	@echo "  make electron-build-linux – Electron Linux production bundle"
 	@echo ""
@@ -56,8 +57,14 @@ electron-build:
 electron-build-mac:
 	cd desktop && bun run electron:build:mac
 
+electron-build-mac-local:
+	cd desktop && CSC_IDENTITY_AUTO_DISCOVERY=false bun run electron:build:mac
+
 electron-build-win:
 	cd desktop && bun run electron:build:win
 
 electron-build-linux:
 	cd desktop && bun run electron:build:linux
+
+remote-dev:
+	cd remote-server && bun run dev
