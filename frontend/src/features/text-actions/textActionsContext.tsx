@@ -62,6 +62,15 @@ export function TextActionsProvider({
     [normalizeActionText],
   )
 
+  const handleRecognize = useCallback(
+    (text: string) => {
+      const query = normalizeActionText(text)
+      if (!query) return
+      setDecodeResult(decodeAndFormatText(query))
+    },
+    [normalizeActionText],
+  )
+
   const handleCopyResult = useCallback(() => {
     if (!decodeResult?.output) return
     void copyTextToClipboard(decodeResult.output)
@@ -92,6 +101,7 @@ export function TextActionsProvider({
         result={decodeResult}
         onOpenChange={setIsDecodeDialogOpen}
         onCopyResult={handleCopyResult}
+        onRecognize={handleRecognize}
       />
     </TextActionsContext.Provider>
   )

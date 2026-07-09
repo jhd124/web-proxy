@@ -33,6 +33,7 @@ import { PanelHeader, panelHeaderStyles as ph } from '@/components/panel-header'
 import { requestComposerTexts as t } from '../texts'
 import type { RequestComposerViewModel } from '../types'
 import { CurlImportDialogUI } from './CurlImportDialogUI'
+import { TextContextMenuUI } from '../../text-actions/ui/TextContextMenuUI'
 import { TooltipButton } from '../../override-editor/ui/TooltipButton'
 import s from './RequestComposerUI.module.css'
 
@@ -159,24 +160,32 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
                   </div>
                   <label className={s.field}>
                     <span>{t.fields.searchParams}</span>
-                    <AutoGrowTextarea
-                      className={s.textarea}
-                      value={form.searchParamsText}
-                      onValueChange={(value) => setFormField('searchParamsText', value)}
-                      placeholder={t.placeholders.keyValueLines}
-                      spellCheck={false}
-                    />
+                    <TextContextMenuUI fallbackText={form.searchParamsText}>
+                      <div className={s.textContextTarget}>
+                        <AutoGrowTextarea
+                          className={s.textarea}
+                          value={form.searchParamsText}
+                          onValueChange={(value) => setFormField('searchParamsText', value)}
+                          placeholder={t.placeholders.keyValueLines}
+                          spellCheck={false}
+                        />
+                      </div>
+                    </TextContextMenuUI>
                   </label>
                   {form.method !== 'GET' && (
                     <label className={s.field}>
                       <span>{t.fields.body}</span>
-                      <AutoGrowTextarea
-                        className={`${s.textarea} ${s.bodyText}`}
-                        value={form.body}
-                        onValueChange={(value) => setFormField('body', value)}
-                        placeholder={t.placeholders.body}
-                        spellCheck={false}
-                      />
+                      <TextContextMenuUI fallbackText={form.body}>
+                        <div className={s.textContextTarget}>
+                          <AutoGrowTextarea
+                            className={`${s.textarea} ${s.bodyText}`}
+                            value={form.body}
+                            onValueChange={(value) => setFormField('body', value)}
+                            placeholder={t.placeholders.body}
+                            spellCheck={false}
+                          />
+                        </div>
+                      </TextContextMenuUI>
                     </label>
                   )}
                 </section>
@@ -184,13 +193,17 @@ export function RequestComposerUI(viewModel: RequestComposerViewModel) {
                 <section className={s.group}>
                   <label className={s.field}>
                     <span>{t.fields.headers}</span>
-                    <AutoGrowTextarea
-                      className={s.textarea}
-                      value={form.headersText}
-                      onValueChange={(value) => setFormField('headersText', value)}
-                      placeholder={t.placeholders.headers}
-                      spellCheck={false}
-                    />
+                    <TextContextMenuUI fallbackText={form.headersText}>
+                      <div className={s.textContextTarget}>
+                        <AutoGrowTextarea
+                          className={s.textarea}
+                          value={form.headersText}
+                          onValueChange={(value) => setFormField('headersText', value)}
+                          placeholder={t.placeholders.headers}
+                          spellCheck={false}
+                        />
+                      </div>
+                    </TextContextMenuUI>
                   </label>
                 </section>
               </div>

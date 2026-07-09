@@ -12,6 +12,7 @@ export const textActionTexts = {
     result: '结果',
     detectedAs: (label: string) => `识别为：${label}`,
     copyResult: '复制结果',
+    recognize: '识别',
     close: '关闭',
     empty: '没有可处理的文本',
     copySuccess: '已复制结果',

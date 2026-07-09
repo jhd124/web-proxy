@@ -85,6 +85,17 @@
   word-break: break-word;
 }
 
+.preEditable {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  outline: none;
+}
+
+.preEditable:focus {
+  border-color: var(--text-active);
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;

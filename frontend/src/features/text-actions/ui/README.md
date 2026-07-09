@@ -5,7 +5,7 @@
 ## 当前 UI
 
 - `TextContextMenuUI.tsx`：基于现有 ContextMenu 封装统一文本右键菜单，右键时会缓存并恢复当前文本选区；优先使用选中文本，未选中时使用调用方提供的回退文本。
-- `DecodeFormatDialogUI*`：Decode/Format 弹窗，展示识别类型、转换结果和复制结果按钮。
+- `DecodeFormatDialogUI*`：Decode/Format 弹窗，展示识别类型、转换结果；未识别格式时结果区可编辑，底部主按钮为「识别」并支持重新识别，识别成功后切换为只读结果与「复制结果」按钮。
 
 ## 维护要求
 

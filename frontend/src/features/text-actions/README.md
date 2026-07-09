@@ -6,7 +6,7 @@
 
 - `hooks/`：对外暴露文本动作 Hook。
 - `ui/`：右键菜单与 Decode/Format 弹窗展示组件。
-- `decodeFormat.ts`：自动识别 URL、URL component、base64、JWT 与 JSON 的纯转换函数；URL 参数值若仍是带参数 URL，会继续递归展开。
+- `decodeFormat.ts`：自动识别 URL、URL component、base64、JWT 与 JSON 的纯转换函数；URL 参数值若仍是带参数 URL，会继续递归展开；未识别时弹窗允许编辑原文并手动触发重新识别。
 - `textActionsContext.tsx`：连接页面搜索、全局搜索与 Decode/Format 弹窗状态的 Provider。
 - `textActionsContextValue.ts`：文本动作 Context 与读取 Hook。
 - `texts.ts`：菜单和弹窗文案。
