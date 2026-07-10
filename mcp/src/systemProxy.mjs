@@ -108,6 +108,69 @@ async function resolveProxyPort(args) {
   return port;
 }
 
+function parseProxyBlock(text) {
+  const lines = String(text ?? "").split(/\r?\n/);
+  let enabled = null;
+  let server = null;
+  let port = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const lower = line.toLowerCase();
+    if (lower.startsWith("enabled:")) {
+      enabled = line.split(":").slice(1).join(":").trim().toLowerCase() === "yes";
+      continue;
+    }
+    if (lower.startsWith("server:")) {
+      server = line.split(":").slice(1).join(":").trim() || null;
+      continue;
+    }
+    if (lower.startsWith("port:")) {
+      const rawPort = Number(line.split(":").slice(1).join(":").trim());
+      port = Number.isFinite(rawPort) ? rawPort : null;
+    }
+  }
+  return { enabled, server, port };
+}
+
+export function getSystemProxyStatus(rawArgs) {
+  const args = rawArgs || {};
+  if (process.platform !== "darwin") {
+    return {
+      supported: false,
+      platform: process.platform,
+      message: "system proxy status currently supports macOS only",
+    };
+  }
+  const serviceName =
+    (typeof args.serviceName === "string" && args.serviceName.trim()) ||
+    resolvePrimaryNetworkService();
+  if (!serviceName) {
+    return {
+      supported: true,
+      platform: "darwin",
+      serviceName: null,
+      enabled: false,
+      message: "cannot determine active network service",
+    };
+  }
+  const httpText = commandOutput("networksetup", ["-getwebproxy", serviceName]);
+  const httpsText = commandOutput("networksetup", [
+    "-getsecurewebproxy",
+    serviceName,
+  ]);
+  const http = parseProxyBlock(httpText);
+  const https = parseProxyBlock(httpsText);
+  const enabled = Boolean(http.enabled || https.enabled);
+  return {
+    supported: true,
+    platform: "darwin",
+    serviceName,
+    enabled,
+    http,
+    https,
+  };
+}
+
 export async function enableSystemProxy(rawArgs) {
   const args = rawArgs || {};
   if (process.platform !== "darwin") {

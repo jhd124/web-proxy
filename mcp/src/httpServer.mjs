@@ -31,6 +31,7 @@ export function startHttpServer({
   serverVersion,
   tools,
   callTool,
+  instructions,
   host,
   port,
 }) {
@@ -40,6 +41,7 @@ export function startHttpServer({
     serverVersion,
     tools,
     callTool,
+    instructions,
   };
 
   const server = http.createServer((request, response) => {

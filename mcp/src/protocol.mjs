@@ -20,7 +20,7 @@ function createErrorResponse(id, code, message) {
 
 export async function handleJsonRpcMessage(
   message,
-  { protocolVersion, serverName, serverVersion, tools, callTool },
+  { protocolVersion, serverName, serverVersion, tools, callTool, instructions },
 ) {
   const id = message?.id;
   const method = message?.method;
@@ -39,6 +39,9 @@ export async function handleJsonRpcMessage(
           name: serverName,
           version: serverVersion,
         },
+        ...(typeof instructions === "string" && instructions.length > 0
+          ? { instructions }
+          : {}),
       },
     };
   }

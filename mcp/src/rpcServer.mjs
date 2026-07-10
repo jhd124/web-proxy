@@ -18,13 +18,21 @@ function sendError(id, code, message) {
   });
 }
 
-export function startStdioServer({ protocolVersion, serverName, serverVersion, tools, callTool }) {
+export function startStdioServer({
+  protocolVersion,
+  serverName,
+  serverVersion,
+  tools,
+  callTool,
+  instructions,
+}) {
   const protocolContext = {
     protocolVersion,
     serverName,
     serverVersion,
     tools,
     callTool,
+    instructions,
   };
 
   let buffer = Buffer.alloc(0);

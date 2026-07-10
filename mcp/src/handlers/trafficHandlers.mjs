@@ -1,4 +1,4 @@
-import { apiGetJson } from "../apiClient.mjs";
+import { apiDelete, apiGetJson, apiPostJson } from "../apiClient.mjs";
 import { resolveDashboardUrl, sleep } from "../constants.mjs";
 
 export async function handleListenTraffic(rawArgs) {
@@ -96,4 +96,35 @@ export async function handleFilterTraffic(rawArgs) {
     matched: trimmed.length,
     entries: trimmed,
   };
+}
+
+export async function handleGetRequest(rawArgs) {
+  const args = rawArgs || {};
+  const baseUrl = resolveDashboardUrl(args);
+  const id = typeof args.id === "string" ? args.id.trim() : "";
+  if (!id) {
+    throw new Error("id is required");
+  }
+  return apiGetJson(baseUrl, `/api/requests/${encodeURIComponent(id)}`);
+}
+
+export async function handleClearTraffic(rawArgs) {
+  const args = rawArgs || {};
+  const baseUrl = resolveDashboardUrl(args);
+  await apiDelete(baseUrl, "/api/requests");
+  return { ok: true, cleared: true };
+}
+
+export async function handlePauseCapture(rawArgs) {
+  const args = rawArgs || {};
+  const baseUrl = resolveDashboardUrl(args);
+  await apiPostJson(baseUrl, "/api/capture/pause", {});
+  return { ok: true, capturePaused: true };
+}
+
+export async function handleResumeCapture(rawArgs) {
+  const args = rawArgs || {};
+  const baseUrl = resolveDashboardUrl(args);
+  await apiPostJson(baseUrl, "/api/capture/resume", {});
+  return { ok: true, capturePaused: false };
 }
