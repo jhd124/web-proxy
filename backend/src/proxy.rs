@@ -601,21 +601,18 @@ fn find_override(
     request_body: &[u8],
 ) -> Option<crate::state::OverrideRule> {
     let rules = state.overrides.read();
-    rules
-        .iter()
-        .find(|r| {
-            r.matches(
-                method,
-                scheme,
-                host,
-                path_with_query,
-                path_only,
-                request_query,
-                request_headers,
-                request_body,
-            )
-        })
-        .cloned()
+    crate::state::pick_best_override_match(
+        &rules,
+        method,
+        scheme,
+        host,
+        path_with_query,
+        path_only,
+        request_query,
+        request_headers,
+        request_body,
+    )
+    .cloned()
 }
 
 fn find_breakpoint(
