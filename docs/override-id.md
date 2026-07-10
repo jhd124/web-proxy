@@ -69,10 +69,11 @@ id = 小写十六进制( SHA256( UTF-8( material ) ) )
 
 因此：**只要 `id` 不同，就允许同时存在**；即「同 host、同 path」时，仍可通过不同协议、请求头、查询参数、请求体等区分出不同 `id`。
 
-### 与代理「首条命中」的关系
+### 与代理命中优先级的关系
 
-`backend/src/proxy.rs` 的 `find_override` 在内存规则列表上按**顺序**查找，**第一个** `matches` 为真的规则生效。  
-若存在多条在「某次实际请求」上**同时**满足 `matches` 的规则（例如仅 host+path 重叠、其它条件在这一次请求上也都满足），则**先被遍历到**的那条 wins。列表顺序以加载/插入后的 `Vec` 为准（新创建会插到前面等，以 `backend/src/overrides.rs` 为准）。需要避免歧义时，应让各条规则在 M / P / H_blob / Q_blob / B 等维度上**互斥**，或接受顺序带来的优先级。
+`backend/src/proxy.rs` 的 `find_override` 与 `state.rs` 的 `recompute_rule_matches` 会在所有 `matches` 为真的 enabled 规则中，选取 **`match_specificity` 分数最高**的一条生效。分数越高表示匹配条件越具体（method、protocol、path、请求头、查询参数、请求体等约束越多；host/path 中通配符越少、字面量越长分数越高）。同分时列表靠前（较新）者优先。
+
+若需要避免歧义，仍应让各条规则在 M / P / H_blob / Q_blob / B 等维度上**互斥**；或在同分时接受「较新规则优先」。
 
 ## 与响应内容的关系
 

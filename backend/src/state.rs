@@ -99,6 +99,92 @@ impl OverrideRule {
         }
         true
     }
+
+    /// 规则匹配条件的「详细程度」分数，越高表示约束越多、越具体。
+    pub fn match_specificity(&self) -> u64 {
+        let mut score = 0u64;
+        if self
+            .match_method
+            .as_ref()
+            .is_some_and(|method| !method.trim().is_empty())
+        {
+            score += 1 << 24;
+        }
+        if self.match_protocol.is_some() {
+            score += 1 << 23;
+        }
+        if self
+            .match_path
+            .as_ref()
+            .is_some_and(|path| !path.trim().is_empty())
+        {
+            score += 1 << 22;
+            score += pattern_literal_score(self.match_path.as_deref().unwrap_or_default());
+        }
+        score = score.saturating_add(
+            (self.match_request_headers.len() as u64).saturating_mul(1 << 16),
+        );
+        score = score.saturating_add((self.match_query.len() as u64).saturating_mul(1 << 16));
+        if self
+            .match_request_body
+            .as_ref()
+            .is_some_and(|body| !body.trim().is_empty())
+        {
+            score += 1 << 26;
+        }
+        if let Some(host) = self.match_host.as_deref() {
+            score += pattern_literal_score(host);
+        }
+        score
+    }
+}
+
+/// 在多条同时命中的 override 中选取最具体的一条；同分时列表靠前（较新）者优先。
+pub fn pick_best_override_match<'a>(
+    rules: &'a [OverrideRule],
+    method: &str,
+    scheme: &str,
+    host: &str,
+    path_with_query: &str,
+    path_only: &str,
+    request_query: &[(String, String)],
+    request_headers: &HeaderMap,
+    request_body: &[u8],
+) -> Option<&'a OverrideRule> {
+    rules
+        .iter()
+        .enumerate()
+        .filter(|(_, rule)| {
+            rule.matches(
+                method,
+                scheme,
+                host,
+                path_with_query,
+                path_only,
+                request_query,
+                request_headers,
+                request_body,
+            )
+        })
+        .max_by(|(index_a, rule_a), (index_b, rule_b)| {
+            rule_a
+                .match_specificity()
+                .cmp(&rule_b.match_specificity())
+                .then_with(|| index_b.cmp(index_a))
+        })
+        .map(|(_, rule)| rule)
+}
+
+fn pattern_literal_score(pattern: &str) -> u64 {
+    let mut score = 0u64;
+    for ch in pattern.trim().chars() {
+        match ch {
+            '*' => score = score.saturating_sub(50),
+            '?' => score = score.saturating_sub(5),
+            _ => score = score.saturating_add(1),
+        }
+    }
+    score
 }
 
 fn request_headers_satisfied(req: &HeaderMap, rules: &[(String, String)]) -> bool {
@@ -940,7 +1026,7 @@ impl AppState {
         self.recompute_rule_matches();
     }
 
-    /// 规则变更后重算历史 HTTP 条目的命中规则 id（潜在命中：第一个 enabled 命中规则）。
+    /// 规则变更后重算历史 HTTP 条目的命中规则 id（潜在命中：enabled 且最具体的命中规则）。
     /// 历史条目只保留 `request_body_preview`，body 类匹配按预览 best-effort，与前端旧逻辑一致。
     /// 仅在有条目命中变化时广播 Snapshot，避免无谓的全量重渲染。
     pub fn recompute_rule_matches(&self) {
@@ -956,21 +1042,18 @@ impl AppState {
             let origin = entry_origin(&entry.url);
             let request_headers = header_map_from_pairs(&entry.request_headers);
             let request_body = entry.request_body_preview.as_deref().unwrap_or("");
-            let next_override_match_id = overrides
-                .iter()
-                .find(|rule| {
-                    rule.matches(
-                        &entry.method,
-                        &entry.scheme,
-                        &entry.host,
-                        &entry.path,
-                        &entry.path,
-                        &request_query,
-                        &request_headers,
-                        request_body.as_bytes(),
-                    )
-                })
-                .map(|rule| rule.id.clone());
+            let next_override_match_id = pick_best_override_match(
+                &overrides,
+                &entry.method,
+                &entry.scheme,
+                &entry.host,
+                &entry.path,
+                &entry.path,
+                &request_query,
+                &request_headers,
+                request_body.as_bytes(),
+            )
+            .map(|rule| rule.id.clone());
             let next_breakpoint_match_id = breakpoints
                 .iter()
                 .find(|rule| rule.matches(&entry.method, &origin, &entry.path))

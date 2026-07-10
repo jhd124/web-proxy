@@ -11,7 +11,7 @@ import {
   trafficEntryOrigin,
   urlMatchPartsForForm,
 } from '../../../lib/dashboardUtils'
-import { trafficEntryMatchesOverride } from '../../../lib/overrideMatch'
+import { pickBestMatchingOverride } from '../../../lib/overrideMatch'
 import { useMainWindowTrafficSelect } from '../../../lib/useMainWindowTrafficSelect'
 import { getDesktopHost } from '../../../lib/desktopHost'
 import { downloadBlob } from '../../../lib/download'
@@ -526,11 +526,7 @@ export function useDashboard() {
     if (selected.overrideMatchId) {
       return overrides.find((rule) => rule.id === selected.overrideMatchId) ?? null
     }
-    return (
-      overrides.find(
-        (o) => o.enabled && trafficEntryMatchesOverride(selected, o),
-      ) ?? null
-    )
+    return pickBestMatchingOverride(selected, overrides)
   }, [overrides, selected])
 
   // 命中规则的计算已下沉到后端：条目自带 overrideMatchId，规则变更后后端会重算并推 snapshot。

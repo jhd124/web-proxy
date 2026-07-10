@@ -375,6 +375,57 @@ fn recompute_ignores_connect_entries() {
 }
 
 #[test]
+fn pick_best_override_prefers_more_specific_rule() {
+    let mut broad = rule_with("example.com", "/api");
+    broad.id = "broad".to_string();
+    broad.match_method = None;
+
+    let mut specific = rule_with("example.com", "/api");
+    specific.id = "specific".to_string();
+    specific.match_method = Some("GET".to_string());
+
+    let rules = [broad, specific];
+    let matched = pick_best_override_match(
+        &rules,
+        "GET",
+        "https",
+        "example.com",
+        "/api",
+        "/api",
+        &[],
+        &HeaderMap::new(),
+        b"",
+    );
+    assert_eq!(matched.map(|rule| rule.id.as_str()), Some("specific"));
+}
+
+#[test]
+fn recompute_uses_most_specific_override_match() {
+    let state = build_state_for_app_tests();
+    let id = Uuid::new_v4();
+    state.push_traffic(sample_traffic_entry(id));
+
+    let mut broad = rule_with("example.com", "/api");
+    broad.id = "broad".to_string();
+    let mut specific = rule_with("example.com", "/api");
+    specific.id = "specific".to_string();
+    specific.match_method = Some("GET".to_string());
+
+    state.overrides.write().extend([broad, specific]);
+    state.recompute_rule_matches();
+
+    assert_eq!(
+        state
+            .traffic
+            .read()
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.override_match_id.clone()),
+        Some("specific".to_string()),
+    );
+}
+
+#[test]
 fn breakpoint_method_match_is_case_insensitive_and_optional() {
     let rule = BreakpointRule {
         id: Uuid::new_v4(),

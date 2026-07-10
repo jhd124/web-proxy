@@ -385,23 +385,26 @@ export function TrafficVirtualListUI({
           disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
           onSelect={() => {
             if (!contextMenuEntry) return
-            const hasMatchedOverride =
-              Boolean(contextMenuEntry.overrideMatchId) ||
-              matchedOverrideByEntryId?.has(contextMenuEntry.id) === true
-            if (hasMatchedOverride) {
-              onOpenMatchedOverride(contextMenuEntry.id)
-              return
-            }
             onOverride(contextMenuEntry.id)
           }}
         >
           <Replace aria-hidden />
-          {contextMenuEntry &&
-          (Boolean(contextMenuEntry.overrideMatchId) ||
-            matchedOverrideByEntryId?.has(contextMenuEntry.id))
-            ? t.rowMenuViewMatchedOverride
-            : t.rowMenuOverride}
+          {t.rowMenuOverride}
         </ContextMenuItem>
+        {contextMenuEntry &&
+          (Boolean(contextMenuEntry.overrideMatchId) ||
+            matchedOverrideByEntryId?.has(contextMenuEntry.id)) && (
+            <ContextMenuItem
+              disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
+              onSelect={() => {
+                if (!contextMenuEntry) return
+                onOpenMatchedOverride(contextMenuEntry.id)
+              }}
+            >
+              <Replace aria-hidden />
+              {t.rowMenuViewMatchedOverride}
+            </ContextMenuItem>
+          )}
         <ContextMenuItem
           disabled={!contextMenuEntry || contextMenuEntry.kind !== 'http'}
           onSelect={() => {

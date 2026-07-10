@@ -138,6 +138,68 @@ export function pathOnlyFromEntry(entry: TrafficEntry): string {
   return normalizePath(fromUrl)
 }
 
+/** 规则匹配条件的详细程度分数，与后端 `OverrideRule::match_specificity` 对齐。 */
+export function overrideMatchSpecificity(rule: OverrideRule): number {
+  let score = 0
+  if (rule.matchMethod?.trim()) {
+    score += 1 << 24
+  }
+  if (rule.matchProtocol?.trim()) {
+    score += 1 << 23
+  }
+  if (rule.matchPath?.trim()) {
+    score += 1 << 22
+    score += patternLiteralScore(rule.matchPath)
+  }
+  score += (rule.matchRequestHeaders?.length ?? 0) * (1 << 16)
+  score += (rule.matchQuery?.length ?? 0) * (1 << 16)
+  if (rule.matchRequestBody?.trim()) {
+    score += 1 << 26
+  }
+  if (rule.matchHost?.trim()) {
+    score += patternLiteralScore(rule.matchHost)
+  }
+  return score
+}
+
+function patternLiteralScore(pattern: string): number {
+  let score = 0
+  for (const ch of pattern.trim()) {
+    if (ch === '*') {
+      score = Math.max(0, score - 50)
+      continue
+    }
+    if (ch === '?') {
+      score = Math.max(0, score - 5)
+      continue
+    }
+    score += 1
+  }
+  return score
+}
+
+/** 在多条同时命中的 override 中选取最具体的一条；同分时列表靠前（较新）者优先。 */
+export function pickBestMatchingOverride(
+  entry: TrafficEntry,
+  rules: readonly OverrideRule[],
+): OverrideRule | null {
+  let bestRule: OverrideRule | null = null
+  let bestScore = -1
+  let bestIndex = Number.POSITIVE_INFINITY
+
+  rules.forEach((rule, index) => {
+    if (!rule.enabled || !trafficEntryMatchesOverride(entry, rule)) return
+    const score = overrideMatchSpecificity(rule)
+    if (score > bestScore || (score === bestScore && index < bestIndex)) {
+      bestRule = rule
+      bestScore = score
+      bestIndex = index
+    }
+  })
+
+  return bestRule
+}
+
 /**
  * Best-effort mirror of the proxy's `OverrideRule::matches` for dashboard selection.
  * Request body: compares to `requestBodyPreview` when the rule matches on body
