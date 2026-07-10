@@ -13,6 +13,7 @@
     "electron:pack": "bun run electron:prebuild && electron-builder --dir",
     "electron:build": "bun run electron:prebuild && electron-builder -mwl",
     "electron:build:mac": "bun run electron:prebuild && electron-builder --mac",
+    "electron:build:mac-bundled-pro": "PROXY_BUNDLED_PRO=1 bun run electron:prebuild && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
     "electron:build:win": "bun run electron:prebuild && electron-builder --win",
     "electron:build:linux": "bun run electron:prebuild && electron-builder --linux"
   },
@@ -47,6 +48,10 @@
       {
         "from": "resources/mcp",
         "to": "mcp"
+      },
+      {
+        "from": "resources/build-profile.json",
+        "to": "build-profile.json"
       }
     ],
     "mac": {

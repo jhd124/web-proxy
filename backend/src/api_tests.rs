@@ -963,6 +963,39 @@ fn signed_test_license_key() -> (String, String) {
 }
 
 #[tokio::test]
+async fn billing_status_uses_bundled_pro_when_env_set() {
+    let previous = std::env::var("PROXY_BUNDLED_PRO").ok();
+    unsafe {
+        std::env::set_var("PROXY_BUNDLED_PRO", "1");
+    }
+
+    let db_path = std::env::temp_dir().join(format!(
+        "proxy-app-test-bundled-pro-{}.sqlite",
+        Uuid::new_v4()
+    ));
+    let billing = crate::billing::BillingState::init(&db_path).expect("init bundled pro billing");
+    let status = billing.status(crate::billing::BillingUsage {
+        breakpoints: 0,
+        overrides: 0,
+        saved_requests: 0,
+    });
+
+    match previous {
+        Some(value) => unsafe {
+            std::env::set_var("PROXY_BUNDLED_PRO", value);
+        },
+        None => unsafe {
+            std::env::remove_var("PROXY_BUNDLED_PRO");
+        },
+    }
+
+    assert_eq!(status.plan, crate::billing::Plan::Pro);
+    assert!(status.activated);
+    assert_eq!(status.license_id.as_deref(), Some("bundled-pro"));
+    assert_eq!(status.limits.breakpoints, None);
+}
+
+#[tokio::test]
 async fn billing_status_defaults_to_trial_limits() {
     let state = build_trial_state();
     let status = crate::billing::get_status(State(state)).await.0;

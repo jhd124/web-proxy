@@ -156,6 +156,23 @@ function getProxyCommand(): ProxyCommand {
   }
 }
 
+function shouldEnableBundledPro(): boolean {
+  if (process.env.PROXY_BUNDLED_PRO === '1') return true
+  if (!app.isPackaged) return false
+
+  const profilePath = path.join(process.resourcesPath, 'build-profile.json')
+  if (!fs.existsSync(profilePath)) return false
+
+  try {
+    const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8')) as {
+      bundledPro?: boolean
+    }
+    return profile.bundledPro === true
+  } catch {
+    return false
+  }
+}
+
 function getMcpScriptPath(): string {
   if (!app.isPackaged) {
     return path.join(repoRoot, 'mcp', 'proxy-mcp-server.mjs')
@@ -217,6 +234,10 @@ function startProxyApp(dataDir: string): void {
 
   if (app.isPackaged) {
     env.DASHBOARD_DIST = path.join(process.resourcesPath, 'dist')
+  }
+
+  if (shouldEnableBundledPro()) {
+    env.PROXY_BUNDLED_PRO = '1'
   }
 
   proxyProcess = spawn(proxy.command, proxy.args, {

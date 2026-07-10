@@ -42,6 +42,12 @@ fs.cpSync(frontendDist, distDest, { recursive: true })
 fs.copyFileSync(proxyBinary, binDest)
 fs.cpSync(mcpRoot, mcpDest, { recursive: true })
 
+const bundledPro = process.env.PROXY_BUNDLED_PRO === '1'
+fs.writeFileSync(
+  path.join(resourcesDir, 'build-profile.json'),
+  JSON.stringify({ bundledPro }, null, 2),
+)
+
 if (process.platform !== 'win32') {
   fs.chmodSync(binDest, 0o755)
 }

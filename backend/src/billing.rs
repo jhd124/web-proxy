@@ -168,6 +168,7 @@ pub struct BillingState {
     license: RwLock<Option<VerifiedLicense>>,
     public_key: RwLock<Option<VerifyingKey>>,
     load_error: RwLock<Option<String>>,
+    bundled_pro: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -179,13 +180,19 @@ impl BillingState {
     pub fn init(db_path: &Path) -> anyhow::Result<Self> {
         ensure_schema(db_path)?;
         let public_key = public_key_from_env();
+        let bundled_pro = bundled_pro_from_env();
         let state = Self {
             db_path: db_path.to_path_buf(),
             license: RwLock::new(None),
             public_key: RwLock::new(public_key),
             load_error: RwLock::new(None),
+            bundled_pro,
         };
-        state.load_stored_license();
+        if bundled_pro {
+            state.set_bundled_pro_license();
+        } else {
+            state.load_stored_license();
+        }
         Ok(state)
     }
 
@@ -195,6 +202,7 @@ impl BillingState {
             license: RwLock::new(None),
             public_key: RwLock::new(None),
             load_error: RwLock::new(Some(error)),
+            bundled_pro: false,
         }
     }
 
@@ -223,6 +231,12 @@ impl BillingState {
     }
 
     pub fn activate(&self, license_key: &str) -> Result<LicensePayload, ApiError> {
+        if self.bundled_pro {
+            return Ok(self
+                .current_valid_license()
+                .map(|license| license.payload)
+                .ok_or_else(|| ApiError::invalid_license("Bundled Pro license is unavailable"))?);
+        }
         let verified = self.verify_license_key(license_key)?;
         save_license_key(&self.db_path, license_key)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -265,6 +279,25 @@ impl BillingState {
             }
         }
         Some(verified)
+    }
+
+    fn set_bundled_pro_license(&self) {
+        *self.license.write() = Some(VerifiedLicense {
+            payload: LicensePayload {
+                license_id: "bundled-pro".to_string(),
+                plan: Plan::Pro,
+                limits: PlanLimits {
+                    breakpoints: None,
+                    overrides: None,
+                    saved_requests: None,
+                },
+                issued_at: Utc::now(),
+                expires_at: None,
+                customer_email: None,
+                device_limit: None,
+            },
+        });
+        *self.load_error.write() = None;
     }
 
     fn load_stored_license(&self) {
@@ -406,6 +439,22 @@ fn public_key_from_env() -> Option<VerifyingKey> {
     std::env::var("LICENSE_PUBLIC_KEY")
         .ok()
         .and_then(|value| parse_public_key(&value).ok())
+}
+
+fn bundled_pro_from_env() -> bool {
+    env_flag_enabled("PROXY_BUNDLED_PRO")
+}
+
+fn env_flag_enabled(key: &str) -> bool {
+    std::env::var(key)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes"
+            )
+        })
+        .unwrap_or(false)
 }
 
 fn parse_public_key(value: &str) -> anyhow::Result<VerifyingKey> {
