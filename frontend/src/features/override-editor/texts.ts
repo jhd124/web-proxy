@@ -76,6 +76,8 @@ export const overrideEditorTexts = {
     status: 'Status',
     responseHeaders: 'Response headers (one',
     responseHeadersLabel: 'Response headers',
+    responseHeadersWildcardHint:
+      'Value * copies the same-named request header when present; otherwise keeps literal * (e.g. CORS). With map remote, these headers override matching upstream response headers.',
     codeName: 'Name: value',
     perLine: 'per line)',
     streamHint:

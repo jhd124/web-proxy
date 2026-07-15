@@ -194,3 +194,87 @@ fn filtered_rule_headers_respects_streaming_and_encoding_flags() {
         .iter()
         .all(|(k, _)| !k.eq_ignore_ascii_case("content-length")));
 }
+
+#[test]
+fn resolve_override_response_headers_expands_wildcard_from_request() {
+    let mut request_headers = HeaderMap::new();
+    request_headers.insert("x-request-id", HeaderValue::from_static("req-42"));
+    request_headers.insert("origin", HeaderValue::from_static("https://app.example"));
+
+    let rule_headers = vec![
+        ("X-Request-Id".to_string(), "*".to_string()),
+        ("Access-Control-Allow-Origin".to_string(), "*".to_string()),
+        ("Content-Type".to_string(), "application/json".to_string()),
+    ];
+
+    let resolved = resolve_override_response_headers(&rule_headers, &request_headers);
+    assert_eq!(
+        resolved,
+        vec![
+            ("X-Request-Id".to_string(), "req-42".to_string()),
+            (
+                "Access-Control-Allow-Origin".to_string(),
+                "*".to_string()
+            ),
+            ("Content-Type".to_string(), "application/json".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn overlay_response_header_pairs_overrides_matching_names() {
+    let upstream = vec![
+        ("content-type".to_string(), "text/plain".to_string()),
+        ("x-upstream".to_string(), "keep".to_string()),
+    ];
+    let overrides = vec![
+        ("Content-Type".to_string(), "application/json".to_string()),
+        ("x-override".to_string(), "new".to_string()),
+    ];
+
+    let merged = overlay_response_header_pairs(upstream, &overrides);
+    assert_eq!(
+        merged,
+        vec![
+            ("x-upstream".to_string(), "keep".to_string()),
+            ("Content-Type".to_string(), "application/json".to_string()),
+            ("x-override".to_string(), "new".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn apply_response_header_overlays_replaces_existing_header() {
+    let mut header_map = reqwest::header::HeaderMap::new();
+    header_map.insert(
+        reqwest::header::CONTENT_TYPE,
+        reqwest::header::HeaderValue::from_static("text/plain"),
+    );
+    header_map.insert(
+        reqwest::header::HeaderName::from_static("x-upstream"),
+        reqwest::header::HeaderValue::from_static("keep"),
+    );
+
+    apply_response_header_overlays(
+        &mut header_map,
+        &[
+            ("Content-Type".to_string(), "application/json".to_string()),
+            ("x-override".to_string(), "new".to_string()),
+        ],
+    );
+
+    assert_eq!(
+        header_map
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok()),
+        Some("application/json")
+    );
+    assert_eq!(
+        header_map.get("x-upstream").and_then(|v| v.to_str().ok()),
+        Some("keep")
+    );
+    assert_eq!(
+        header_map.get("x-override").and_then(|v| v.to_str().ok()),
+        Some("new")
+    );
+}

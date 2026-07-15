@@ -74,8 +74,8 @@ CONNECT 路径分三种：
 `OverrideRule` 支持：
 
 - 匹配条件：协议、host（支持 `*`/`?`）、path、请求头、query、请求体；
-- 响应动作：状态码、响应头、body；
-- map remote：将请求改写后转发到另一目标；
+- 响应动作：状态码、响应头、body；响应头值为 `*` 时用同名请求头回填；
+- map remote：将请求改写后转发到另一目标，规则中的响应头按同名覆盖上游响应头；
 - stream interval：按分段间隔返回内容（常用于 SSE 模拟）。
 
 ### 5.2 Breakpoint

@@ -302,7 +302,8 @@ export function OverrideRequestFormUI({
           <LabelHint
             hint={
               <>
-                {t.responseHeaders} <code>{t.codeName}</code> {t.perLine}
+                {t.responseHeaders} <code>{t.codeName}</code> {t.perLine}{' '}
+                {t.responseHeadersWildcardHint}
               </>
             }
           />
