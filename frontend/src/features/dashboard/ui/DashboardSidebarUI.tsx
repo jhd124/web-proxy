@@ -34,8 +34,15 @@ function buildNavTooltip(label: string, activeCount: number): string {
 
 export function DashboardSidebarUI(viewModel: DashboardViewModel) {
   const activeTab = viewModel.activeTab
-  const hasActiveBreakpoints = viewModel.activeBreakpointsCount > 0
-  const hasActiveOverrides = viewModel.activeOverridesCount > 0
+  // 停止捕捉时规则不生效，隐藏红点与 tooltip 中的活跃数量
+  const visibleBreakpointsCount = viewModel.capturePaused
+    ? 0
+    : viewModel.activeBreakpointsCount
+  const visibleOverridesCount = viewModel.capturePaused
+    ? 0
+    : viewModel.activeOverridesCount
+  const hasActiveBreakpoints = visibleBreakpointsCount > 0
+  const hasActiveOverrides = visibleOverridesCount > 0
 
   return (
     <Sidebar side="left" collapsible="icon" aria-label="Dashboard sidebar">
@@ -56,10 +63,7 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
               <SidebarMenuButton
                 isActive={activeTab === 'breakpoints'}
                 onClick={viewModel.onBreakpointsNavClick}
-                tooltip={buildNavTooltip(
-                  'Breakpoint',
-                  viewModel.activeBreakpointsCount,
-                )}
+                tooltip={buildNavTooltip('Breakpoint', visibleBreakpointsCount)}
                 className={root.navButton}
               >
                 <StepForward />
@@ -68,11 +72,11 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
               {hasActiveBreakpoints && (
                 <span className={root.activeBadge} aria-label="Active breakpoints count">
                   <span className={root.badgeCountCompact}>
-                    {formatActiveCount(viewModel.activeBreakpointsCount)}{' '}
+                    {formatActiveCount(visibleBreakpointsCount)}{' '}
                   </span>
                   <span className={root.badgeCountExpanded}>
                     {dashboardTexts.sidebar.activeCountLabel(
-                      formatActiveCount(viewModel.activeBreakpointsCount),
+                      formatActiveCount(visibleBreakpointsCount),
                     )}
                   </span>
                 </span>
@@ -84,7 +88,7 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
               <SidebarMenuButton
                 isActive={activeTab === 'override'}
                 onClick={viewModel.onOverridesNavClick}
-                tooltip={buildNavTooltip('Override', viewModel.activeOverridesCount)}
+                tooltip={buildNavTooltip('Override', visibleOverridesCount)}
                 className={root.navButton}
               >
                 <Replace />
@@ -93,11 +97,11 @@ export function DashboardSidebarUI(viewModel: DashboardViewModel) {
               {hasActiveOverrides && (
                 <span className={root.activeBadge} aria-label="Active overrides count">
                   <span className={root.badgeCountCompact}>
-                    {formatActiveCount(viewModel.activeOverridesCount)}
+                    {formatActiveCount(visibleOverridesCount)}
                   </span>
                   <span className={root.badgeCountExpanded}>
                     {dashboardTexts.sidebar.activeCountLabel(
-                      formatActiveCount(viewModel.activeOverridesCount),
+                      formatActiveCount(visibleOverridesCount),
                     )}
                   </span>
                 </span>
