@@ -299,6 +299,84 @@ fn filtered_rule_headers(
         .collect()
 }
 
+/// 响应头值为通配符 `*` 时，用同名请求头的值回填；请求无同名头则保留字面量 `*`
+///（例如 CORS 的 `Access-Control-Allow-Origin: *`）。
+fn resolve_response_header_value(
+    header_name: &str,
+    value: &str,
+    request_headers: &hyper::header::HeaderMap,
+) -> String {
+    if value.trim() != "*" {
+        return value.to_string();
+    }
+    let want = header_name.to_ascii_lowercase();
+    for (name, val) in request_headers.iter() {
+        if name.as_str() == want {
+            if let Ok(s) = val.to_str() {
+                return s.to_string();
+            }
+        }
+    }
+    "*".to_string()
+}
+
+/// 解析 override 响应头：`*` 回填为同名请求头。
+fn resolve_override_response_headers(
+    rule_headers: &[(String, String)],
+    request_headers: &hyper::header::HeaderMap,
+) -> Vec<(String, String)> {
+    rule_headers
+        .iter()
+        .filter(|(k, _)| !k.trim().is_empty())
+        .map(|(k, v)| {
+            (
+                k.clone(),
+                resolve_response_header_value(k, v, request_headers),
+            )
+        })
+        .collect()
+}
+
+/// 用 override 响应头覆盖上游响应头中的同名项（大小写不敏感）；规则中有、上游没有的头会追加。
+fn overlay_response_header_pairs(
+    upstream: Vec<(String, String)>,
+    overrides: &[(String, String)],
+) -> Vec<(String, String)> {
+    if overrides.is_empty() {
+        return upstream;
+    }
+    let mut result = upstream;
+    for (name, value) in overrides {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        result.retain(|(k, _)| !k.eq_ignore_ascii_case(trimmed));
+        result.push((trimmed.to_string(), value.clone()));
+    }
+    result
+}
+
+fn apply_response_header_overlays(
+    header_map: &mut reqwest::header::HeaderMap,
+    overrides: &[(String, String)],
+) {
+    for (name, value) in overrides {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(header_name) = reqwest::header::HeaderName::from_bytes(trimmed.as_bytes()) else {
+            continue;
+        };
+        let Ok(header_value) = reqwest::header::HeaderValue::from_str(value) else {
+            continue;
+        };
+        header_map.remove(&header_name);
+        header_map.insert(header_name, header_value);
+    }
+}
+
 async fn wait_until_stream_playing(ctrl: &mut watch::Receiver<bool>) {
     loop {
         if *ctrl.borrow() {
@@ -1018,15 +1096,17 @@ async fn respond_with_rule(
     body: String,
     stream_interval_ms: Option<u64>,
     mut stream_ctrl: Option<watch::Receiver<bool>>,
+    request_headers: &hyper::header::HeaderMap,
 ) -> Result<Response<ProxyBody>, Infallible> {
     let started = Instant::now();
-    let content_encoding = response_content_encoding(&headers);
+    let resolved_headers = resolve_override_response_headers(&headers, request_headers);
+    let content_encoding = response_content_encoding(&resolved_headers);
     let keep_content_encoding = content_encoding
         .as_deref()
         .map(|enc| encode_body_for_content_encoding(body.as_bytes(), enc).is_some())
         .unwrap_or(true);
     let effective_headers = filtered_rule_headers(
-        &headers,
+        &resolved_headers,
         stream_interval_ms.is_some(),
         keep_content_encoding,
     );
@@ -1544,7 +1624,7 @@ async fn forward_proxied_http(
         );
     }
 
-    if let Some(rule) = matched_override {
+    if let Some(ref rule) = matched_override {
         if mapped_remote_url.is_none() {
             return respond_with_rule(
                 state,
@@ -1552,14 +1632,21 @@ async fn forward_proxied_http(
                 peer,
                 &url,
                 rule.status,
-                rule.headers,
-                rule.body,
+                rule.headers.clone(),
+                rule.body.clone(),
                 rule.stream_interval_ms,
                 stream_ctrl,
+                request_headers,
             )
             .await;
         }
     }
+
+    let map_remote_header_overrides = matched_override
+        .as_ref()
+        .filter(|rule| has_map_remote_rule(rule))
+        .map(|rule| resolve_override_response_headers(&rule.headers, request_headers))
+        .unwrap_or_default();
 
     let upstream_target_url = mapped_remote_url.unwrap_or_else(|| url.clone());
 
@@ -1605,13 +1692,16 @@ async fn forward_proxied_http(
     };
 
     let status = upstream.status().as_u16();
-    let resp_headers: Vec<(String, String)> = upstream
-        .headers()
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
-        .collect();
-
-    let header_map = upstream.headers().clone();
+    let mut header_map = upstream.headers().clone();
+    apply_response_header_overlays(&mut header_map, &map_remote_header_overrides);
+    let resp_headers: Vec<(String, String)> = overlay_response_header_pairs(
+        upstream
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("<binary>").to_string()))
+            .collect(),
+        &map_remote_header_overrides,
+    );
 
     if is_sse_response(&upstream) {
         state.update_traffic(
